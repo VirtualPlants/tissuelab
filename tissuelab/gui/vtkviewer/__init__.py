@@ -1,0 +1,2 @@
+
+from vtkviewer import VtkViewerWidget
