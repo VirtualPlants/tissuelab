@@ -36,7 +36,6 @@ setup(
     entry_points={
 
         'oalab.applet': [
-            'OmeroClient = tissuelab.plugins.applets.omeroclient:OmeroClient',
             'VtkViewer = tissuelab.plugins.applets.vtkviewer:VtkViewer',
             ],
 
