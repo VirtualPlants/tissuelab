@@ -192,8 +192,6 @@ class VtkViewer(QtGui.QWidget):
                 colorFunc.AddRGBPoint(cell_id, *color)
                 alphaChannelFunc.AddPoint(cell_id, alpha)
 
-        self.iren.Render()
-
     def demo_matrix1(self):
         dtype = np.uint16
         matrix1 = np.zeros([75, 75, 75], dtype=dtype)

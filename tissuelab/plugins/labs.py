@@ -8,6 +8,7 @@ class TissueLab(object):
         'PkgManagerWidget',
         'EditorManager',
         'VtkViewer',
+        'Viewer3D',
         'HelpWidget',
         'Logger',
         'HistoryWidget',
