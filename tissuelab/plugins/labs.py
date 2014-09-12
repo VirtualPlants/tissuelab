@@ -3,7 +3,7 @@ class TissueLab(object):
     name = 'tissue'
 
     applets = [
-        'ProjectManager2',
+        'ProjectManager',
         'ControlManager',
         'PkgManagerWidget',
         'EditorManager',
@@ -12,7 +12,7 @@ class TissueLab(object):
         'HelpWidget',
         'Logger',
         'HistoryWidget',
-#         'World',
+        'World',
         ]
 
     def __call__(self, mainwin):

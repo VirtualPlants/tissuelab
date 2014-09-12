@@ -23,23 +23,25 @@ class VtkViewerWidget(QtGui.QWidget, AbstractListener):
 
         self.session = Session()
         self.session.world.register_listener(self)
+        self.session.interpreter.locals['world_viewer'] = self
         self.session.interpreter.locals['viewer'] = self.vtk
 
     def notify(self, sender, event=None):
-        signal, data = event
-        if signal == 'WorldChanged':
-            self.set_world(data)
+        pass
+#         signal, data = event
+#         if signal == 'WorldChanged':
+#             self.set_world(data)
 
     def set_world(self, world):
         self.vtk.clear()
         for obj_name, world_object in world.items():
             obj = world_object.obj
-            print obj_name, obj
+            print obj_name
             if isinstance(obj, np.ndarray):
                 self.vtk.add_matrix(obj_name, obj)
             if isinstance(obj, vtk.vtkActor):
                 self.vtk.add_actor(obj_name, obj)
-        self.vtk.compute()
+        # self.vtk.compute()
 
 class VtkViewer(QtGui.QWidget):
     def __init__(self):
@@ -72,8 +74,6 @@ class VtkViewer(QtGui.QWidget):
         self.volume = {}
         self.actor = {}
 
-        self.clear()
-
     def initialize(self):
         pass
 #         self.ren.ResetCamera()
@@ -100,9 +100,6 @@ class VtkViewer(QtGui.QWidget):
         self.volume_property = {}
         self.volume = {}
         self.actor = {}
-
-        self.compute()
-
 
     def compute(self):
         for name, volume in self.volume.items():
@@ -149,6 +146,8 @@ class VtkViewer(QtGui.QWidget):
         volume = self.volume[name] = vtk.vtkVolume()
         volume.SetMapper(volumeMapper)
         volume.SetProperty(volume_property)
+        volume.SetOrigin(nx / 2., ny / 2., nz / 2.)
+        volume.SetPosition(-(nx - 1) / 2., -(ny - 1) / 2., -(nz - 1) / 2.)
 
         self.color_cell(name)
 
