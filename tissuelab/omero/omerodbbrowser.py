@@ -165,6 +165,7 @@ class OmeroDbBrowser(QtGui.QWidget):
 
 if __name__ == '__main__' :
     import sys
+    import tissuelab.omero
     app = QtGui.QApplication.instance()
     if app :
         EMBEDED = True
@@ -173,7 +174,7 @@ if __name__ == '__main__' :
         app = QtGui.QApplication(sys.argv)
 
     from omero.gateway import BlitzGateway
-    conn = BlitzGateway('gbaty', 'gbaty', host='localhost', port=4064)
+    conn = BlitzGateway('root', 'omero', host='localhost', port=4064)
     conn.connect()
 
     def f(obj):

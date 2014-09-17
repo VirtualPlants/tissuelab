@@ -27,16 +27,14 @@ class VtkViewerWidget(QtGui.QWidget, AbstractListener):
         self.session.interpreter.locals['viewer'] = self.vtk
 
     def notify(self, sender, event=None):
-        pass
-#         signal, data = event
-#         if signal == 'WorldChanged':
-#             self.set_world(data)
+        signal, data = event
+        if signal == 'world_sync':
+            self.set_world(data)
 
     def set_world(self, world):
         self.vtk.clear()
         for obj_name, world_object in world.items():
             obj = world_object.obj
-            print obj_name
             if isinstance(obj, np.ndarray):
                 self.vtk.add_matrix(obj_name, obj)
             if isinstance(obj, vtk.vtkActor):
@@ -100,6 +98,9 @@ class VtkViewer(QtGui.QWidget):
         self.volume_property = {}
         self.volume = {}
         self.actor = {}
+
+    def refresh(self):
+        self.compute()
 
     def compute(self):
         for name, volume in self.volume.items():
