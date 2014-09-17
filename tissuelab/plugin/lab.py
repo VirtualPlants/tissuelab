@@ -9,6 +9,7 @@ class TissueLab(object):
         'EditorManager',
         'VtkViewer',
         'Viewer3D',
+        'OmeroClient',
         'HelpWidget',
         'Logger',
         'HistoryWidget',

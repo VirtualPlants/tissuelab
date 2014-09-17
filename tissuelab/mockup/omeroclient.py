@@ -1,5 +1,5 @@
 
-from ui_omeroclient import Ui_Form
+from tissuelab.mockup.ui_omeroclient import Ui_Form
 from openalea.vpltk.qt import QtGui
 
 class OmeroClientWidget(QtGui.QWidget, Ui_Form):
