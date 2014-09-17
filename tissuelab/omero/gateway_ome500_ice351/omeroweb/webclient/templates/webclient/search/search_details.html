@@ -1,0 +1,131 @@
+{% load i18n %}
+{% load common_filters %}
+
+
+{% comment %}
+<!--
+  Copyright (C) 2011 University of Dundee & Open Microscopy Environment.
+  All rights reserved.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Affero General Public License as
+  published by the Free Software Foundation, either version 3 of the
+  License, or (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Affero General Public License for more details.
+
+  You should have received a copy of the GNU Affero General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-->
+{% endcomment %}
+
+    <script type="text/javascript">
+        $(document).ready(function(){
+            
+            // double-click handler on image - launches image viewer
+            //$("table#dataTable tbody tr").dblclick(function(event) {
+                // TODO: path to the object should be rendered on the server side
+            //});
+
+            // single click handler on image (container). Selection then update toolbar & metadata pane
+            $("table#dataTable tbody tr").click(function(event) {
+                OME.handleTableClickSelection(event);
+            });
+            
+            // plugin to handle drag-select of images
+            $("table#dataTable tbody").selectable({
+                filter: 'tr',
+                distance: 2,
+                stop: function(){  
+                    var selected = $('tr.ui-selected', this);
+                    OME.table_selection_changed(selected);
+                },
+                start: function(){
+                }
+            });
+            
+            
+            $("#dataTable").tablesorter( {sortList: [[1,0]]} ); 
+
+            $('input#id_search').quicksearch('table#dataTable tbody tr', {
+                'delay': 300,
+                'loader': 'span.loading'
+            });
+        });    
+    </script>
+
+
+	
+    
+
+    <div>
+    {% block search_results %}
+        {% if manager.c_size %}
+        
+        <table id="dataTable" class="tablesorter">
+            <thead> 
+                <tr> 
+                    <th class="table_images">{% trans "Object" %}</th> 
+                    <th class="table_desc">{% trans "Name" %}</th> 
+                    <th class="table_date">{% trans "Date" %}</th> 
+                </tr> 
+            </thead>
+            <tbody>
+            <!-- NB: E.g. "#project-123 td.desc a" etc is used to update names if edited in right-panel 'editinplace.js' -->
+            {% for c in manager.containers.projects %}
+                <tr id="project-{{ c.id }}" class="{{ c.getPermsCss }}">
+                    <td class="image">
+                        <img id="{{ c.id }}" src="{% static "webgateway/img/folder16.png" %}" alt="project" title="{{ c.name }}"/>
+                    </td>
+                    <td class="desc"><a>{{ c.name|truncatebefor:"65" }}</a></td>
+                    <td class="date">{{ c.getDate }}</td>                    
+                </tr>
+            {% endfor %}
+            {% for c in manager.containers.screens %}
+                <tr id="screen-{{ c.id }}" class="{{ c.getPermsCss }}">
+                    <td class="image">
+                        <img id="{{ c.id }}" src="{% static "webclient/image/folder_screen32.png" %}" alt="screen" title="{{ c.name }}"/>
+                    </td>
+                    <td class="desc"><a>{{ c.name|truncatebefor:"65" }}</a></td>
+                    <td class="date">{{ c.getDate }}</td>                    
+                </tr>
+            {% endfor %}
+            {% for c in manager.containers.datasets %}
+                <tr id="dataset-{{ c.id }}" class="{{ c.getPermsCss }}">
+                    <td class="image">
+                        <img id="{{ c.id }}" src="{% static "webgateway/img/folder_image16.png" %}" alt="dataset" title="{{ c.name }}"/>
+                    </td>
+                    <td class="desc"><a>{{ c.name|truncatebefor:"65" }}</a></td>
+                    <td class="date">{{ c.getDate }}</td>                    
+                </tr>
+            {% endfor %}
+            {% for c in manager.containers.plates %}
+                <tr id="plate-{{ c.id }}" class="{{ c.getPermsCss }}">
+                    <td class="image">
+                        <img id="{{ c.id }}" src="{% static "webclient/image/folder_plate32.png" %}" alt="plate" title="{{ c.name }}"/>
+                    </td>
+                    <td class="desc"><a>{{ c.name|truncatebefor:"65" }}</a></td>
+                    <td class="date">{{ c.getDate }}</td>                    
+                </tr>
+            {% endfor %}
+            {% for c in manager.containers.images %}
+                <tr id="image-{{ c.id }}" class="{{ c.getPermsCss }}">
+                    <td class="image">
+                        <img id="{{ c.id }}" src="{% url 'render_thumbnail_resize' 32 c.id  %}" alt="image" title="{{ c.name }}"/>
+                    </td>
+                    <td class="desc"><a>{{ c.name|truncatebefor:"65" }}</a></td>
+                    <td class="date">{{ c.getDate }}</td>                    
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        
+        {% else %}
+            <p class="center_message message_nodata">{% trans "No results found" %}</p>
+        {% endif %}
+
+    {% endblock %}
+    </div>

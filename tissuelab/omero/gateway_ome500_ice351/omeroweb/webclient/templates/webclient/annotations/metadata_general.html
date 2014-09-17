@@ -1,0 +1,1050 @@
+
+
+{% load i18n %}
+{% load common_filters %}
+{% load common_tags %}
+
+
+{% comment %}
+<!--
+  Copyright (C) 2011 University of Dundee & Open Microscopy Environment.
+  All rights reserved.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Affero General Public License as
+  published by the Free Software Foundation, either version 3 of the
+  License, or (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Affero General Public License for more details.
+
+  You should have received a copy of the GNU Affero General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-->
+{% endcomment %}
+
+    <script type="text/javascript">
+        
+        $(document).ready(function()
+            {
+                var linkify = function(input) {
+                    var regex = /(https?|ftp|file):\/\/[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]/g;
+                    return input.replace(regex, "<a href='$&' target='_blank'>$&</a>");
+                };
+                var linkify_element = function(elements) {
+                    elements.each(function() { var $this = $(this); $this.html(linkify($this.html())); });
+                };
+
+                $("#comments_container").hide_if_empty();
+                $("#fileanns_container").hide_if_empty();
+                $("#tags_container").hide_if_empty();
+                
+                {% if manager.canEdit %}
+                // we may have well-index, if we are editing an image within a Well
+                var idx = "{{ index }}";
+                if (idx.length > 0) {
+                    idx = "?index=" + idx;
+                }
+                $( "#{{ manager.obj_type }}name-{{ manager.obj_id }} button" )      // E.g. imagename-123 button
+                    .editable('{% url 'manage_action_containers' "editname" manager.obj_type manager.obj_id %}'+idx,
+                        '{% url 'manage_action_containers' "savename" manager.obj_type manager.obj_id %}'+idx,
+                        "{{ manager.obj_type }}name-{{ manager.obj_id }}" );
+                $( "#{{ manager.obj_type }}description-{{ manager.obj_id }} button" )
+                    .editable('{% url 'manage_action_containers' "editdescription" manager.obj_type manager.obj_id %}'+idx,
+                        '{% url 'manage_action_containers' "savedescription" manager.obj_type manager.obj_id %}'+idx,
+                        "{{ manager.obj_type }}description-{{ manager.obj_id }}", { post_save: linkify });
+                linkify_element($( "#{{ manager.obj_type }}description-{{ manager.obj_id }} > p > span" ));
+                {% else %}
+                linkify_element($( "#image_desc" ));
+                {% endif %}
+                linkify_element($( ".commentText" ));
+
+                var acquisition_load = false;
+                var preview_load = false;
+                var hierarchy_load = false;
+
+                
+                $("{% for t in manager.tag_annotations %}#tagdesc{{ t.id }}, {% endfor %}#tag").tooltip({ 
+                    track: true, 
+                    delay: 0, 
+                    showURL: false, 
+                    opacity: 1, 
+                    fixPNG: true, 
+                    showBody: " - ", 
+                    top: -15, 
+                    left: 5 
+                }); 
+                
+                $("#custom_annotations td span").hide() // hide the tool tip source elements
+                $("#custom_annotations td").tooltip({ 
+                    bodyHandler: function() { 
+                            return $("span.tooltip_html", $(this)).html(); 
+                        },
+                    track: true, 
+                    delay: 0, 
+                    showURL: false, 
+                    fixPNG: true, 
+                    showBody: " - ", 
+                    top: 10, 
+                    left: -100 
+                });
+                $(".tooltip").parent().children("span").hide(); // hide tool tip source
+                $(".tooltip").tooltip_init();
+
+                $(".show_xml").next().hide();   // hide any XML annotation blocks
+                // display in a new window      
+                $(".show_xml").click(function() {
+                    var xml = $(this).next().html();
+                    var newWindow=window.open('','','height=500,width=500,scrollbars=yes, top=50, left=100');
+                    newWindow.document.write(xml);
+                    newWindow.document.close();
+                    return false;
+                });
+                
+                {% if manager.image %}
+                // handle loading of image hierarchy by ajax
+                $("#hierarchy-link").click(function(e){
+                    var hierarchy_url = $(this).attr('href');
+                    $("#hierarchy-spinner").show();  // waiting...
+                    $("#hierarchy-pane").load(hierarchy_url);
+                    e.preventDefault();
+                    return false;
+                })
+                {% endif %}
+
+                // show a link to the current object
+                $("#show_link_btn").click(function(){
+                    $("#link_info_popup").show();
+                {% if webclient_path %}
+                    var lnk = "{{ webclient_path }}";
+                {% else %}
+                    var lnk = location.href.substring(0,location.href.length - location.search.length);
+                    if (lnk.charAt( lnk.length-1 ) == "#") { lnk = lnk.substring(0, lnk.length-1)}
+                {% endif %}
+                    var obj_type = "{{manager.obj_type}}";
+                    if (obj_type === "acquisition") {
+                        obj_type = "run";
+                    }
+                    lnk += "?show=" + obj_type + "-{{ manager.obj_id }}";
+                    var link_input = $("#link_info_popup input");
+                    link_input.val(lnk);
+                    link_input.get(0).focus();
+                    link_input.get(0).select();
+                });
+                $("#link_info_popup img").click(function(){
+                    $("#link_info_popup").hide();
+                });
+
+                // show original file path links for images
+                {% if manager.image %}
+                $("#show_fs_files_btn").click(function(){
+                    $("#fs_paths_popup").show();
+                    var fs_input = $("#fs_paths_popup textarea");
+                    $.getJSON("{% url 'original_file_paths' manager.image.id %}",
+                        function(data) {
+                            fs_input.val(data.join("\n"));
+                            fs_input.attr("cols", 150);
+                            fs_input.attr("rows", Math.max(3, data.length));
+                        });
+                });
+                $("#fs_paths_popup img").click(function(){
+                    $("#fs_paths_popup").hide();
+                });
+                {% endif %}
+
+                // handle submit of Add Comment form
+                $("#add_comment_form").ajaxForm({
+                    beforeSubmit: function(data) {
+                        var textArea = $('#add_comment_form textarea');
+                        if ($.trim(textArea.val()).length == 0) return false;
+                    },
+                    success: function(html) {
+                        var $comment = $(html)
+                        linkify_element($comment);
+                        $('#comments_container').prepend( $comment ).show();
+                        var textArea = $('#add_comment_form textarea');
+                        textArea.val('');
+                    },
+                });
+
+                // bind removeItem to various [-] buttons
+                $("#comments_container").on("click", ".removeComment", function(event){
+                    var url = $(this).attr('url');
+                    OME.removeItem(event, ".ann_comment_wrapper", 
+                        url, $.trim($("#object-id").text()), {{ index|default:"0" }});
+                    return false;
+                });
+                $("#tags_container").on("click", ".removeTag", function(event){
+                    var url = $(this).attr('url');
+                    OME.removeItem(event, ".tag_annotation_wrapper", url, 
+                        $.trim($("#object-id").text()), {{ index|default:"0" }});
+                    return false;
+                });
+                $("#fileanns_container").on("click", ".removeFile", function(event) {
+                    var url = $(this).attr('href');
+                    OME.removeItem(event, ".file_ann_wrapper", url, 
+                        $.trim($("#object-id").text()), {{ index|default:"0" }});
+                    return false;
+                });
+                
+                $("#fileanns_container").on("click", ".deleteFile", function(event) {
+                    var url = $(this).attr('href');
+                    OME.deleteItem(event, "file_ann_wrapper", url, $.trim($("#object-id").text()));
+                });
+                
+                $(".dropdown_menu .menu_launch").click(function(e){
+                    $(this).parent().find('ul').css('visibility', 'visible');
+                    $(this).parent().find('.dropdown_menu_options').show();
+                    return false;
+                });
+                // on hover-out of the menu itself, hide drop-down menus
+                $(".dropdown_menu_options").hover(function(){}, function(){
+                    $(this).css('visibility', 'hidden');
+                }).hide();
+
+
+                // Choose to add tags...
+                if ($("#add_tags_form").length === 0) {
+                    $("<form id='add_tags_form' title='Tags Selection' action='{% url 'annotate_tags' %}' method='post'></form>")
+                        .hide().appendTo('body');
+                }
+                $("#launch_tags_form").click(function(event) {
+                    $("#add_tags_form").dialog("open");
+                    // load form via AJAX...
+                    var load_url = $(this).attr('href');
+                    $("#add_tags_form").load(load_url);
+                    return false;
+                });
+                // set-up the tags form to use dialog
+                $("#add_tags_form").dialog({
+                    autoOpen: false,
+                    resizable: false,
+                    height: 450,
+                    width:420,
+                    modal: true,
+                    buttons: {
+                        "Accept": function() {
+                            // simply submit the form (AJAX handling set-up above)
+                            $("#add_tags_form").submit();
+                            $( this ).dialog( "close" );
+                        },
+                        "Cancel": function() {
+                            $( this ).dialog( "close" );
+                        }
+                    }
+                });
+                $('#add_tags_form').ajaxForm({
+                    success: function(data) {
+                        $("#add_tags_form").dialog( "close" );      // hide in case it was submitted via 'Enter'
+                        // update the list of tags
+                        var $tag = $(data);
+                        $("#tags_container").prepend($tag).hide_if_empty();
+                        $(".tooltip", $tag).tooltip_init();
+                    }
+                });
+
+
+                // set-up the attachment selection form to use AJAX. (requires jquery.form.js plugin)
+                if ($("#choose_attachments_form").length === 0) {
+                    $("<form id='choose_attachments_form' title='Choose Attachments' action='{% url 'annotate_file' %}' method='post'></form>")
+                        .hide().appendTo('body');
+                }
+                $('#choose_attachments_form').ajaxForm({
+                    beforeSubmit: function(data) {
+                        $("#batch_attachments_form").dialog( "close" );
+                        $("#fileann_spinner").show();
+                    },
+                    success: function(data) {
+                        $("#fileann_spinner").hide();
+                        // update the list of file annotations and bind actions
+                        var $fileanns = $(data)
+                        $("#fileanns_container").prepend( $fileanns ).show();
+                        $(".tooltip", $fileanns).tooltip_init();
+                    },
+                    error: function(data){
+                        $("#fileann_spinner").hide();
+                        alert(data.response);
+                    }
+                });
+                // prepare dialog for choosing file to attach...
+                $("#choose_attachments_form").dialog({
+                    autoOpen: false,
+                    resizable: false,
+                    height: 420,
+                    width:360,
+                    modal: true,
+                    buttons: {
+                        "Accept": function() {
+                            // simply submit the form (AJAX handling set-up above)
+                            $("#choose_attachments_form").submit();
+                            $( this ).dialog( "close" );
+                        },
+                        "Cancel": function() {
+                            $( this ).dialog( "close" );
+                        }
+                    }
+                });
+                // show dialog for choosing file to attach...
+                $("#choose_file_anns").click(function() {
+                    // show dialog first, then do the AJAX call to load files...
+                    var attach_form = $( "#choose_attachments_form" );
+                    attach_form.dialog( "open" );
+                    // load form via AJAX...
+                    var load_url = $(this).attr('href');
+                    attach_form.load(load_url);
+                    return false;
+                });
+
+
+                // We do this here and in batch_annotate panel
+                OME.initToolbarDropdowns();
+                
+                // Handle Download actions
+                $("#create-ometiff").click(function(e){
+                    
+                    var url = $(this).attr('href');
+                    $("#download_dropdown ul").css('visibility', 'hidden');// hide dropdown menu
+                    var dialog_opts = ['Cancel', 'Create'];
+                    $.ajax({
+                        url: "{% url 'ome_tiff_info' manager.obj_id %}",
+                        cache: false,
+                        dataType: 'json',
+                        success: function(data) {
+                            var msg = "This will create an OME-TIFF file from this Image.";
+                            if (data.id && data.ago) {
+                                msg += "<br>Or you can Download one that was created "+ data.ago +" ago.";
+                                var download_ometiff = data.download;
+                                dialog_opts[1] = "Create New";
+                                dialog_opts.push("Download");
+                            } else {
+                                msg += "<br>This will be attached to the Image and available to download.";
+                            }
+
+                            var confirm_ometiff = OME.confirm_dialog(msg,
+                                function() {
+                                    var btn = confirm_ometiff.data("clicked_button");
+                                    switch (btn) {
+                                        case "Create":   // two options for the same button
+                                        case "Create New":
+                                            $.post( url, function() {
+                                                OME.showActivities();
+                                            });
+                                            break;
+                                        case "Download":
+                                            window.location.href = download_ometiff;
+                                            break;
+                                    }
+                                },
+                                "Create OME-TIFF?",
+                                dialog_opts,
+                                null, 200
+                            );
+                        }
+                    });
+                    
+                    e.preventDefault();
+                    return false;
+                });
+
+                // Channel name editing
+            {% if manager.image or manager.well.getWellSample.image %}
+                // we need to know parent for the 'apply to all'
+                var getParentId = function() {
+                    if (typeof $.jstree === "undefined") {
+                        return;
+                    }
+                    var datatree = $.jstree._focused();
+                    if (!datatree) return;
+                    var sel = datatree.data.ui.selected,
+                        result;
+                    var p = /^(plate-[0-9]+)$/;
+                    if (p.test(sel.attr('id'))) {
+                        return sel.attr('id');
+                    }
+                    var parent = sel.parent().parent(),
+                        parent_id = parent.attr('id');
+                    if (p.test(parent_id)) {
+                        return parent_id;
+                    }
+                    if (/^dataset-([0-9]+)$/.test(parent_id)) {
+                        return parent_id;
+                    }
+                }
+                var $chNameForm = $("#channel_names_edit");
+                // set up form with Parent
+                var pid = getParentId();    // E.g. dataset-123 OR plate-456
+                if (typeof pid === "undefined") {
+                    $chNameForm.find("button[name=apply]").hide();  // hide 'apply to all'
+                } else {
+                    var parentType = pid.split("-")[0];
+                    $chNameForm.find(".ptype").text( parentType );
+                    $chNameForm.find("input[name=parentId]").val(pid).attr('value', pid);
+                    if (parentType === "plate") {
+                        // Plate: only allow 'Apply to All' (all images linked to same Channels)
+                        $chNameForm.find("button[name=save]").remove();
+                    }
+                }
+                var resetChForm = function() {
+                    $chNameForm.find(".originalButtons").show();
+                    $chNameForm.find(".confirmButtons").hide();
+                    $("#channel_names_display").show();
+                    $("#editChannelNames").show();
+                    $chNameForm.hide();
+                }
+                // Workflow starts by displaying the form
+                $("#editChannelNames").click(function(){
+                    $("#channel_names_display").hide();
+                    $("#editChannelNames").hide();
+                    $chNameForm.show();
+                });
+                // Handling of all form buttons. NB: save & apply_confirm buttons submit
+                $chNameForm.find("button").click(function(event){
+                    var name = $(this).attr('name');
+                    if (name === "apply") {
+                        // Ask users to confirm:
+                        $chNameForm.find(".originalButtons").hide();
+                        $chNameForm.find(".confirmButtons").show();
+                        event.preventDefault(); // prevent form submission etc
+                        return false;
+                    } else if (name === "cancel") {
+                        // cancel - hide and don't submit
+                        resetChForm();
+                    }
+                });
+                // Form handled by AJAX
+                $chNameForm.ajaxForm({
+                    dataType:  'json',
+                    success: function(data) {
+                        var cnames = data.channelNames;
+                        // update the channel names, and ititial values in form
+                        $("#channel_names_display span").each(function(i){
+                            if (cnames.hasOwnProperty("channel"+i)) {
+                                $(this).text(cnames["channel"+i]);
+                            }
+                        });
+                        $chNameForm.find("input").each(function(i){
+                            if (cnames.hasOwnProperty( $(this).attr('name') )) {
+                                $(this).attr('value', cnames["channel"+i]);
+                            }
+                        });
+                        resetChForm();
+                    }
+                });
+
+            {% endif %}
+
+            });
+            
+    </script>
+
+
+        <!-- This is used by AJAX loading the right panel, to check it matches current selection -->
+        <div id='object-id' style="display:none">{{manager.obj_type}}-{{ manager.obj_id }}</div>
+
+
+        {% if not manager.tag %}
+        
+        
+        <!-- ANNOTATIONS "General" -->
+        <div id="general_tab" class="right_tab_inner" >
+           
+            {% if manager.image %}            
+
+            {% include "webclient/annotations/includes/toolbar.html" %}
+
+            <!-- Image Name -->
+            {% with obj=manager.image nameText=manager.image.name %}
+                {% include "webclient/annotations/includes/name.html" %}
+            {% endwith %}
+            
+
+            <div style="padding-bottom:6px; position:relative">
+
+                <h2 class="data_heading_id" style="float:left">
+                    {{ manager.obj_type }} ID: <strong>{{ manager.obj_id }}</strong>
+                </h2>
+
+                <button class="btn silver btn_text" href="#" style="float:right"
+                        onclick="return OME.openPopup('{% url 'web_image_viewer' manager.image.id %}')"
+                        title="Open full image viewer in new window">
+                    <span>
+                         {% trans "Full viewer" %} 
+                    </span>
+                </button>
+                <div id="link_info_popup" class="info_popup" style="right:0px; top:30px; padding:4px; display:none">
+                    <input type="text" size="30">
+                    <img title="Close" src="{% static 'webgateway/img/close.gif' %}" />
+                </div>
+
+            </div>
+
+            {% if manager.image.showOriginalFilePaths %}
+            <div style="clear:both"></div>
+            <div id="fs_paths_popup" style="display:none; background: #fff; border: solid 1px #ddd; margin-bottom:5px">
+                <img title="Close" src="{% static 'webgateway/img/close.gif' %}" style="float:right; margin:3px"/>
+                <div style="margin: 4px">{{ manager.image.countImportedImageFiles }} Image file{{ manager.image.countImportedImageFiles|pluralize:'s'}}:</div>
+                <textarea readonly="true" style="width:99%; float:right; resize:none; border:none; padding:5px 0 0 0; margin:0px"></textarea>
+                <div style="clear:both"></div>
+            </div>
+            {% endif %}
+
+            <div style="clear:both"></div>
+            <div style="padding-bottom:6px; position:relative">
+
+
+                {% if manager.openAstexViewerCompatible %}
+                
+                <button style="float:right; margin-right:5px" class="btn silver btn_text" href="#" onclick="return OME.openPopup('{% url 'open_astex_viewer' 'image_8bit' manager.image.id %}')"
+                        title="Open with Open Astex Viewer">
+                    <span>
+                    {% trans "Volume viewer" %} 
+                    </span>
+                </button>
+                {% endif %}
+                
+            </div>
+                  
+            <div style="clear:both"></div>
+                  
+
+            <hr/><!-- Temporary Solution. Not the right way to add borders to elements! -->
+                  
+                  
+                  
+                  
+            <!-- Image Description -->      
+            {% with obj=manager.image %}
+                {% include "webclient/annotations/includes/description.html" %}
+            {% endwith %}
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            <!-- Include table of core metadata, Owner, SizeX,Y,Z, Channels etc -->
+            {% with image=manager.image parent=manager.image.getParent %}
+                {% include "webclient/annotations/includes/core_metadata.html" %}
+            {% endwith %}
+
+
+            {% else %}
+                {% if manager.dataset %}
+
+                {% include "webclient/annotations/includes/toolbar.html" %}
+
+                <!-- Dataset Name -->
+                {% with obj=manager.dataset nameText=manager.dataset.name %}
+                    {% include "webclient/annotations/includes/name.html" %}
+                {% endwith %}
+
+
+                
+                <h2 class="data_heading_id">
+                    {{ manager.obj_type }} ID: <strong>{{ manager.obj_id }}</strong>
+                </h2>
+
+                <hr/>
+                
+                <!-- Dataset Description -->
+                {% with obj=manager.dataset %}
+                    {% include "webclient/annotations/includes/description.html" %}
+                {% endwith %}
+                
+                <table>
+                    <tr>
+                        <th>Owner:</th>
+                        <td id='owner_fullname'>{{ manager.dataset.getOwner.getFullName }}</td>
+                    </tr>
+                    <tr>
+                        <th>Creation Date:</th>
+                        <td id='creation_date'>{{ manager.dataset.getDate|date:"Y-m-d H:i:s" }}</td>
+                    </tr>                    
+                </table>
+                {% else %}
+                    {% if manager.project %}
+
+                    {% include "webclient/annotations/includes/toolbar.html" %}
+
+                    <!-- Project Name -->
+                    {% with obj=manager.project nameText=manager.project.name %}
+                        {% include "webclient/annotations/includes/name.html" %}
+                    {% endwith %}
+
+                    
+                    <h2 class="data_heading_id">
+                        {{ manager.obj_type }} ID: <strong>{{ manager.obj_id }}</strong>
+                    </h2>
+
+                    <hr/>
+                    
+                    <!--Project Description -->
+                    {% with obj=manager.project %}
+                        {% include "webclient/annotations/includes/description.html" %}
+                    {% endwith %}
+                    
+                    <table>
+                        <tr>
+                            <th>Owner:</th>
+                            <td id='owner_fullname'>{{ manager.project.getOwner.getFullName }}</td>
+                        </tr>
+                        <tr>
+                            <th>Creation Date:</th>
+                            <td id='creation_date'>{{ manager.project.getDate|date:"Y-m-d H:i:s" }}</td>
+                        </tr>
+                    </table>
+                    {% endif %}
+                {% endif %}
+            {% endif %}
+            
+            {% if manager.well %}            
+
+            {% include "webclient/annotations/includes/toolbar.html" %}
+
+                        <!-- Image (in WellSample) Description -->
+            {% with obj=manager.well.getWellSample.image nameText=manager.well.getWellSample.image.name %}
+                {% include "webclient/annotations/includes/name.html" %}
+            {% endwith %}
+
+                   
+
+             <h2 class="data_heading_id" style="float:left">
+                Image ID: <strong>{{ manager.well.getWellSample.image.id }}</strong>
+                Well ID: <strong>{{ manager.well.id }}</strong>
+            </h2>
+            
+            <button class="btn silver btn_text" href="#" style="float:right"
+                onclick="return OME.openPopup('{% url 'web_image_viewer' manager.well.getWellSample.image.id %}')" alt="View" title="Open full viewer">
+                <span>
+                {% trans "Launch full viewer" %} 
+                </span>
+            </button>
+            
+            <div style="clear:both"></div>
+
+            <hr/>
+            
+                        <!-- Image (in WellSample) Description -->
+            {% with obj=manager.well.getWellSample.image %}
+                {% include "webclient/annotations/includes/description.html" %}
+            {% endwith %}
+
+            <!-- Include table of core metadata, Owner, SizeX,Y,Z, Channels etc -->
+            {% with image=manager.well.getWellSample.image %}
+                {% include "webclient/annotations/includes/core_metadata.html" %}
+            {% endwith %}
+
+            {% else %}
+                {% if manager.acquisition %}
+
+                {% include "webclient/annotations/includes/toolbar.html" %}
+
+                <!-- Acquisition Name -->
+                {% with obj=manager.acquisition nameText=manager.acquisition.name %}
+                    {% include "webclient/annotations/includes/name.html" %}
+                {% endwith %}
+                
+
+                <h2 class="data_heading_id">
+                    Plate Run ID: <strong>{{ manager.acquisition.id }}</strong>
+                    <!-- open link -->
+                    <button id="show_link_btn" class="btn silver btn_link" title="Link to this Acquisition">
+                        <span></span>
+                    </button>
+                    <div id="link_info_popup" class="info_popup" style="right:0px; top:30px; padding:4px; display:none">
+                        <input type="text" size="30">
+                        <img title="Close" src="{% static 'webgateway/img/close.gif' %}" />
+                    </div>
+                </h2>
+
+                <hr/>
+                
+                <!-- Acquisition Description -->
+                {% with obj=manager.acquisition %}
+                    {% include "webclient/annotations/includes/description.html" %}
+                {% endwith %}
+                
+                <table>
+                    <tr>
+                        <th>Owner:</th>
+                        <td id='owner_fullname'>{{ manager.acquisition.getOwner.getFullName }}</td>
+                    </tr>
+                    <tr>
+                        <th>Creation Date:</th>
+                        <td id='creation_date'>{{ manager.acquisition.getDate|date:"Y-m-d H:i:s" }}</td>
+                    </tr>
+                </table>
+                {% else %}
+                    {% if manager.plate %}
+
+                    {% include "webclient/annotations/includes/toolbar.html" %}
+
+                    <!-- Plate Name -->
+                    {% with obj=manager.plate nameText=manager.plate.name %}
+                        {% include "webclient/annotations/includes/name.html" %}
+                    {% endwith %}
+
+
+                    <h2 class="data_heading_id">
+                        {{ manager.obj_type }} ID: <strong>{{ manager.obj_id }}</strong>
+                    </h2>
+                    
+                    <hr/>
+                    
+                    <!-- Plate Description -->
+                    {% with obj=manager.plate %}
+                        {% include "webclient/annotations/includes/description.html" %}
+                    {% endwith %}
+
+
+                    <table>
+                        <tr>
+                            <th>Owner:</th>
+                            <td id='owner_fullname'>{{ manager.plate.getOwner.getFullName }}</td>
+                        </tr>
+                        <tr>
+                            <th>Creation Date:</th>
+                            <td id='creation_date'>{{ manager.plate.getDate|date:"Y-m-d H:i:s" }}</td>
+                        </tr>
+                        <!--{% comment %}
+                        <tr>
+                            <th>Well Count:</th>
+                            <td id='child_count'>{{ manager.plate.countChildren }} {% plural manager.plate.countChildren 'well' 'Wells' %}</td>
+                        </tr>
+                        {% endcomment %}-->
+                    </table>
+                    {% else %}
+                        {% if manager.screen %}
+
+                        {% include "webclient/annotations/includes/toolbar.html" %}
+
+                        <!-- Screen Name -->
+                        {% with obj=manager.screen nameText=manager.screen.name %}
+                            {% include "webclient/annotations/includes/name.html" %}
+                        {% endwith %}
+
+                        <h2 class="data_heading_id">
+                            {{ manager.obj_type }} ID: <strong>{{ manager.obj_id }}</strong>
+                        </h2>
+                            
+                        <hr/>   
+                            
+
+                        <!-- Screen Description -->
+                        {% with obj=manager.screen %}
+                            {% include "webclient/annotations/includes/description.html" %}
+                        {% endwith %}
+
+                        <table>
+                            <tr>
+                                <th>Owner:</th>
+                                <td id='owner_fullname'>{{ manager.screen.getOwner.getFullName }}</td>
+                            </tr>
+                            <tr>
+                                <th>Creation Date:</th>
+                                <td id='creation_date'>{{ manager.screen.getDate|date:"Y-m-d H:i:s" }}</td>
+                            </tr>                    
+                            <tr>
+                                <th>Screen Count:</th>
+                                <td id='child_count'>{{ manager.screen.countChildren }} {% plural manager.screen.countChildren 'screen' 'screens' %}</td>
+                            </tr>
+                        </table>
+                        {% endif %}
+                    {% endif %}
+                {% endif %}
+            {% endif %}
+        
+        
+        
+            
+            
+            
+            <hr/><!-- Temporary Solution. Not the right way to add borders to elements! -->
+            
+            
+            
+            
+            
+            
+        
+        
+    <!-- ANNOTATIONS -->
+    <!--<h1>{% trans "Annotations" %}</h1>-->
+            
+            <div class="annotations_section">
+            <!-- RATING -->
+      
+                    <h2>{% trans "Rating" %}</h2>
+                    <div style="clear:both"></div>
+                    {% if manager.rating_annotations %}
+                    <div class="lntags">
+                
+                    {% for rating in manager.rating_annotations %}
+                
+                        {% ifequal rating.getValue 0 %}<img src="{% static "webclient/image/rating0.png" %}">{% endifequal %}
+                        {% ifequal rating.getValue 1 %}<img src="{% static "webclient/image/rating1.png" %}">{% endifequal %}
+                        {% ifequal rating.getValue 2 %}<img src="{% static "webclient/image/rating2.png" %}">{% endifequal %}
+                        {% ifequal rating.getValue 3 %}<img src="{% static "webclient/image/rating3.png" %}">{% endifequal %}
+                        {% ifequal rating.getValue 4 %}<img src="{% static "webclient/image/rating4.png" %}">{% endifequal %}
+                        {% ifequal rating.getValue 5 %}<img src="{% static "webclient/image/rating5.png" %}">{% endifequal %}
+                       
+                       
+                        {{ rating.getDetails.getOwner.getNameWithInitial }}
+                        
+                    {% endfor %}
+                       
+                    </div>
+                    {% else %}
+                        {% trans "No ratings" %}
+                    {% endif %}
+             
+             </div>
+            
+            
+            <hr/><!-- Temporary Solution. Not the right way to add borders to elements! -->
+            
+            
+            <!-- TAGS -->               
+            <div class="annotations_section">
+                
+                <h2>{% trans "Tags" %}</h2>
+                
+                
+                
+                {% if manager.canAnnotate %}
+                    <div>
+                        <a id="launch_tags_form" href="{% url 'annotate_tags' %}?{{manager.obj_type}}={{ manager.obj_id }}&index={{ index }}" class="btn silver btn_add"><span></span></a>
+                    </div>
+                {% endif %}
+
+                <!-- display existing Tags -->
+                <div id="tags_container" class="lntags">
+                {% for tag in manager.tag_annotations %}
+                    {% with can_remove=tag.link.canDelete %}
+                        {% include "webclient/annotations/tag.html" %}
+                    {% endwith %}
+                {% endfor %}
+                </div>
+ 
+            </div>
+            
+            
+            <hr/><!-- Temporary Solution. Not the right way to add borders to elements! -->
+            
+            
+            
+            <!-- FILES -->
+            <div class="annotations_section">
+                <h2>{% trans "Attachments" %}</h2>
+
+                    {% if manager.canAnnotate %}
+                        <a id="choose_file_anns" href="{% url 'annotate_file' %}?{{manager.obj_type}}={{ manager.obj_id }}&index={{ index }}" class="btn silver btn_add">
+                            <span></span>
+                        </a>
+                    {% endif %}
+                    <img id='fileann_spinner' src="{% static "webgateway/img/spinner.gif" %}" style="display:none"/>
+
+                <!-- display existing file annotations -->
+
+                    <ul id="fileanns_container" class="lnfiles">
+                        {% for fileann in manager.file_annotations %}
+                            {% with can_remove=fileann.link.canDelete %}
+                                {% include "webclient/annotations/fileann.html" %}
+                            {% endwith %}
+                        {% endfor %}
+                    </ul>
+
+            </div>
+
+
+            <hr/><!-- Temporary Solution. Not the right way to add borders to elements! -->
+
+
+            <!-- CUSTOM ANNOTATIONS -->
+            <div class="annotations_section">
+                <h2>{% trans "Others" %}:</h2>
+                
+                    <!-- tool tips for each <td> is contained in child <span>, which are also hidden -->
+                    <table id="custom_annotations">
+                        {% for ann in manager.xml_annotations %}
+                        <tr><th>XML:</th>
+                            <td>
+                                <div>{{ ann.getValue|escape|slice:"0:30" }}...</div>
+                                <div class="show_xml">Open in window</div><div>{{ ann.getValue }}</div>
+                                <span class="tooltip_html" style='display:none'>{% if ann.ns %}<b>Namespace:</b> {{ ann.ns }}<br />{% endif %}
+                                    {% if ann.description %}<b>Description:</b> {{ ann.description }}<br />{% endif %}
+                                    <b>Owner:</b> {{ ann.getOwner.getFullName }}<br />
+                                    <b>Date:</b> {{ ann.creationEventDate|date:"Y-m-d H:i:s" }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        
+                        {% for ann in manager.boolean_annotations %}
+                        <tr><th>Boolean:</th>
+                            <td>
+                                {{ ann.getValue }}
+                                <span class="tooltip_html" style='display:none'>{% if ann.ns %}<b>Namespace:</b> {{ ann.ns }}<br />{% endif %}
+                                    {% if ann.description %}<b>Description:</b> {{ ann.description }}<br />{% endif %}
+                                    <b>Owner:</b> {{ ann.getOwner.getFullName }}<br />
+                                    <b>Date:</b> {{ ann.creationEventDate|date:"Y-m-d H:i:s" }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% for ann in manager.double_annotations %}
+                        <tr><th>Double:</th>
+                            <td>
+                                {{ ann.getValue }}
+                                <span class="tooltip_html" style='display:none'>{% if ann.ns %}<b>Namespace:</b> {{ ann.ns }}<br />{% endif %}
+                                    {% if ann.description %}<b>Description:</b> {{ ann.description }}<br />{% endif %}
+                                    <b>Owner:</b> {{ ann.getOwner.getFullName }}<br />
+                                    <b>Date:</b> {{ ann.creationEventDate|date:"Y-m-d H:i:s" }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% for ann in manager.long_annotations %}
+                        <tr><th>Long:</th>
+                            <td>
+                                {{ ann.getValue }}
+                                <span class="tooltip_html" style='display:none'>{% if ann.ns %}<b>Namespace:</b> {{ ann.ns }}<br />{% endif %}
+                                    {% if ann.description %}<b>Description:</b> {{ ann.description }}<br />{% endif %}
+                                    <b>Owner:</b> {{ ann.getOwner.getFullName }}<br />
+                                    <b>Date:</b> {{ ann.creationEventDate|date:"Y-m-d H:i:s" }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% for ann in manager.term_annotations %}
+                        <tr><th>Term:</th>
+                            <td>
+                                {{ ann.getValue }}
+                                <span class="tooltip_html" style='display:none'>{% if ann.ns %}<b>Namespace:</b> {{ ann.ns }}<br />{% endif %}
+                                    {% if ann.description %}<b>Description:</b> {{ ann.description }}<br />{% endif %}
+                                    <b>Owner:</b> {{ ann.getOwner.getFullName }}<br />
+                                    <b>Date:</b> {{ ann.creationEventDate|date:"Y-m-d H:i:s" }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% for ann in manager.time_annotations %}
+                        <tr><th>Time:</th>
+                            <td>
+                                {{ ann.getValue }}
+                                <span class="tooltip_html" style='display:none'>{% if ann.ns %}<b>Namespace:</b> {{ ann.ns }}<br />{% endif %}
+                                    {% if ann.description %}<b>Description:</b> {{ ann.description }}<br />{% endif %}
+                                    <b>Owner:</b> {{ ann.getOwner.getFullName }}<br />
+                                    <b>Date:</b> {{ ann.creationEventDate|date:"Y-m-d H:i:s" }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+            </div>
+                    
+                    
+                    
+            <hr/><!-- Temporary Solution. Not the right way to add borders to elements! -->
+
+            
+            
+            <!-- COMMENTS -->
+            <div class="annotations_section">
+                <h2>{% trans "Comment:" %}</h2>
+                
+                    {% if manager.canAnnotate %}
+                    <form id="add_comment_form" action="{% url 'annotate_comment' %}" method="post">
+                    <table>
+                        <tr class="hiddenField"><td>{{ form_comment.image }}</td></tr>
+                        <tr class="hiddenField"><td>{{ form_comment.dataset }}</td></tr>
+                        <tr class="hiddenField"><td>{{ form_comment.project }}</td></tr>
+                        <tr class="hiddenField"><td>{{ form_comment.screen }}</td></tr>
+                        <tr class="hiddenField"><td>{{ form_comment.plate }}</td></tr>
+                        <tr class="hiddenField"><td>{{ form_comment.acquisition }}</td></tr>
+                        <tr class="hiddenField"><td>{{ form_comment.well }}</td></tr>
+                        <tr>
+                            <td>{{ form_comment.comment }}</td>
+                        </tr>
+                        <tr>
+                            <td><input type="submit" value="{% trans 'Add Comment' %}" /></td>
+                        </tr>
+                    </table>
+                    </form>
+                    {% endif %}                        
+                
+                    <div id="comments_container" class="lncomments">
+                        {% for tann in manager.text_annotations %}
+                            {% include "webclient/annotations/comment.html" %}
+                        {% endfor %}
+                    </div>
+           
+            <div class="clear"></div>          
+
+
+
+
+
+
+            <div class="annotations_section">
+                {% if manager.image %}
+                <!-- HIERARCHY - Contained In -->
+                <h2>Image Contained in:</h2>
+                <div id="hierarchy-pane">
+                    <!-- content is loaded by ajax when this tab is first displayed -->
+                    <a id="hierarchy-link" href="{% url 'load_metadata_hierarchy' 'image' manager.image.id %}">Load hierarchy...</a>
+                    <img id="hierarchy-spinner" style="display:none" src="{% static "webgateway/img/spinner.gif" %}" />
+                </div>
+                {% endif %}
+            </div>
+            
+        </div>
+        {% endif %}
+
+
+
+
+
+        {% if manager.tag %}
+
+        <div id="general_tab" class="right_tab_inner" >
+
+            <!-- Toolbar at the top -->
+            {% include "webclient/annotations/includes/toolbar.html" %}
+
+
+                <!-- Tag TextValue -->
+                {% with obj=manager.tag nameText=manager.tag.getValue %}
+                    {% include "webclient/annotations/includes/name.html" %}
+                {% endwith %}
+
+        
+
+
+                <hr/>
+
+                <!-- Tag Description -->
+                {% with obj=manager.tag %}
+                    {% include "webclient/annotations/includes/description.html" %}
+                {% endwith %}
+        
+                <table>
+                    <tr>
+                        <th>Owner:</th>
+                        <td id='owner_fullname'>{{ manager.tag.getOwner.getFullName }}</td>
+                    </tr>
+                    <tr>
+                        <th>Creation Date:</th>
+                        <td id='creation_date'>{{ manager.tag.getDate|date:"Y-m-d H:i:s" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Image Count:</th>
+                        {% if False %}
+                        <td id='child_count'>{{ manager.tag.countChildren }} {% plural manager.tag.countChildren 'tag' 'tags' %}</td>
+                        {% endif %}
+                    </tr>
+                </table>
+        </div>
+        {% endif %}
+    
+    
+
