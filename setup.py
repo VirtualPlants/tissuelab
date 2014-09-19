@@ -37,7 +37,8 @@ setup(
 
         'oalab.applet': [
             'VtkViewer = tissuelab.plugin.applet.vtkviewer:VtkViewer',
-            'OmeroClient = tissuelab.plugin.applet.omeroclient:OmeroClient'
+            'OmeroClient = tissuelab.plugin.applet.omeroclient:OmeroClient',
+            'LineageViewer = tissuelab.plugin.applet.lineage:LineageViewer',
             ],
 
         'oalab.lab': [

@@ -14,6 +14,7 @@ class TissueLab(object):
         'Logger',
         'HistoryWidget',
         'World',
+        'LineageViewer',
         ]
 
     def __call__(self, mainwin):
