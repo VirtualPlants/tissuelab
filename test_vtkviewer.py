@@ -1,6 +1,7 @@
 
 from openalea.vpltk.qt import QtCore, QtGui
-from openalea.vpltk.shell.shell import get_shell_class, get_interpreter_class
+from openalea.oalab.shell import get_shell_class
+from openalea.core.interpreter import get_interpreter_class
 from tissuelab.gui.vtkviewer import VtkViewerWidget
 
 instance = QtGui.QApplication.instance()

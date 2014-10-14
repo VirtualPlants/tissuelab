@@ -1,7 +1,7 @@
 
 __all__ = []
 
-from openalea.vpltk.catalog.factories import ObjectFactory
+from openalea.oalab.legacy.catalog.factories import ObjectFactory
 
 
 AdapterSpatialImageToImage5D = ObjectFactory(name='AdapterSpatialImageToImage5D', 

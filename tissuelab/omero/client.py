@@ -1,10 +1,9 @@
 
+from openalea.core.service.control import create_control, group_controls
+from openalea.oalab.gui.utils import ModalDialog
+from openalea.oalab.service.qt_control import edit
 from openalea.vpltk.qt import QtCore, QtGui
 from tissuelab.omero.omerodbbrowser import OmeroDbBrowser
-from openalea.oalab.control.manager import ControlContainer
-from openalea.oalab.service.control import create, group
-from openalea.oalab.service.qt_control import edit
-from openalea.oalab.gui.utils import ModalDialog 
 
 class OmeroClient(QtGui.QWidget):
     def __init__(self, parent=None):
@@ -40,11 +39,11 @@ class OmeroClient(QtGui.QWidget):
 
     def connect(self, username=None, password=None, host='localhost', port=4064):
         if username is None or password is None:
-            username = create('username', 'IStr')
-            password = create('password', 'IStr')
-            host = create('host', 'IStr', value=host)
-            port = create('port', 'IInt', value=port, constraints={'min':0, 'max':65536})
-            gr = group([username, password, host, port])
+            username = create_control('username', 'IStr')
+            password = create_control('password', 'IStr')
+            host = create_control('host', 'IStr', value=host)
+            port = create_control('port', 'IInt', value=port, constraints={'min':0, 'max':65536})
+            gr = group_controls([username, password, host, port])
             editor = edit(gr)
             dialog = ModalDialog(editor)
             if dialog.exec_():

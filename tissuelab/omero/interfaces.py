@@ -1,7 +1,7 @@
 
 __all__ = ['IImage5DViewer', 'IOmeroImage', 'ISpatialImage', 'IAdapter']
 
-from openalea.vpltk.catalog.interface import IInterface
+from openalea.oalab.legacy.catalog.interface import IInterface
 
 class IAdapter(IInterface):
     name = 'IAdapter'
