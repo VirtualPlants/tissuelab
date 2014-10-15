@@ -61,7 +61,3 @@ class VtkViewer(PluginApplet):
         applet = self.new(self.name, self())
         mainwindow.add_applet(applet, self.alias, area='outputs')
         self._fill_menu(mainwindow, applet)
-
-    def __del__(self):
-        import traceback
-        traceback.print_stack()

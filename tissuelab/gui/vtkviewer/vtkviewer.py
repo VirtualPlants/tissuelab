@@ -7,12 +7,14 @@ from openalea.vpltk.qt import QtGui
 from vtk.qt4.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from openalea.oalab.session.session import Session
 
+
 def expand(widget):
     p = QtGui.QSizePolicy
     widget.setSizePolicy(p(p.MinimumExpanding, p.MinimumExpanding))
 
 
 class VtkViewerWidget(QtGui.QWidget, AbstractListener):
+
     def __init__(self):
         QtGui.QWidget.__init__(self)
         AbstractListener.__init__(self)
@@ -41,7 +43,9 @@ class VtkViewerWidget(QtGui.QWidget, AbstractListener):
                 self.vtk.add_actor(obj_name, obj)
         # self.vtk.compute()
 
+
 class VtkViewer(QtGui.QWidget):
+
     def __init__(self):
         QtGui.QWidget.__init__(self)
 
@@ -152,7 +156,6 @@ class VtkViewer(QtGui.QWidget):
 
         self.color_cell(name)
 
-
     def color_cell(self, name, cell_id=None, color=None, alpha=None, bg_id=0, cmap='default'):
 
         colorFunc = self.volume_property[name].GetRGBTransferFunction()
@@ -188,7 +191,7 @@ class VtkViewer(QtGui.QWidget):
                     if i != 0:
                         alphaChannelFunc.AddPoint(i, alpha)
 
-            else :
+            else:
                 colorFunc.AddRGBPoint(cell_id, *color)
                 alphaChannelFunc.AddPoint(cell_id, alpha)
 
@@ -242,8 +245,6 @@ class VtkViewer(QtGui.QWidget):
 
         self.compute()
 
-
     def resizeEvent(self, *args, **kwargs):
         self.render()
         return QtGui.QWidget.resizeEvent(self, *args, **kwargs)
-
