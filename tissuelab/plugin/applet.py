@@ -58,6 +58,5 @@ class VtkViewer(PluginApplet):
         if applet is None or mainwindow is None:
             return
 
-        applet = self.new(self.name, self())
         mainwindow.add_applet(applet, self.alias, area='outputs')
         self._fill_menu(mainwindow, applet)
