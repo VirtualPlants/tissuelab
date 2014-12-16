@@ -5,6 +5,7 @@ class LineageViewer(PluginApplet):
 
     name = 'LineageViewer'
     alias = 'Lineage Viewer'
+    icon = 'icon_lineageviewer.png'
 
     def __call__(self):
         from tissuelab.gui.lineage import LineageViewer
@@ -46,6 +47,7 @@ class VtkViewer(PluginApplet):
 
     name = 'VtkViewer'
     alias = '3D Viewer'
+    icon = 'icon_vtkviewer.png'
 
     def __call__(self):
         from tissuelab.gui.vtkviewer import VtkViewerWidget
