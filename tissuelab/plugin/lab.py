@@ -3,6 +3,8 @@ from openalea.oalab.plugins.labs.default import DefaultLab
 
 class TissueLab(DefaultLab):
     name = 'tissue'
+    icon = 'icon_tissuelab.png'
+    alias = 'Tissue'
 
     applets = [
         'ProjectManager',
