@@ -4,8 +4,10 @@ import numpy as np
 
 from openalea.core.observer import AbstractListener
 from openalea.vpltk.qt import QtGui
+from openalea.oalab.world import World
+from openalea.core.service.ipython import interpreter as get_interpreter
 from vtk.qt4.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
-from openalea.oalab.session.session import Session
+
 
 
 def expand(widget):
@@ -23,10 +25,12 @@ class VtkViewerWidget(QtGui.QWidget, AbstractListener):
         self.vtk = VtkViewer()
         layout.addWidget(self.vtk)
 
-        self.session = Session()
-        self.session.world.register_listener(self)
-        self.session.interpreter.locals['world_viewer'] = self
-        self.session.interpreter.locals['viewer'] = self.vtk
+        self.world = World()
+        self.world.register_listener(self)
+
+        self.interpreter = get_interpreter()
+        self.interpreter.locals['world_viewer'] = self
+        self.interpreter.locals['viewer'] = self.vtk
 
     def notify(self, sender, event=None):
         signal, data = event
