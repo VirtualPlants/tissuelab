@@ -45,7 +45,7 @@ class VtkViewerWidget(QtGui.QWidget, AbstractListener):
                 self.vtk.add_matrix(obj_name, obj)
             if isinstance(obj, vtk.vtkActor):
                 self.vtk.add_actor(obj_name, obj)
-        # self.vtk.compute()
+        self.vtk.compute()
 
 
 class VtkViewer(QtGui.QWidget):
