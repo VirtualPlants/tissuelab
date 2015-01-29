@@ -163,7 +163,9 @@ class VtkViewer(QtGui.QWidget):
         self.compute()
 
     def _display_volume(self, disp=True):
-        self.volume.clear()
+        for name, volume in self.volume.items():
+            self.ren.RemoveVolume(volume)
+            del self.volume[name]
         self.volume_property.clear()
         if disp:
             for name, data_matrix in self.matrix.items():
