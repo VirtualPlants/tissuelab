@@ -159,6 +159,10 @@ class VtkViewer(QtGui.QWidget):
         self.actor = {}
 
     def display_volume(self, disp=True):
+        self._display_volume(disp)
+        self.compute()
+
+    def _display_volume(self, disp=True):
         self.volume.clear()
         self.volume_property.clear()
         if disp:
