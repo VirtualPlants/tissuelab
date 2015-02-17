@@ -27,7 +27,7 @@ setup(
 
     # package installation
     packages=['tissuelab'],
-    package_dir={'tissuelab':'tissuelab'},
+    package_dir={'tissuelab': 'tissuelab'},
 
     zip_safe=False,
     include_package_data=True,
@@ -37,18 +37,18 @@ setup(
 
         'oalab.applet': [
             'VtkViewer = tissuelab.plugin.applet:VtkViewer',
+            'VtkControlPanel = tissuelab.plugin.applet:VtkControlPanel',
             'OmeroClient = tissuelab.plugin.applet:OmeroClient',
             'LineageViewer = tissuelab.plugin.applet:LineageViewer',
-            ],
+        ],
 
         'oalab.lab': [
             'TissueLab = tissuelab.plugin.lab:TissueLab',
-            ],
+        ],
 
         'oalab.interface': [
-            ],
+        ],
 
 
-        },
-    )
-
+    },
+)

@@ -24,6 +24,9 @@ class TissueLab(DefaultLab):
     layout = {
         'children': {0: [1, 2], 2: [3, 4], 3: [5, 6], 4: [7, 8], 7: [11, 12], 8: [9, 10]},
         'parents': {0: None, 1: 0, 2: 0, 3: 2, 4: 2, 5: 3, 6: 3, 7: 4, 8: 4, 9: 8, 10: 8, 11: 7, 12: 7},
+        'connections': [
+            ('VtkViewer:matrixAdded', 'VtkControlPanel:set_matrix')
+        ],
         'properties': {
             0: {'amount': 0.04774535809018567, 'splitDirection': 2},
             1: {'widget':

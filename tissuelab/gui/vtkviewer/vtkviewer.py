@@ -3,7 +3,7 @@ import vtk
 import numpy as np
 
 from openalea.core.observer import AbstractListener
-from openalea.vpltk.qt import QtGui
+from openalea.vpltk.qt import QtGui, QtCore
 from openalea.oalab.world import World
 from openalea.core.service.ipython import interpreter as get_interpreter
 from vtk.qt4.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
@@ -68,9 +68,9 @@ def blend_funct(data_matrix, data1, LUT1, data2, LUT2, orientation):
     if orientation == 1:
         imgactor.SetDisplayExtent(np.round(xMax / 2), np.round(xMax / 2), 0, yMax, 0, zMax)
     elif orientation == 2:
-        imgactor.SetDisplayExtent(0, xMax, 0, yMax, np.round(zMax / 2), np.round(zMax / 2))
-    elif orientation == 3:
         imgactor.SetDisplayExtent(0, xMax, np.round(yMax / 2), np.round(yMax / 2), 0, zMax)
+    elif orientation == 3:
+        imgactor.SetDisplayExtent(0, xMax, 0, yMax, np.round(zMax / 2), np.round(zMax / 2))
 
     imgactor.SetOrigin(nx / 2., ny / 2., nz / 2.)
     imgactor.SetPosition(-(nx - 1) / 2., -(ny - 1) / 2., -(nz - 1) / 2.)
@@ -78,22 +78,8 @@ def blend_funct(data_matrix, data1, LUT1, data2, LUT2, orientation):
     return imgactor, blend
 
 
-class VtkControlPanel(QtGui.QWidget):
-
-    def __init__(self, parent=None):
-        QtGui.QWidget.__init__(self)
-        self._layout = QtGui.QVBoxLayout(self)
-
-        from openalea.oalab.service.qt_control import qt_editor
-        from openalea.core.control import Control
-        x = Control('x', 'IInt', 0)
-        x.interface.min = 0
-        x.interface.max = 255
-        editor = qt_editor(x)
-        self._layout.addWidget(editor)
-
-
 class VtkViewerWidget(QtGui.QWidget, AbstractListener):
+    matrixAdded = QtCore.Signal(str)
 
     def __init__(self):
         QtGui.QWidget.__init__(self)
@@ -101,6 +87,7 @@ class VtkViewerWidget(QtGui.QWidget, AbstractListener):
 
         layout = QtGui.QVBoxLayout(self)
         self.vtk = VtkViewer()
+        self.vtk.matrixAdded.connect(self.matrixAdded.emit)
         layout.addWidget(self.vtk)
 
         self.world = World()
@@ -109,6 +96,28 @@ class VtkViewerWidget(QtGui.QWidget, AbstractListener):
         self.interpreter = get_interpreter()
         self.interpreter.locals['world_viewer'] = self
         self.interpreter.locals['viewer'] = self.vtk
+
+        self._create_actions()
+        self._create_connections()
+
+    def show_control_panel(self):
+        from tissuelab.gui.vtkviewer.vtkcontrolpanel import VtkControlPanel
+        self.panel = VtkControlPanel()
+        self.matrixAdded.connect(self.panel.set_matrix)
+        self.panel.set_viewer(self.vtk)
+        self.panel.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+        self.panel.show()
+
+    def _create_actions(self):
+        self.action_control_panel = QtGui.QAction('Control Panel', self)
+
+    def _create_connections(self):
+        self.action_control_panel.triggered.connect(self.show_control_panel)
+
+    def toolbar_actions(self):
+        return [
+            self.action_control_panel
+        ]
 
     def notify(self, sender, event=None):
         signal, data = event
@@ -127,6 +136,7 @@ class VtkViewerWidget(QtGui.QWidget, AbstractListener):
 
 
 class VtkViewer(QtGui.QWidget):
+    matrixAdded = QtCore.Signal(str)
 
     def __init__(self):
         QtGui.QWidget.__init__(self)
@@ -157,21 +167,26 @@ class VtkViewer(QtGui.QWidget):
         self.volume_property = {}
         self.volume = {}
         self.actor = {}
+        self.property = {}
 
     def display_volume(self, disp=True):
+        self.clear_scene()
         self._display_volume(disp)
         self.compute()
 
+    def display_cut_planes(self, disp=True):
+        self.clear_scene()
+        self._display_cut_planes(disp)
+        self.compute()
+
     def _display_volume(self, disp=True):
-        for name, volume in self.volume.items():
-            self.ren.RemoveVolume(volume)
-            del self.volume[name]
-        self.volume_property.clear()
-        if disp:
-            for name, data_matrix in self.matrix.items():
-                self.add_matrix_as_volume(name, data_matrix, data_matrix.dtype)
-        else:
-            pass
+        for name in self.volume:
+            self.volume_property[name]['disp'] = disp
+
+    def _display_cut_planes(self, disp=True):
+        for actor_name in self.actor:
+            if '_cut_plane_' in actor_name:
+                self.property[actor_name]['disp'] = disp
 
     def initialize(self):
         pass
@@ -185,6 +200,12 @@ class VtkViewer(QtGui.QWidget):
 #         x, y = iren.GetEventPosition()
 #         self.picker.Pick(x, y, 0, self.ren)
 #         print self.picker.GetSubId()
+
+    def clear_scene(self):
+        for name, volume in self.volume.items():
+            self.ren.RemoveVolume(volume)
+        for name, actor in self.actor.items():
+            self.ren.RemoveActor(actor)
 
     def clear(self):
         for name, volume in self.volume.items():
@@ -213,7 +234,7 @@ class VtkViewer(QtGui.QWidget):
 
         if position > bounds[orientation - 1]:
             position = bounds[orientation - 1]
-        elif position < bounds[orientation - 1]:
+        elif position < 0:
             position = 0
 
         if orientation == 1:
@@ -232,9 +253,11 @@ class VtkViewer(QtGui.QWidget):
 
     def compute(self):
         for name, volume in self.volume.items():
-            self.ren.AddVolume(volume)
+            if self.volume_property[name]['disp']:
+                self.ren.AddVolume(volume)
         for name, actor in self.actor.items():
-            self.ren.AddActor(actor)
+            if self.property[name]['disp']:
+                self.ren.AddActor(actor)
 
         self.iren.Initialize()
         self.iren.Start()
@@ -246,10 +269,15 @@ class VtkViewer(QtGui.QWidget):
 
     def add_actor(self, name, actor):
         self.actor[name] = actor
+        self.property[name] = dict(disp=True)
 
     def add_matrix(self, name, data_matrix, datatype=np.uint8, decimate=1):
         self.matrix[name] = data_matrix
+
+        self.add_matrix_as_volume(name, data_matrix, datatype, decimate)
         self.add_matrix_cut_planes(name, data_matrix, datatype, decimate)
+
+        self.matrixAdded.emit(name)
 
     def add_matrix_cut_planes(self, name, data_matrix, datatype=np.uint16, decimate=1):
         self.reader[name] = reader = matrix_to_image_reader(name, data_matrix, datatype, decimate)
@@ -272,9 +300,11 @@ class VtkViewer(QtGui.QWidget):
         colorFunc = vtk.vtkColorTransferFunction()
         alphaChannelFunc = vtk.vtkPiecewiseFunction()
 
-        volume_property = self.volume_property[name] = vtk.vtkVolumeProperty()
+        volume_property = vtk.vtkVolumeProperty()
         volume_property.SetColor(colorFunc)
         volume_property.SetScalarOpacity(alphaChannelFunc)
+
+        self.volume_property[name] = dict(vtkVolumeProperty=volume_property, disp=True)
 
         volume = self.volume[name] = vtk.vtkVolume()
         volume.SetMapper(volumeMapper)
@@ -286,8 +316,8 @@ class VtkViewer(QtGui.QWidget):
 
     def color_cell(self, name, cell_id=None, color=None, alpha=None, bg_id=0, cmap='default'):
 
-        colorFunc = self.volume_property[name].GetRGBTransferFunction()
-        alphaChannelFunc = self.volume_property[name].GetScalarOpacity()
+        colorFunc = self.volume_property[name]['vtkVolumeProperty'].GetRGBTransferFunction()
+        alphaChannelFunc = self.volume_property[name]['vtkVolumeProperty'].GetScalarOpacity()
 
         if alpha is None:
             alpha = 1.
