@@ -84,22 +84,6 @@ class OmeroClient(QtGui.QWidget):
             return self._connection.getObject(category, uid)
 
     def get_image(self, uid):
-        image = self.read(category='Image', uid=uid)
-
-        # Prepare plane list...
-        sizeZ = image.getSizeZ()
-        sizeC = image.getSizeC()
-        sizeT = image.getSizeT()
-        zctList = []
-
-        for z in range(sizeZ):
-            for c in range(sizeC):
-                for t in range(sizeT):
-                    zctList.append((z, c, t))
-
-        planes = image.getPrimaryPixels().getPlanes(zctList)
-
-        import numpy
-        seg = numpy.array(list(planes))
-
-        return seg
+        image_wrapper = self.read(category='Image', uid=uid)
+        from tissuelab.omero.utils import image_wrapper_to_ndarray
+        return image_wrapper_to_ndarray(image_wrapper)

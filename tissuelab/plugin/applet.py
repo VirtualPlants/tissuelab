@@ -26,6 +26,7 @@ class OmeroClient(PluginApplet):
 
     name = 'OmeroClient'
     alias = 'Omero DB'
+    icon = 'icon_omero.png'
 
     def __call__(self):
         from tissuelab.omero.client import OmeroClient

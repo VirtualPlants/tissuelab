@@ -7,6 +7,7 @@ from openalea.image.pil import Image
 from openalea.vpltk.qt import QtGui, QtCore
 from openalea.vpltk.qt.QtCore import Signal
 
+
 def image_to_items(image):
     item_type_image = QtGui.QStandardItem('image')
     item_image = QtGui.QStandardItem(image.getName())
@@ -23,6 +24,7 @@ def image_to_items(image):
     item_thumbnail.setIcon(QtGui.QIcon(filename))
     return [item_image, item_type_image, item_id, item_thumbnail]
 
+
 def dataset_to_items(dataset):
     item_type_dataset = QtGui.QStandardItem('dataset')
     item_dataset = QtGui.QStandardItem(dataset.getName())
@@ -32,6 +34,7 @@ def dataset_to_items(dataset):
 
     return [item_dataset, item_type_dataset, item_id]
 
+
 def project_to_items(project):
     item_type_project = QtGui.QStandardItem('project')
     item_project = QtGui.QStandardItem(project.getName())
@@ -40,6 +43,7 @@ def project_to_items(project):
     item_project.setData(project)
 
     return [item_project, item_type_project, item_id]
+
 
 def group_to_items(group):
     item_type_group = QtGui.QStandardItem('group')
@@ -52,6 +56,7 @@ def group_to_items(group):
 
 
 class OmeroModel(QtGui.QStandardItemModel):
+
     def __init__(self):
         self._connexion = None
         self._data = []
@@ -67,7 +72,7 @@ class OmeroModel(QtGui.QStandardItemModel):
         # db type easily
         self.clear()
         conn = self._connexion
-        if conn is None :
+        if conn is None:
             return
 
         for group in conn.getGroupsMemberOf():
@@ -103,17 +108,18 @@ class OmeroModel(QtGui.QStandardItemModel):
     def omeroObject(self, idx):
         item = self.itemFromIndex(idx)
         parent = item.parent()
-        if parent :
+        if parent:
             item = parent.child
-        else :
+        else:
             item = self.item
 
         data_type = str(item(idx.row(), 1).text()).capitalize()
         data_id = int(item(idx.row(), 2).text())
-        if data_type == 'Group' :
+        if data_type == 'Group':
             return None
-        else :
+        else:
             return self._connexion.getObject(data_type, data_id)
+
 
 class OmeroView(QtGui.QTreeView):
     objectSelected = Signal(object)
@@ -123,6 +129,11 @@ class OmeroView(QtGui.QTreeView):
         QtGui.QTreeView.__init__(self)
 
         self.setEditTriggers(QtGui.QTreeView.NoEditTriggers)
+
+        self.setDragEnabled(True)
+        self.setDropIndicatorShown(True)
+        self.setAcceptDrops(True)
+
         self.setIconSize(QtCore.QSize(50, 50))
         self.fineTune()
 
@@ -134,8 +145,48 @@ class OmeroView(QtGui.QTreeView):
     def currentChanged(self, current, previous):
         obj = self.model().omeroObject(current)
         self.objectSelected.emit(obj)
-        if obj.__class__.__name__ == '_ImageWrapper' :
+        if obj.__class__.__name__ == '_ImageWrapper':
             self.imageSelected.emit(obj)
+
+    # Drag and drop
+
+    def startDrag(self, supportedActions):
+        from openalea.core.service.mimetype import encode
+        index = self.selectedIndexes()
+        obj = self.model().omeroObject(index[0])
+        conn = self.model()._connexion
+
+        uri = '%(NAME)s = omero://%(USER)s@%(HOST)s:%(PORT)s/%(ID)s' % dict(
+            USER=conn._ic_props['omero.user'],
+            PORT=conn.port,
+            HOST=conn.host,
+            NAME=obj.getName(),
+            ID=obj.getId(),
+        )
+
+        mimetype, mimedata = encode(uri, mimetype='openalealab/omero')
+        qmime_data = QtCore.QMimeData()
+        qmime_data.setData(mimetype, mimedata)
+        qmime_data.setText(obj.getName())
+        drag = QtGui.QDrag(self)
+        drag.setMimeData(qmime_data)
+        drag.start()
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasFormat("openalealab/omero"):
+            event.accept()
+        else:
+            event.ignore()
+
+    def dragMoveEvent(self, event):
+        if event.mimeData().hasFormat("openalealab/omero"):
+            event.setDropAction(QtCore.Qt.CopyAction)
+            event.accept()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event):
+        event.ignore()
 
 
 class OmeroDbBrowser(QtGui.QWidget):
@@ -163,13 +214,13 @@ class OmeroDbBrowser(QtGui.QWidget):
         self.model.setHorizontalHeaderLabels(titles)
 
 
-if __name__ == '__main__' :
+if __name__ == '__main__':
     import sys
     import tissuelab.omero
     app = QtGui.QApplication.instance()
-    if app :
+    if app:
         EMBEDED = True
-    else :
+    else:
         EMBEDED = False
         app = QtGui.QApplication(sys.argv)
 
@@ -185,7 +236,7 @@ if __name__ == '__main__' :
     w.setConnection(conn)
     w.show()
 
-    if not EMBEDED :
+    if not EMBEDED:
         app.exec_()
 
     conn._closeSession()
