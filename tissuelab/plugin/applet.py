@@ -68,7 +68,7 @@ class VtkControlPanel(PluginApplet):
 
     name = 'VtkControlPanel'
     alias = '3D Viewer controls'
-    icon = 'icon_vtkviewer.png'
+    icon = 'icon_vtkcontrolpanel.png'
 
     def __call__(self):
         from tissuelab.gui.vtkviewer.vtkcontrolpanel import VtkControlPanel

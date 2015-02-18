@@ -5,7 +5,9 @@ from openalea.oalab.service.qt_control import edit
 from openalea.vpltk.qt import QtCore, QtGui
 from tissuelab.omero.omerodbbrowser import OmeroDbBrowser
 
+
 class OmeroClient(QtGui.QWidget):
+
     def __init__(self, parent=None):
         QtGui.QWidget.__init__(self, parent)
 
@@ -32,20 +34,26 @@ class OmeroClient(QtGui.QWidget):
 
         self.menu.addAction(self.action_connect_db)
 
-    def contextMenuEvent(self, event):
-        menu = QtGui.QMenu(self)
-        menu.addAction(self.action_connect_db)
-        menu.exec_(event.globalPos())
+    def toolbar_actions(self):
+        return [self.action_connect_db]
+
+    def menu_actions(self):
+        return [self.action_connect_db]
+
+    def menus(self):
+        return [self.menu]
 
     def connect(self, username=None, password=None, host='localhost', port=4064):
         if username is None or password is None:
             username = create_control('username', 'IStr')
             password = create_control('password', 'IStr')
             host = create_control('host', 'IStr', value=host)
-            port = create_control('port', 'IInt', value=port, constraints={'min':0, 'max':65536})
+            port = create_control('port', 'IInt', value=port, constraints={'min': 0, 'max': 65536})
             gr = group_controls([username, password, host, port])
-            editor = edit(gr)
-            dialog = ModalDialog(editor)
+            container = edit(gr)
+            qt_password = container.editor[password]()
+            qt_password.setEchoMode(QtGui.QLineEdit.Password)
+            dialog = ModalDialog(container)
             if dialog.exec_():
                 username = username.value
                 password = password.value

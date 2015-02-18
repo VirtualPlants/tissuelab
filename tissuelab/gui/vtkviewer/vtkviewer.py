@@ -353,19 +353,27 @@ class VtkViewer(QtGui.QWidget):
                 colorFunc.AddRGBPoint(cell_id, *color)
                 alphaChannelFunc.AddPoint(cell_id, alpha)
 
+    def demo_matrix_xyz(self):
+        dtype = np.uint16
+        matrix = np.zeros([100, 100, 100], dtype=dtype)
+        matrix[90:100, 0:10, 0:10] = 1
+        matrix[0:10, 90:100, 0:10] = 2
+        matrix[0:10, 0:10, 90:100] = 3
+        return matrix
+
     def demo_matrix1(self):
         dtype = np.uint16
-        matrix1 = np.zeros([75, 75, 75], dtype=dtype)
-        matrix1[25:55, 25:55, 25:55] = 1
-        matrix1[45:74, 45:74, 45:74] = 10
-        return matrix1
+        matrix = np.zeros([75, 75, 75], dtype=dtype)
+        matrix[25:55, 25:55, 25:55] = 1
+        matrix[45:74, 45:74, 45:74] = 10
+        return matrix
 
     def demo_matrix2(self):
         dtype = np.uint16
-        matrix2 = np.zeros([75, 75, 75], dtype=dtype)
-        matrix2[0:10, 0:10, 0:10] = 1
+        matrix = np.zeros([75, 75, 75], dtype=dtype)
+        matrix[0:10, 0:10, 0:10] = 1
 
-        return matrix2
+        return matrix
 
     def demo_actor(self):
         source = vtk.vtkSphereSource()
