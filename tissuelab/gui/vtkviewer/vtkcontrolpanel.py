@@ -31,8 +31,6 @@ class VtkControlPanel(QtGui.QWidget):
         from openalea.core.control.manager import ControlContainer
 
         self._manager = ControlContainer()
-        self._view = ControlManagerWidget(manager=self._manager)
-
         self._params = {}
 
         self._cb_matrix_name = QtGui.QComboBox()
@@ -40,13 +38,7 @@ class VtkControlPanel(QtGui.QWidget):
         self._cb_matrix_name.setSizePolicy(p(p.Expanding, p.Maximum))
         self._cb_matrix_name.currentIndexChanged.connect(self._matrix_name_changed)
 
-        self._layout = QtGui.QVBoxLayout(self)
-        self._layout.addWidget(self._cb_matrix_name)
-        self._layout.addWidget(self._view)
-
         self._viewer = None
-
-        self._view.model.set_manager(self._manager)
 
         for i, data in enumerate([
             ('x', self._x_slider_changed),
@@ -70,6 +62,15 @@ class VtkControlPanel(QtGui.QWidget):
         self.interpreter = get_interpreter()
         self.interpreter.locals['viewer_control'] = self
 
+        from openalea.oalab.service.qt_control import edit
+        #self._view = ControlManagerWidget(manager=self._manager)
+        # self._view.model.set_manager(self._manager)
+        self._view = edit(self._manager)
+
+        self._layout = QtGui.QVBoxLayout(self)
+        self._layout.addWidget(self._cb_matrix_name)
+        self._layout.addWidget(self._view)
+
     def __getitem__(self, key):
         return self._manager.control(name=key)
 
@@ -77,7 +78,6 @@ class VtkControlPanel(QtGui.QWidget):
         self._viewer = viewer
 
     def clear(self):
-        print '---------->'
         self._cb_matrix_name.clear()
         self._params.clear()
 
