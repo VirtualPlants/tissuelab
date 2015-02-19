@@ -133,10 +133,10 @@ def expand(widget):
 def define_LUT(image, colormap, i_min=None, i_max=None):
     if i_min is None:
         # i_min = image.min()
-        i_min = np.percentile(image,5)
+        i_min = np.percentile(image, 5)
     if i_max is None:
         # i_max = image.max()
-        i_max = np.percentile(image,95)
+        i_max = np.percentile(image, 95)
     # lut = vtk.vtkLookupTable()
     lut = vtk.vtkDiscretizableColorTransferFunction()
     # lut.DiscretizeOn()
@@ -145,42 +145,41 @@ def define_LUT(image, colormap, i_min=None, i_max=None):
         # lut.SetSaturationRange(0, 0)
         # lut.SetHueRange(0, 0)
         # lut.SetValueRange(0, 1)
-        lut.AddRGBPoint(i_min,0.0,0.0,0.0)
-        lut.AddRGBPoint(i_max,1.0,1.0,1.0)
+        lut.AddRGBPoint(i_min, 0.0, 0.0, 0.0)
+        lut.AddRGBPoint(i_max, 1.0, 1.0, 1.0)
 
     elif colormap == "invert_grey":
-        lut.AddRGBPoint(i_min,1.0,1.0,1.0)
-        lut.AddRGBPoint(0.5*i_min+0.5*i_max,0.5,0.5,0.55)
-        lut.AddRGBPoint(i_max,0.0,0.0,0.0)
+        lut.AddRGBPoint(i_min, 1.0, 1.0, 1.0)
+        lut.AddRGBPoint(0.5 * i_min + 0.5 * i_max, 0.5, 0.5, 0.55)
+        lut.AddRGBPoint(i_max, 0.0, 0.0, 0.0)
 
     elif colormap == "vegetation":
-        lut.AddRGBPoint(1.0*i_min+0.0*i_max,255/255.,246/255.,229/255.)
-        lut.AddRGBPoint(0.8*i_min+0.2*i_max,219/255.,219/255.,162/255.)
-        lut.AddRGBPoint(0.6*i_min+0.4*i_max,158/255.,184/255.,106/255.)
-        lut.AddRGBPoint(0.4*i_min+0.6*i_max,91/255.,148/255.,62/255.)
-        lut.AddRGBPoint(0.2*i_min+0.8*i_max,29/255.,112/255.,29/255.)
-        lut.AddRGBPoint(0.0*i_min+1.0*i_max,8/255.,77/255.,31/255.)
+        lut.AddRGBPoint(1.0 * i_min + 0.0 * i_max, 255 / 255., 246 / 255., 229 / 255.)
+        lut.AddRGBPoint(0.8 * i_min + 0.2 * i_max, 219 / 255., 219 / 255., 162 / 255.)
+        lut.AddRGBPoint(0.6 * i_min + 0.4 * i_max, 158 / 255., 184 / 255., 106 / 255.)
+        lut.AddRGBPoint(0.4 * i_min + 0.6 * i_max, 91 / 255., 148 / 255., 62 / 255.)
+        lut.AddRGBPoint(0.2 * i_min + 0.8 * i_max, 29 / 255., 112 / 255., 29 / 255.)
+        lut.AddRGBPoint(0.0 * i_min + 1.0 * i_max, 8 / 255., 77 / 255., 31 / 255.)
 
     elif colormap == "color":
         # lut.SetNumberOfTableValues(image.max() + 1)
         # lut.SetNumberOfColors(i_max() + 1)
         # lut.SetRange(i_min(), i_max())
-        lut.AddHSVPoint(i_min,0.0,1.0,0.8)
-        lut.AddHSVPoint(0.67*i_min+0.33*i_max,0.33,1.0,0.8)
-        lut.AddHSVPoint(0.33*i_min+0.67*i_max,0.67,1.0,0.8)
-        lut.AddHSVPoint(i_max,1.0,1.0,0.8)
+        lut.AddHSVPoint(i_min, 0.0, 1.0, 0.8)
+        lut.AddHSVPoint(0.67 * i_min + 0.33 * i_max, 0.33, 1.0, 0.8)
+        lut.AddHSVPoint(0.33 * i_min + 0.67 * i_max, 0.67, 1.0, 0.8)
+        lut.AddHSVPoint(i_max, 1.0, 1.0, 0.8)
 
     elif colormap == "glasbey":
         from glasbey import glasbey
         if i_max < 255:
             for i in xrange(256):
-            #   lut.AddRGBPoint((1.-i/255.)*i_min + (i/255.)*i_max,glasbey[i][0],glasbey[i][1],glasbey[i][2])
-                lut.AddRGBPoint(i,glasbey[i][0],glasbey[i][1],glasbey[i][2])
+                #   lut.AddRGBPoint((1.-i/255.)*i_min + (i/255.)*i_max,glasbey[i][0],glasbey[i][1],glasbey[i][2])
+                lut.AddRGBPoint(i, glasbey[i][0], glasbey[i][1], glasbey[i][2])
         else:
             for i in np.unique(image):
-            # for i in xrange(65536):
-                lut.AddRGBPoint(i,glasbey[i%256][0],glasbey[i%256][1],glasbey[i%256][2])
-
+                # for i in xrange(65536):
+                lut.AddRGBPoint(i, glasbey[i % 256][0], glasbey[i % 256][1], glasbey[i % 256][2])
 
     # lut.Build()
     return lut
@@ -438,10 +437,10 @@ class VtkViewer(QtGui.QWidget):
 
     def add_matrix_cut_planes(self, name, data_matrix, datatype=np.uint16, decimate=1, **kwargs):
         self.reader[name] = reader = matrix_to_image_reader(name, data_matrix, datatype, decimate)
-        cmap = kwargs.get('colormap','grey')
+        cmap = kwargs.get('colormap', 'grey')
         # bwLut = define_LUT(data_matrix, "grey")
         # colorLut = define_LUT(data_matrix, "glasbey")
-        lut = define_LUT(data_matrix,cmap)
+        lut = define_LUT(data_matrix, cmap)
         for orientation in [1, 2, 3]:
             actor, blend = blend_funct(data_matrix, reader, lut, reader, lut, orientation)
             self.vtkdata['%s_blend_cut_plane_%d' % (name, orientation)] = blend
@@ -472,9 +471,9 @@ class VtkViewer(QtGui.QWidget):
         volume.SetOrigin(nx / 2., ny / 2., nz / 2.)
         volume.SetPosition(-(nx - 1) / 2., -(ny - 1) / 2., -(nz - 1) / 2.)
 
-        cmap = kwargs.get('colormap','grey')
-        alpha = kwargs.get('alpha',None)
-        self.color_cell(name,alpha=alpha,colormap=cmap)
+        cmap = kwargs.get('colormap', 'grey')
+        alpha = kwargs.get('alpha', None)
+        self.color_cell(name, alpha=alpha, colormap=cmap)
 
     def color_cell(self, name, cell_id=None, color=None, alpha=None, bg_id=1, colormap='glasbey'):
 
@@ -490,12 +489,11 @@ class VtkViewer(QtGui.QWidget):
             if cell_id is None:
                 # colorFunc.RemoveAllPoints()
 
-                self.volume_property[name]['vtkVolumeProperty'].SetColor(define_LUT(matrix,colormap))
-                
-                alphaChannelFunc.RemoveAllPoints()
-                
-                alphaChannelFunc.AddPoint(bg_id, 0.0)
+                self.volume_property[name]['vtkVolumeProperty'].SetColor(define_LUT(matrix, colormap))
 
+                alphaChannelFunc.RemoveAllPoints()
+
+                alphaChannelFunc.AddPoint(bg_id, 0.0)
 
                 # if colormap == 'random':
                 #     from random import random as r
@@ -506,10 +504,10 @@ class VtkViewer(QtGui.QWidget):
                 #         colorFunc.AddRGBPoint(i, *color)
 
                 # elif colormap == 'grey':
-                    # colorFunc.AddRGBPoint(matrix.min(),0.0,0.0,0.0)
-                    # colorFunc.AddRGBPoint(matrix.max(),1.0,1.0,1.0)
-                    # colorFunc.AddHSVPoint(matrix.min(),0.0,1.0,0.5)
-                    # colorFunc.AddHSVPoint(matrix.max(),0.5,1.0,0.5)
+                # colorFunc.AddRGBPoint(matrix.min(),0.0,0.0,0.0)
+                # colorFunc.AddRGBPoint(matrix.max(),1.0,1.0,1.0)
+                # colorFunc.AddHSVPoint(matrix.min(),0.0,1.0,0.5)
+                # colorFunc.AddHSVPoint(matrix.max(),0.5,1.0,0.5)
                 if alpha is None:
 
                     if colormap not in ['glasbey']:
@@ -518,7 +516,7 @@ class VtkViewer(QtGui.QWidget):
                         alphaChannelFunc.AddPoint(matrix.max(), 1.0)
                     else:
                         # alphaChannelFunc.AddPoint(1, 0.0)
-                        alphaChannelFunc.AddPoint(bg_id+1, 1.0)
+                        alphaChannelFunc.AddPoint(bg_id + 1, 1.0)
                         alphaChannelFunc.AddPoint(matrix.max(), 1.0)
 
                 # else:
@@ -544,7 +542,6 @@ class VtkViewer(QtGui.QWidget):
 
     #     colorFunc = self.volume_property[name]['vtkVolumeProperty'].GetRGBTransferFunction()
     #     alphaChannelFunc = self.volume_property[name]['vtkVolumeProperty'].GetScalarOpacity()
-
 
     def demo_matrix_xyz(self):
         dtype = np.uint16
