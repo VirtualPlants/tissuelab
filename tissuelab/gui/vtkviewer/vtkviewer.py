@@ -14,122 +14,6 @@ def expand(widget):
     widget.setSizePolicy(p(p.MinimumExpanding, p.MinimumExpanding))
 
 
-# class JetMap (ColorRange) :
-#     def __init__ (self, val_min=0., val_max=1., **keys) :
-#         ColorRange.__init__(self,
-#                             (val_min,val_max),
-#                             [Color(0.,0.,0.3),blue,green,
-#                              yellow,red,Color(0.3,0.,0.)],
-#                             (0.,0.15,0.3,0.7,0.85,1.),
-#                             **keys)
-
-# class TerrainMap (ColorRange) :
-#     def __init__ (self, val_min=0., val_max=1., **keys) :
-#         ColorRange.__init__(self,
-#                             (val_min,val_max),
-#                             [Color(0.,0.651,0.),Color(0.902,0.902,0.),
-#                              Color(0.925,0.694,0.463),Color(0.949,0.949,0.949)],
-#                             (0.,0.4,0.8,1.),
-#                             **keys)
-
-# class HeatMap (ColorRange) :
-#     def __init__ (self, val_min=0., val_max=1., **keys) :
-#         ColorRange.__init__(self,
-#                             (val_min,val_max),
-#                             [Color(0.2,0.,0.),red,
-#                              yellow,white,Color(0.3,0.3,1.)],
-#                             (0.,0.3,0.6,0.9,1.),
-#                             **keys)
-
-# class JetMapWithoutRed (ColorRange) :
-#     def __init__ (self, val_min=0., val_max=1., **keys) :
-#         ColorRange.__init__(self,
-#                             (val_min,val_max),
-#                             [Color(0.,0.,0.3),blue,green,
-#                              yellow,magenta],
-#                             (0.,0.2,0.5,0.8,1.),
-#                             **keys)
-
-# class GreenMap (ColorRange) :
-#     def __init__ (self, val_min=0., val_max=1., **keys) :
-#         ColorRange.__init__(self,
-#                             (val_min,val_max),
-#                             [Color(0.,0.,0.),Color(0.,0.1,0.),green],
-#                             (0.,.5,1.),
-#                             **keys)
-
-
-# class BlueMap (ColorRange) :
-#     """Created by Michael Walker 16/05/2011. If Jerome has a problem he can sue me.
-#     """
-#     def __init__ (self, val_min=0., val_max=1., **keys) :
-#         ColorRange.__init__(self,
-#                             (val_min,val_max),
-#                             [Color(.7,.7,1.),Color(0.5,0.5,.9),Color(.1,.1,.7)],
-#                             (0.,.5,1.),
-#                             **keys)
-
-# class CurvMap (ColorRange) :
-#     """Created by Guillaume Cerutti 06/07/2014
-#     """
-#     def __init__ (self, val_min=0., val_max=1., **keys) :
-#         ColorRange.__init__(self,
-#                             (val_min,val_max),
-#                             [Color(0.125,0.9,1.0),Color(0.125,0.3,1.0),Color(0.125,0.125,0.3),Color(0.3,0.125,0.125),Color(1.0,0.3,0.125),Color(1.,0.9,0.125)],
-#                             (0.,.2,.45,0.55,.8,1.),
-#                             **keys)
-
-# class PurpleMap (ColorRange) :
-#     """Created by Guillaume Cerutti 18/12/2014
-#     """
-#     def __init__ (self, val_min=0., val_max=1., **keys) :
-#         ColorRange.__init__(self,
-#                             (val_min,val_max),
-#                             [Color(0.0,0.0,0.0),Color(0.133,0.0,0.32),Color(0.55,0.0,0.65),Color(0.88,0.08,0.52),Color(1.,0.66,0.86),Color(1.,0.92,0.88)],
-#                             (0.,.1,.4,0.65,.9,1.),
-#                             **keys)
-
-# class HotMap (ColorRange) :
-#     """Created by Guillaume Cerutti 18/12/2014
-#     """
-#     def __init__ (self, val_min=0., val_max=1., **keys) :
-#         ColorRange.__init__(self,
-#                             (val_min,val_max),
-#                             [black,red,yellow,white],
-#                             (0.,.33,.66,1.),
-#                             **keys)
-
-# class ColdMap (ColorRange) :
-#     """Created by Guillaume Cerutti 18/12/2014
-#     """
-#     def __init__ (self, val_min=0., val_max=1., **keys) :
-#         ColorRange.__init__(self,
-#                             (val_min,val_max),
-#                             [Color(8/255.,104/255.,172/255.),Color(67/255.,162/255.,202/255.),Color(123/255.,204/255.,196/255.),Color(186/255.,228/255.,188/255.),Color(240/255.,249/255.,232/255.)],
-#                             (0.,.25,.5,.75,1.),
-#                             **keys)
-
-# class PureGreenMap (ColorRange) :
-#     """Created by Guillaume Cerutti 18/12/2014
-#     """
-#     def __init__ (self, val_min=0., val_max=1., **keys) :
-#         ColorRange.__init__(self,
-#                             (val_min,val_max),
-#                             [Color(0/255.,86/255.,5/255.),Color(40/255.,134/255.,0/255.),Color(46/255.,255/255.,0/255.),Color(189/255.,255/255.,82/255.),Color(212/255.,255/255.,69/255.)],
-#                             (0.,.25,.5,.75,1.),
-#                             **keys)
-
-# class AtmosphereMap (ColorRange) :
-#     """Created by Guillaume Cerutti 18/12/2014
-#     """
-#     def __init__ (self, val_min=0., val_max=1., **keys) :
-#         ColorRange.__init__(self,
-#                             (val_min,val_max),
-#                             [Color(237/255.,234/255.,206/255.),Color(127/255.,212/255.,183/255.),Color(86/255.,149/255.,200/255.),Color(149/255.,37/255.,130/255.),],
-#                             (0.,.33,.66,1.),
-#                             **keys)
-
-
 def define_LUT(image, colormap, i_min=None, i_max=None):
     if i_min is None:
         # i_min = image.min()
@@ -150,8 +34,57 @@ def define_LUT(image, colormap, i_min=None, i_max=None):
 
     elif colormap == "invert_grey":
         lut.AddRGBPoint(i_min, 1.0, 1.0, 1.0)
-        lut.AddRGBPoint(0.5 * i_min + 0.5 * i_max, 0.5, 0.5, 0.55)
-        lut.AddRGBPoint(i_max, 0.0, 0.0, 0.0)
+        lut.AddRGBPoint(0.5 * i_min + 0.5 * i_max, 0.4, 0.4, 0.5)
+        lut.AddRGBPoint(i_max, 0.2, 0.2, 0.2)
+
+    elif colormap == "jet":
+        lut.AddRGBPoint(1.0 * i_min + 0.0 * i_max, 0.0, 0.0, 0.3)
+        lut.AddRGBPoint(0.85 * i_min + 0.15 * i_max, 0.0, 0.0, 1.0)
+        lut.AddRGBPoint(0.7 * i_min + 0.3 * i_max, 0.0, 1.0, 0.0)
+        lut.AddRGBPoint(0.3 * i_min + 0.7 * i_max, 1.0, 1.0, 0.0)
+        lut.AddRGBPoint(0.15 * i_min + 0.85 * i_max, 1.0, 0.0, 0.0)
+        lut.AddRGBPoint(0.0 * i_min + 1.0 * i_max, 0.3, 0.0, 0.0)
+
+    elif colormap == "hot":
+        lut.AddRGBPoint(1.0 * i_min + 0.0 * i_max, 0.0, 0.0, 0.0)
+        lut.AddRGBPoint(0.67 * i_min + 0.33 * i_max, 1.0, 0.0, 0.0)
+        lut.AddRGBPoint(0.33 * i_min + 0.67 * i_max, 1.0, 1.0, 0.0)
+        lut.AddRGBPoint(0.0 * i_min + 1.0 * i_max, 1.0, 1.0, 1.0)
+
+    elif colormap == "blue":
+        lut.AddRGBPoint(i_min, 0.7, 0.7, 1.0)
+        lut.AddRGBPoint(0.5 * i_min + 0.5 * i_max, 0.5, 0.5, 0.9)
+        lut.AddRGBPoint(i_max, 1.0, 1.0, 0.7)
+
+    elif colormap == "terrain":
+        lut.AddRGBPoint(1.0 * i_min + 0.0 * i_max, 0., 0.651, 0.)
+        lut.AddRGBPoint(0.6 * i_min + 0.4 * i_max, 0.902, 0.902, 0.)
+        lut.AddRGBPoint(0.2 * i_min + 0.8 * i_max, 0.925, 0.694, 0.463)
+        lut.AddRGBPoint(0.0 * i_min + 1.0 * i_max, 0.949, 0.949, 0.949)
+
+    # custom lookup tables ;)
+
+    elif colormap == "cold":
+        lut.AddRGBPoint(1.0 * i_min + 0.0 * i_max, 8 / 255., 104 / 255., 172 / 255.)
+        lut.AddRGBPoint(0.75 * i_min + 0.25 * i_max, 67 / 255., 162 / 255., 202 / 255.)
+        lut.AddRGBPoint(0.5 * i_min + 0.5 * i_max, 123 / 255., 204 / 255., 196 / 255.)
+        lut.AddRGBPoint(0.25 * i_min + 0.75 * i_max, 186 / 255., 228 / 255., 188 / 255.)
+        lut.AddRGBPoint(0.0 * i_min + 1.0 * i_max, 240 / 255., 249 / 255., 232 / 255.)
+
+    elif colormap == "temperature":
+        lut.AddRGBPoint(1.0 * i_min + 0.0 * i_max, 19 / 255., 70 / 255., 135 / 255.)
+        lut.AddRGBPoint(0.9 * i_min + 0.1 * i_max, 0 / 255., 56 / 255., 216 / 255.)
+        lut.AddRGBPoint(0.8 * i_min + 0.2 * i_max, 150 / 255., 196 / 255., 222 / 255.)
+        lut.AddRGBPoint(0.65 * i_min + 0.35 * i_max, 230 / 255., 225 / 255., 193 / 255.)
+        lut.AddRGBPoint(0.35 * i_min + 0.65 * i_max, 225 / 255., 194 / 255., 63 / 255.)
+        lut.AddRGBPoint(0.2 * i_min + 0.8 * i_max, 241 / 255., 89 / 255., 33 / 255.)
+        lut.AddRGBPoint(0.0 * i_min + 1.0 * i_max, 115 / 255., 4 / 255., 5 / 255.)
+
+    elif colormap == "atmosphere":
+        lut.AddRGBPoint(1.0 * i_min + 0.0 * i_max, 237 / 255., 234 / 255., 206 / 255.)
+        lut.AddRGBPoint(0.67 * i_min + 0.33 * i_max, 127 / 255., 212 / 255., 183 / 255.)
+        lut.AddRGBPoint(0.33 * i_min + 0.67 * i_max, 86 / 255., 149 / 255., 200 / 255.)
+        lut.AddRGBPoint(0.0 * i_min + 1.0 * i_max, 149 / 255., 37 / 255., 130 / 255.)
 
     elif colormap == "vegetation":
         lut.AddRGBPoint(1.0 * i_min + 0.0 * i_max, 255 / 255., 246 / 255., 229 / 255.)
@@ -160,6 +93,70 @@ def define_LUT(image, colormap, i_min=None, i_max=None):
         lut.AddRGBPoint(0.4 * i_min + 0.6 * i_max, 91 / 255., 148 / 255., 62 / 255.)
         lut.AddRGBPoint(0.2 * i_min + 0.8 * i_max, 29 / 255., 112 / 255., 29 / 255.)
         lut.AddRGBPoint(0.0 * i_min + 1.0 * i_max, 8 / 255., 77 / 255., 31 / 255.)
+
+    elif colormap == "ocean":
+        lut.AddRGBPoint(1.0 * i_min + 0.0 * i_max, 46 / 255., 43 / 255., 77 / 255.)
+        lut.AddRGBPoint(0.8 * i_min + 0.2 * i_max, 8 / 255., 70 / 255., 117 / 255.)
+        lut.AddRGBPoint(0.6 * i_min + 0.4 * i_max, 5 / 255., 112 / 255., 166 / 255.)
+        lut.AddRGBPoint(0.4 * i_min + 0.6 * i_max, 56 / 255., 168 / 255., 208 / 255.)
+        lut.AddRGBPoint(0.2 * i_min + 0.8 * i_max, 113 / 255., 212 / 255., 217 / 255.)
+        lut.AddRGBPoint(0.0 * i_min + 1.0 * i_max, 204 / 255., 219 / 255., 218 / 255.)
+
+    elif colormap == "population":
+        lut.AddRGBPoint(1.0 * i_min + 0.0 * i_max, 240 / 255., 240 / 255., 224 / 255.)
+        lut.AddRGBPoint(0.8 * i_min + 0.2 * i_max, 240 / 255., 240 / 255., 176 / 255.)
+        lut.AddRGBPoint(0.6 * i_min + 0.4 * i_max, 240 / 255., 224 / 255., 144 / 255.)
+        lut.AddRGBPoint(0.4 * i_min + 0.6 * i_max, 240 / 255., 176 / 255., 172 / 255.)
+        lut.AddRGBPoint(0.2 * i_min + 0.8 * i_max, 208 / 255., 112 / 255., 80 / 255.)
+        lut.AddRGBPoint(0.0 * i_min + 1.0 * i_max, 176 / 255., 48 / 255., 48 / 255.)
+
+    elif colormap == "curvature":
+        lut.AddRGBPoint(1.0 * i_min + 0.0 * i_max, 0.125, 0.9, 1.0)
+        lut.AddRGBPoint(0.8 * i_min + 0.2 * i_max, 0.125, 0.3, 1.0)
+        lut.AddRGBPoint(0.55 * i_min + 0.45 * i_max, 0.125, 0.125, 0.3)
+        lut.AddRGBPoint(0.45 * i_min + 0.55 * i_max, 0.3, 0.125, 0.125)
+        lut.AddRGBPoint(0.2 * i_min + 0.8 * i_max, 1.0, 0.3, 0.125)
+        lut.AddRGBPoint(0.0 * i_min + 1.0 * i_max, 1., 0.9, 0.125)
+
+    elif colormap == "green":
+        # lut.AddRGBPoint(1.0 * i_min + 0.0 * i_max, 0 / 255., 86 / 255., 5 / 255.)
+        lut.AddRGBPoint(1.0 * i_min + 0.0 * i_max, 0 / 255., 0 / 255., 0 / 255.)
+        lut.AddRGBPoint(0.75 * i_min + 0.25 * i_max, 40 / 255., 134 / 255., 0 / 255.)
+        lut.AddRGBPoint(0.5 * i_min + 0.5 * i_max, 46 / 255., 255 / 255., 0 / 255.)
+        lut.AddRGBPoint(0.25 * i_min + 0.75 * i_max, 189 / 255., 255 / 255., 82 / 255.)
+        lut.AddRGBPoint(0.0 * i_min + 1.0 * i_max, 212 / 255., 255 / 255., 69 / 255.)
+
+    elif colormap == "purple":
+        lut.AddRGBPoint(1.0 * i_min + 0.0 * i_max, 0.0, 0.0, 0.0)
+        lut.AddRGBPoint(0.9 * i_min + 0.1 * i_max, 0.133, 0.0, 0.32)
+        lut.AddRGBPoint(0.6 * i_min + 0.4 * i_max, 0.55, 0.0, 0.65)
+        lut.AddRGBPoint(0.35 * i_min + 0.65 * i_max, 0.88, 0.08, 0.52)
+        lut.AddRGBPoint(0.1 * i_min + 0.9 * i_max, 1., 0.66, 0.86)
+        lut.AddRGBPoint(0.0 * i_min + 1.0 * i_max, 1., 0.92, 0.88)
+
+    elif colormap == "red":
+        lut.AddRGBPoint(1.0 * i_min + 0.0 * i_max, 73 / 255., 16 / 255., 18 / 255.)
+        lut.AddRGBPoint(0.8 * i_min + 0.2 * i_max, 94 / 255., 15 / 255., 2 / 255.)
+        lut.AddRGBPoint(0.6 * i_min + 0.4 * i_max, 139 / 255., 31 / 255., 19 / 255.)
+        lut.AddRGBPoint(0.4 * i_min + 0.6 * i_max, 154 / 255., 51 / 255., 52 / 255.)
+        lut.AddRGBPoint(0.2 * i_min + 0.8 * i_max, 203 / 255., 97 / 255., 71 / 255.)
+        lut.AddRGBPoint(0.0 * i_min + 1.0 * i_max, 239 / 255., 238 / 255., 239 / 255.)
+
+    elif colormap == "marocco":
+        lut.AddRGBPoint(1.0 * i_min + 0.0 * i_max, 62 / 255., 23 / 255., 78 / 255.)
+        lut.AddRGBPoint(0.8 * i_min + 0.2 * i_max, 98 / 255., 26 / 255., 74 / 255.)
+        lut.AddRGBPoint(0.6 * i_min + 0.4 * i_max, 155 / 255., 1 / 255., 59 / 255.)
+        lut.AddRGBPoint(0.4 * i_min + 0.6 * i_max, 216 / 255., 71 / 255., 40 / 255.)
+        lut.AddRGBPoint(0.2 * i_min + 0.8 * i_max, 255 / 255., 134 / 255., 3 / 255.)
+        lut.AddRGBPoint(0.0 * i_min + 1.0 * i_max, 255 / 255., 197 / 255., 2 / 255.)
+
+    elif colormap == "sepia":
+        lut.AddRGBPoint(1.0 * i_min + 0.0 * i_max, 245 / 255., 236 / 255., 233 / 255.)
+        lut.AddRGBPoint(0.8 * i_min + 0.2 * i_max, 232 / 255., 213 / 255., 204 / 255.)
+        lut.AddRGBPoint(0.6 * i_min + 0.4 * i_max, 158 / 255., 130 / 255., 109 / 255.)
+        lut.AddRGBPoint(0.4 * i_min + 0.6 * i_max, 125 / 255., 97 / 255., 77 / 255.)
+        lut.AddRGBPoint(0.2 * i_min + 0.8 * i_max, 95 / 255., 66 / 255., 36 / 255.)
+        lut.AddRGBPoint(0.0 * i_min + 1.0 * i_max, 72 / 255., 43 / 255., 13 / 255.)
 
     elif colormap == "color":
         # lut.SetNumberOfTableValues(image.max() + 1)
