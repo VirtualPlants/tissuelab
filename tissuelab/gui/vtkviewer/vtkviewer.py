@@ -236,6 +236,7 @@ def blend_funct(data_matrix, data1, LUT1, data2, LUT2, orientation):
 
 class VtkViewerWidget(QtGui.QWidget, AbstractListener):
     matrixAdded = QtCore.Signal(str)
+    worldChanged = QtCore.Signal()
 
     def __init__(self):
         QtGui.QWidget.__init__(self)
@@ -278,6 +279,7 @@ class VtkViewerWidget(QtGui.QWidget, AbstractListener):
     def notify(self, sender, event=None):
         signal, data = event
         if signal == 'world_sync':
+            self.worldChanged.emit()
             self.set_world(data)
 
     def set_world(self, world):
@@ -440,6 +442,9 @@ class VtkViewer(QtGui.QWidget):
 
         self.add_matrix_as_volume(name, data_matrix, datatype, decimate, **kwargs)
         self.add_matrix_cut_planes(name, data_matrix, datatype, decimate, **kwargs)
+
+        self._display_cut_planes(name, kwargs.get('cut_planes', True))
+        self._display_volume(name, kwargs.get('volume', True))
 
         self.matrixAdded.emit(name)
 

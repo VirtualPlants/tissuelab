@@ -156,7 +156,7 @@ class OmeroView(QtGui.QTreeView):
         obj = self.model().omeroObject(index[0])
         conn = self.model()._connexion
 
-        uri = '%(NAME)s = omero://%(USER)s@%(HOST)s:%(PORT)s/%(ID)s' % dict(
+        uri = '%(NAME)s = omero://%(USER)s@%(HOST)s:%(PORT)s/id=%(ID)s' % dict(
             USER=conn._ic_props['omero.user'],
             PORT=conn.port,
             HOST=conn.host,
