@@ -34,6 +34,8 @@ class VtkControlPanel(ControlManagerWidget):
         self.controls = ControlContainer()
         self.model.set_manager(self.controls)
 
+        self.controls.add('matrix_name', interface='IStr', value='', alias='Matrix name')
+
         for i, data in enumerate([
             ('x', self._x_slider_changed),
             ('y', self._y_slider_changed),
@@ -50,6 +52,9 @@ class VtkControlPanel(ControlManagerWidget):
 
         self.controls.register_follower('volume', self._display_volume_changed)
         self.controls.register_follower('cut_planes', self._display_cut_planes_changed)
+        self.controls.register_follower('matrix_name', self._matrix_name_changed)
+
+        self._current = None
 
     def set_viewer(self, viewer):
         self._viewer = viewer
@@ -62,6 +67,7 @@ class VtkControlPanel(ControlManagerWidget):
         self.set_viewer(viewer.vtk)
 
         if isinstance(data_matrix, basestring):
+            self.controls.control(name='matrix_name').value = data_matrix
             data_matrix = self._viewer.matrix[data_matrix]
 
         for orientation in (0, 1, 2):
@@ -70,20 +76,23 @@ class VtkControlPanel(ControlManagerWidget):
             c.interface.max = data_matrix.shape[orientation]
             c.value = c.interface.max / 2
 
+    def _matrix_name_changed(self, old, new):
+        self._current = new
+
     def _display_cut_planes_changed(self, old, new):
-        self._viewer.display_cut_planes(new)
+        self._viewer.display_cut_planes(name=self._current, disp=new)
 
     def _display_volume_changed(self, old, new):
-        self._viewer.display_volume(new)
+        self._viewer.display_volume(name=self._current, disp=new)
 
     def _x_slider_changed(self, old, new):
-        name = self._viewer.matrix.keys()[0]
+        name = self._current
         self._viewer.move_cut_plane(name, new, 1)
 
     def _y_slider_changed(self, old, new):
-        name = self._viewer.matrix.keys()[0]
+        name = self._current
         self._viewer.move_cut_plane(name, new, 2)
 
     def _z_slider_changed(self, old, new):
-        name = self._viewer.matrix.keys()[0]
+        name = self._current
         self._viewer.move_cut_plane(name, new, 3)

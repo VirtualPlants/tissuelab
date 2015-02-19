@@ -325,24 +325,32 @@ class VtkViewer(QtGui.QWidget):
         self.actor = {}
         self.property = {}
 
-    def display_volume(self, disp=True):
+    def display_volume(self, name=None, disp=True):
         self.clear_scene()
-        self._display_volume(disp)
+        self._display_volume(name, disp)
         self.compute()
 
-    def display_cut_planes(self, disp=True):
+    def display_cut_planes(self, name=None, disp=True):
         self.clear_scene()
-        self._display_cut_planes(disp)
+        self._display_cut_planes(name, disp)
         self.compute()
 
-    def _display_volume(self, disp=True):
-        for name in self.volume:
+    def _display_volume(self, name, disp=True):
+        if name is None:
+            for name in self.volume:
+                self.volume_property[name]['disp'] = disp
+        else:
             self.volume_property[name]['disp'] = disp
 
-    def _display_cut_planes(self, disp=True):
-        for actor_name in self.actor:
-            if '_cut_plane_' in actor_name:
-                self.property[actor_name]['disp'] = disp
+    def _display_cut_planes(self, name, disp=True):
+        if name is None:
+            for actor_name in self.actor:
+                if '_cut_plane_' in actor_name:
+                    self.property[actor_name]['disp'] = disp
+        else:
+            for actor_name in self.actor:
+                if actor_name.startswith('%s_cut_plane_' % name):
+                    self.property[actor_name]['disp'] = disp
 
     def initialize(self):
         pass
