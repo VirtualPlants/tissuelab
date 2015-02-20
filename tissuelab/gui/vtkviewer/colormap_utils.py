@@ -1,5 +1,26 @@
 import numpy as np
 
+colormap_names = ["grey",
+                  "invert_grey",
+                  "jet",
+                  "hot",
+                  "blue",
+                  "cold",
+                  "terrain",
+                  "temperature",
+                  "atmosphere",
+                  "vegetation",
+                  "ocean",
+                  "density",
+                  "curvature",
+                  "green",
+                  "purple",
+                  "red",
+                  "marocco",
+                  "sepia",
+                  "color",
+                  "glasbey"]
+
 glasbey = np.array(
     [[1.0, 1.0, 1.0],
      [0.0, 0.0, 1.0],

@@ -24,6 +24,10 @@ def define_lookuptable(image, colormap, i_min=None, i_max=None):
     # lut = vtk.vtkLookupTable()
     lut = vtk.vtkColorTransferFunction()
     # lut.DiscretizeOn()
+
+    from colormap_utils import colormap_names
+    assert colormap in colormap_names
+
     if colormap == "grey":
         # lut.SetTableRange(image.min(), image.max())
         # lut.SetSaturationRange(0, 0)
@@ -102,7 +106,7 @@ def define_lookuptable(image, colormap, i_min=None, i_max=None):
         lut.AddRGBPoint(0.2 * i_min + 0.8 * i_max, 113 / 255., 212 / 255., 217 / 255.)
         lut.AddRGBPoint(0.0 * i_min + 1.0 * i_max, 204 / 255., 219 / 255., 218 / 255.)
 
-    elif colormap == "population":
+    elif colormap == "density":
         lut.AddRGBPoint(1.0 * i_min + 0.0 * i_max, 240 / 255., 240 / 255., 224 / 255.)
         lut.AddRGBPoint(0.8 * i_min + 0.2 * i_max, 240 / 255., 240 / 255., 176 / 255.)
         lut.AddRGBPoint(0.6 * i_min + 0.4 * i_max, 240 / 255., 224 / 255., 144 / 255.)
@@ -168,7 +172,7 @@ def define_lookuptable(image, colormap, i_min=None, i_max=None):
         lut.AddHSVPoint(i_max, 1.0, 1.0, 0.8)
 
     elif colormap == "glasbey":
-        from glasbey import glasbey
+        from colormap_utils import glasbey
         if i_max < 255:
             for i in xrange(256):
                 #   lut.AddRGBPoint((1.-i/255.)*i_min + (i/255.)*i_max,glasbey[i][0],glasbey[i][1],glasbey[i][2])
