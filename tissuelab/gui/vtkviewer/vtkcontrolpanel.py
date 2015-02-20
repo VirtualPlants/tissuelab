@@ -25,13 +25,17 @@ from openalea.core.service.ipython import interpreter as get_interpreter
 
 class VtkControlPanel(QtGui.QWidget):
 
-    def __init__(self, parent=None):
+    StyleTableView = 0
+    StylePanel = 1
+    DEFAULT_STYLE = StylePanel
+
+    def __init__(self, parent=None, style=None):
         QtGui.QWidget.__init__(self, parent=parent)
+        if style is None:
+            style = self.DEFAULT_STYLE
+        self.style = style
 
-        from openalea.core.control.manager import ControlContainer
-
-        self._manager = ControlContainer()
-        self._params = {}
+        self._manager = {}
 
         self._cb_matrix_name = QtGui.QComboBox()
         p = QtGui.QSizePolicy
@@ -39,47 +43,113 @@ class VtkControlPanel(QtGui.QWidget):
         self._cb_matrix_name.currentIndexChanged.connect(self._matrix_name_changed)
 
         self._viewer = None
-
-        for i, data in enumerate([
-            ('x', self._x_slider_changed),
-            ('y', self._y_slider_changed),
-            ('z', self._z_slider_changed),
-        ]):
-            name, func = data
-            c = self._manager.add(name, interface='IInt', value=1, alias='Move %s plane' % name)
-            c.interface.min = 0
-            c.interface.max = 100
-            self._manager.register_follower(name, func)
-
-        self._manager.add('volume', interface='IBool', value=True, alias='Display volume')
-        self._manager.add('cut_planes', interface='IBool', value=True, alias='Display cut plane')
-
-        self._manager.register_follower('volume', self._display_volume_changed)
-        self._manager.register_follower('cut_planes', self._display_cut_planes_changed)
-
         self._current = None
+        self._default_manager = self._create_manager()
 
         self.interpreter = get_interpreter()
         self.interpreter.locals['viewer_control'] = self
 
-        from openalea.oalab.service.qt_control import edit
-        #self._view = ControlManagerWidget(manager=self._manager)
-        # self._view.model.set_manager(self._manager)
-        self._view = edit(self._manager)
+        if self.style == self.StylePanel:
+            from openalea.oalab.service.qt_control import edit
+            self._view = edit(self._default_manager)
+            self._qt_control = {}
+            for control, editor in self._view.editor.items():
+                self._qt_control[control.name] = editor
+        else:
+            self._view = ControlManagerWidget(manager=self._default_manager)
 
         self._layout = QtGui.QVBoxLayout(self)
         self._layout.addWidget(self._cb_matrix_name)
         self._layout.addWidget(self._view)
 
     def __getitem__(self, key):
-        return self._manager.control(name=key)
+        return self._manager[self._current].control(name=key)
+
+    def _create_manager(self, viewer=None, matrix_name=None):
+        from openalea.core.control.manager import ControlContainer
+        manager = ControlContainer()
+        for i, data in enumerate([
+            ('x', self._x_slider_changed),
+            ('y', self._y_slider_changed),
+            ('z', self._z_slider_changed),
+        ]):
+            name, func = data
+            c = manager.add(name, interface='IInt', value=1, alias='Move %s plane' % name)
+            c.interface.min = 0
+            c.interface.max = 100
+
+        cut_planes = manager.add('cut_planes', interface='IBool', value=True, alias='Display cut plane')
+        volume = manager.add('volume', interface='IBool', value=True, alias='Display volume')
+
+        alpha = manager.add('cut_planes_alpha', interface='IFloat', value=1, alias=u'Cut planes α')
+        alpha.interface.step = 0.1
+        alpha.interface.min = 0
+        alpha.interface.max = 1
+
+        alpha = manager.add('volume_alpha', interface='IFloat', value=1, alias=u'Volume α')
+        alpha.interface.step = 0.1
+        alpha.interface.min = 0
+        alpha.interface.max = 1
+
+        alphamap = manager.add('volume_alphamap_type', interface='IEnumStr', value='linear',
+                               alias=u'Volume α map')
+        alphamap.interface.enum = ['constant', 'linear']
+
+        lut = manager.add('lookuptable', interface='IEnumStr', value='grey', alias=u'Lookup table')
+        lut.interface.enum = ['grey', 'glasbey']
+
+        bg_id = manager.add('bg_id', interface='IInt', value=1, alias=u'Background Id')
+        selected_id = manager.add('selected_id', interface='IInt', value=2, alias=u'Color cell')
+
+        if viewer and matrix_name:
+            disp = True
+            for actor_name in viewer.vtk.actor:
+                if actor_name.startswith('%s_cut_plane_' % matrix_name):
+                    disp = viewer.vtk.property[actor_name]['disp']
+                    break
+
+            volume.value = viewer.vtk.volume_property[matrix_name]['disp']
+            cut_planes.value = disp
+
+            data_matrix = viewer.vtk.matrix[matrix_name]
+
+            for orientation in (0, 1, 2):
+                c_id = list('xyz')[orientation]
+                c = manager.control(name=c_id)
+                c.interface.min = 0
+                c.interface.max = data_matrix.shape[orientation]
+                c.value = c.interface.max / 2
+
+            for c in [bg_id, selected_id]:
+                c.interface.min = data_matrix.min()
+                c.interface.max = data_matrix.max()
+
+        return manager
+
+    def _connect_manager(self, manager):
+        manager.register_follower('volume', self._display_volume_changed)
+        manager.register_follower('cut_planes', self._display_cut_planes_changed)
+        manager.register_follower('cut_planes_alpha', self._cut_planes_alpha_changed)
+        manager.register_follower('volume_alpha', self._volume_alpha_changed)
+        manager.register_follower('volume_alphamap_type', self._volume_alphamap_changed)
+        manager.register_follower('lookuptable', self._lookuptable_changed)
+        manager.register_follower('bg_id', self._bg_id_changed)
+        manager.register_follower('selected_id', self._selected_id_changed)
+
+        for data in [
+            ('x', self._x_slider_changed),
+            ('y', self._y_slider_changed),
+            ('z', self._z_slider_changed),
+        ]:
+            name, func = data
+            manager.register_follower(name, func)
 
     def set_viewer(self, viewer):
         self._viewer = viewer
 
     def clear(self):
         self._cb_matrix_name.clear()
-        self._params.clear()
+        self._manager.clear()
 
     def set_matrix(self, name):
         viewer = self.sender()
@@ -91,50 +161,51 @@ class VtkControlPanel(QtGui.QWidget):
         if not isinstance(name, basestring):
             raise NotImplementedError
 
-        if name not in self._params:
+        if name not in self._manager:
+            manager = self._create_manager(viewer, name)
+            self._manager[name] = manager
+            self._connect_manager(manager)
             self._cb_matrix_name.addItem(name)
-            self._params[name] = {}
-
-        for actor_name in viewer.vtk.actor:
-            if actor_name.startswith('%s_cut_plane_' % name):
-                disp = viewer.vtk.property[actor_name]['disp']
-                break
-
-        self._params[name]['volume'] = viewer.vtk.volume_property[name]['disp']
-        self._params[name]['cut_planes'] = disp
-
-        data_matrix = self._viewer.matrix[name]
-
-        for orientation in (0, 1, 2):
-            c_id = list('xyz')[orientation]
-            c = self._manager.control(name=c_id)
-            c.interface.min = 0
-            c.interface.max = data_matrix.shape[orientation]
-            c.value = c.interface.max / 2
-            self._params[name][c_id] = c.interface.max / 2
 
     def _matrix_name_changed(self, idx):
-        if idx == -1:
-            return
-        name = self._cb_matrix_name.itemText(idx)
-        self.select_matrix(name)
+        if idx != -1:
+            self.select_matrix(self._cb_matrix_name.itemText(idx))
+
+    def _set_manager(self, manager):
+        if self.style == self.StylePanel:
+            for c_id, weakref in self._qt_control.items():
+                control = manager.control(name=c_id)
+                editor = weakref()
+                if editor and control:
+                    editor.set(control)
+        else:
+            self._view.model.set_manager(manager)
 
     def select_matrix(self, name):
         if name != self._current:
-            # Store old matrix values
-            if self._current in self._params:
-                for c_id in self._params[self._current].keys():
-                    control = self._manager.control(name=c_id)
-                    self._params[self._current][c_id] = control.value
-
             # Update matrix name
             self._current = name
+            self._set_manager(self._manager[name])
 
-            # Update parameters with new matrix values
-            if name in self._params:
-                for c_id, value in self._params[name].items():
-                    control = self._manager.control(name=c_id)
-                    control.value = value
+    def _selected_id_changed(self, old, new):
+        print 'color ...', new
+
+    def _bg_id_changed(self, old, new):
+        self._volume_alpha_changed(None,  self['volume_alpha'].value)
+
+    def _cut_planes_alpha_changed(self, old, new):
+        self._viewer.set_cut_planes_alpha(self._current, alpha=new)
+
+    def _volume_alpha_changed(self, old, new):
+        alphamap = self['volume_alphamap_type'].value
+        bg_id = self['bg_id'].value
+        self._viewer.set_volume_alpha(self._current, alpha=new, alphamap=alphamap, bg_id=bg_id)
+
+    def _lookuptable_changed(self, old, new):
+        self._viewer.set_lookuptable(self._current, colormap=new)
+
+    def _volume_alphamap_changed(self, old, new):
+        self._volume_alpha_changed(None,  self['volume_alpha'].value)
 
     def _display_cut_planes_changed(self, old, new):
         self._viewer.display_cut_planes(name=self._current, disp=new)
@@ -143,13 +214,10 @@ class VtkControlPanel(QtGui.QWidget):
         self._viewer.display_volume(name=self._current, disp=new)
 
     def _x_slider_changed(self, old, new):
-        name = self._current
-        self._viewer.move_cut_plane(name, new, 1)
+        self._viewer.move_cut_plane(name=self._current, position=new, orientation=1)
 
     def _y_slider_changed(self, old, new):
-        name = self._current
-        self._viewer.move_cut_plane(name, new, 2)
+        self._viewer.move_cut_plane(name=self._current, position=new, orientation=2)
 
     def _z_slider_changed(self, old, new):
-        name = self._current
-        self._viewer.move_cut_plane(name, new, 3)
+        self._viewer.move_cut_plane(name=self._current, position=new, orientation=3)
