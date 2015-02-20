@@ -44,6 +44,7 @@ class VtkControlPanel(QtGui.QWidget):
 
         self._viewer = None
         self._current = None
+        self._old_color = None
         self._default_manager = self._create_manager()
 
         self.interpreter = get_interpreter()
@@ -96,10 +97,11 @@ class VtkControlPanel(QtGui.QWidget):
         alphamap.interface.enum = ['constant', 'linear']
 
         lut = manager.add('lookuptable', interface='IEnumStr', value='grey', alias=u'Lookup table')
-        lut.interface.enum = ['grey', 'glasbey']
+        from tissuelab.gui.vtkviewer.colormap_def import colormap_names
+        lut.interface.enum = colormap_names
 
         bg_id = manager.add('bg_id', interface='IInt', value=1, alias=u'Background Id')
-        selected_id = manager.add('selected_id', interface='IInt', value=2, alias=u'Color cell')
+        #selected_id = manager.add('selected_id', interface='IInt', value=2, alias=u'Color cell')
 
         if viewer and matrix_name:
             disp = True
@@ -120,7 +122,7 @@ class VtkControlPanel(QtGui.QWidget):
                 c.interface.max = data_matrix.shape[orientation]
                 c.value = c.interface.max / 2
 
-            for c in [bg_id, selected_id]:
+            for c in [bg_id]:
                 c.interface.min = data_matrix.min()
                 c.interface.max = data_matrix.max()
 
@@ -134,7 +136,7 @@ class VtkControlPanel(QtGui.QWidget):
         manager.register_follower('volume_alphamap_type', self._volume_alphamap_changed)
         manager.register_follower('lookuptable', self._lookuptable_changed)
         manager.register_follower('bg_id', self._bg_id_changed)
-        manager.register_follower('selected_id', self._selected_id_changed)
+        #manager.register_follower('selected_id', self._selected_id_changed)
 
         for data in [
             ('x', self._x_slider_changed),
@@ -188,7 +190,12 @@ class VtkControlPanel(QtGui.QWidget):
             self._set_manager(self._manager[name])
 
     def _selected_id_changed(self, old, new):
-        print 'color ...', new
+        # restore old cell original color
+        if self._old_color:
+            self._viewer.color_cell(self._current, old, self._old_color)
+        # save current color and color in red
+        self._old_color = self._viewer.cell_color(self._current, new)
+        self._viewer.color_cell(self._current, new, (1., 0., 0.))
 
     def _bg_id_changed(self, old, new):
         self._volume_alpha_changed(None,  self['volume_alpha'].value)

@@ -25,8 +25,9 @@ def define_lookuptable(image, colormap, i_min=None, i_max=None):
     lut = vtk.vtkColorTransferFunction()
     # lut.DiscretizeOn()
 
-    from colormap_utils import colormap_names
-    assert colormap in colormap_names
+    from tissuelab.gui.vtkviewer.colormap_def import colormap_names
+    if colormap not in colormap_names:
+        print 'unknown colormap', colormap
 
     if colormap == "grey":
         # lut.SetTableRange(image.min(), image.max())
@@ -552,7 +553,22 @@ class VtkViewer(QtGui.QWidget):
             for orientation in [1, 2, 3]:
                 self.vtkdata[name + "_cut_plane_colors_" + str(orientation)].SetLookupTable(lut)
 
-    def color_cell(self, name, cell_id=None, color=None, alpha=None, bg_id=1, colormap='glasbey'):
+    def cell_color(self, name, cell_id):
+        colorFunc = self.volume_property[name]['vtkVolumeProperty'].GetRGBTransferFunction()
+        return colorFunc.GetColor(cell_id)
+
+    def color_cell(self, name, cell_id=None, color=None, alpha=None):
+        if color is None:
+            color = (1., 1., 1.)
+        if cell_id is None:
+            cell_id = 1
+        colorFunc = self.volume_property[name]['vtkVolumeProperty'].GetRGBTransferFunction()
+        colorFunc.RemoveAllPoints()
+        colorFunc.AddRGBPoint(cell_id - 1, 1., 1., 1.)
+        colorFunc.AddRGBPoint(cell_id, *color)
+        colorFunc.AddRGBPoint(cell_id + 1, 1., 1., 1.)
+
+    def old_color_cell(self, name, cell_id=None, color=None, alpha=None, bg_id=1, colormap='glasbey'):
 
         alphaChannelFunc = self.volume_property[name]['vtkVolumeProperty'].GetScalarOpacity()
 
