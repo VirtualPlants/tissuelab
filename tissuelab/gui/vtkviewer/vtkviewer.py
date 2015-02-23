@@ -245,7 +245,7 @@ class VtkViewerWidget(QtGui.QWidget, AbstractListener):
         AbstractListener.__init__(self)
 
         layout = QtGui.QVBoxLayout(self)
-        self.vtk = VtkViewer()
+        self.vtk = VtkViewer() ## embedded into the VtkViewerWidget
         self.vtk.matrixAdded.connect(self.matrixAdded.emit)
         layout.addWidget(self.vtk)
 
@@ -315,13 +315,14 @@ class VtkViewer(QtGui.QWidget):
         expand(self.frame)
         expand(self.vtkWidget)
 
-        self.ren = vtk.vtkRenderer()
+        self.ren = vtk.vtkRenderer() ## vtk renderer
         self.vtkWidget.GetRenderWindow().AddRenderer(self.ren)
         self.iren = self.vtkWidget.GetRenderWindow().GetInteractor()
 
         layout.addWidget(self.frame)
         self.ren.ResetCamera()
-
+        
+        # vtk objects (like vtk volumes, vtk actors...) sorted by name in a dictionnary
         self.matrix = {}
         self.reader = {}
         self.volume_property = {}
