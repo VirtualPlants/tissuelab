@@ -58,20 +58,20 @@ def group_to_items(group):
 class OmeroModel(QtGui.QStandardItemModel):
 
     def __init__(self):
-        self._connexion = None
+        self._connection = None
         self._data = []
 
         QtGui.QStandardItemModel.__init__(self)
 
-    def setConnection(self, omero_connexion):
-        self._connexion = omero_connexion
+    def setConnection(self, omero_connection):
+        self._connection = omero_connection
         self.refresh()
 
     def refresh(self):
         # Here we should use a backend strategy to be able to change
         # db type easily
         self.clear()
-        conn = self._connexion
+        conn = self._connection
         if conn is None:
             return
 
@@ -118,7 +118,7 @@ class OmeroModel(QtGui.QStandardItemModel):
         if data_type == 'Group':
             return None
         else:
-            return self._connexion.getObject(data_type, data_id)
+            return self._connection.getObject(data_type, data_id)
 
 
 class OmeroView(QtGui.QTreeView):
@@ -138,9 +138,12 @@ class OmeroView(QtGui.QTreeView):
         self.fineTune()
 
     def fineTune(self):
+        self.expandAll()
         for icol in range(4):
             self.resizeColumnToContents(icol)
-        self.expandAll()
+        titles = ['Category', 'Name', 'Id', 'Image']
+        if self.model():
+            self.model().setHorizontalHeaderLabels(titles)
 
     def currentChanged(self, current, previous):
         obj = self.model().omeroObject(current)
@@ -154,7 +157,7 @@ class OmeroView(QtGui.QTreeView):
         from openalea.core.service.mimetype import encode
         index = self.selectedIndexes()
         obj = self.model().omeroObject(index[0])
-        conn = self.model()._connexion
+        conn = self.model()._connection
 
         uri = '%(NAME)s = omero://%(USER)s@%(HOST)s:%(PORT)s/id=%(ID)s' % dict(
             USER=conn._ic_props['omero.user'],
@@ -208,11 +211,9 @@ class OmeroDbBrowser(QtGui.QWidget):
         self.view.objectSelected.connect(self.objectSelected.emit)
         self.view.imageSelected.connect(self.imageSelected.emit)
 
-    def setConnection(self, omero_connexion):
-        self.model.setConnection(omero_connexion)
-        titles = ['Category', 'Name', 'Id', 'Image']
-        self.model.setHorizontalHeaderLabels(titles)
-
+    def setConnection(self, omero_connection):
+        self.model.setConnection(omero_connection)
+        self.view.fineTune()
 
 if __name__ == '__main__':
     import sys

@@ -92,7 +92,7 @@ class VtkControlPanel(QtGui.QWidget):
         alpha.interface.min = 0
         alpha.interface.max = 1
 
-        alphamap = manager.add('volume_alphamap_type', interface='IEnumStr', value='linear',
+        alphamap = manager.add('volume_alphamap_type', interface='IEnumStr', value='constant',
                                alias=u'Volume α map')
         alphamap.interface.enum = ['constant', 'linear']
 
@@ -187,7 +187,10 @@ class VtkControlPanel(QtGui.QWidget):
         if name != self._current:
             # Update matrix name
             self._current = name
-            self._set_manager(self._manager[name])
+            manager = self._manager[name]
+            manager.disable_followers()
+            self._set_manager(manager)
+            manager.enable_followers()
 
     def _selected_id_changed(self, old, new):
         # restore old cell original color

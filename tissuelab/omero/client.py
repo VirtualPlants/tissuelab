@@ -1,6 +1,6 @@
 
 from openalea.core.service.control import create_control, group_controls
-from openalea.oalab.gui.utils import ModalDialog
+from openalea.oalab.gui.utils import ModalDialog, qicon
 from openalea.oalab.service.qt_control import edit
 from openalea.vpltk.qt import QtCore, QtGui
 from tissuelab.omero.omerodbbrowser import OmeroDbBrowser
@@ -29,16 +29,35 @@ class OmeroClient(QtGui.QWidget):
     def _create_menu(self):
         self.menu = QtGui.QMenu('Omero')
 
-        self.action_connect_db = QtGui.QAction(u'Connect to database', self)
+        self.action_connect_db = QtGui.QAction(
+            qicon('Crystal_Clear_filesystem_socket.png'), u'Connect to database', self)
         self.action_connect_db.triggered.connect(self.connect)
 
+        self.action_reload_db = QtGui.QAction(
+            qicon('Crystal_Clear_Quick_restart.png'), u'Reload database', self)
+        self.action_reload_db.triggered.connect(self.reload)
+
+        self.action_close_db = QtGui.QAction(
+            qicon('Crystal_Clear_Action-delete-icon.png'), u'Close database', self)
+        self.action_close_db.triggered.connect(self.close_db)
+
         self.menu.addAction(self.action_connect_db)
+        self.menu.addAction(self.action_reload_db)
+        self.menu.addAction(self.action_close_db)
 
     def toolbar_actions(self):
-        return [self.action_connect_db]
+        return [
+            self.action_connect_db,
+            self.action_reload_db,
+            self.action_close_db,
+        ]
 
     def menu_actions(self):
-        return [self.action_connect_db]
+        return [
+            self.action_connect_db,
+            self.action_reload_db,
+            self.action_close_db,
+        ]
 
     def menus(self):
         return [self.menu]
@@ -65,12 +84,24 @@ class OmeroClient(QtGui.QWidget):
             if [username, host, port] == self._current:
                 return
             elif username is not None:
+                if self._connection:
+                    self._connection._closeSession()
                 from omero.gateway import BlitzGateway
                 conn = BlitzGateway(username, password, host=host, port=port)
                 conn.connect()
                 self._current = [username, host, port]
                 self._connection = conn
                 self.browser.setConnection(conn)
+
+    def reload(self):
+        self.browser.model.refresh()
+        self.browser.view.fineTune()
+
+    def close_db(self):
+        self._current = [None, None, None]
+        self._connection._closeSession()
+        self.browser.setConnection(None)
+        self._connection = None
 
     def read(self, **kwargs):
         """

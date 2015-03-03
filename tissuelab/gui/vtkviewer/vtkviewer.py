@@ -245,7 +245,7 @@ class VtkViewerWidget(QtGui.QWidget, AbstractListener):
         AbstractListener.__init__(self)
 
         layout = QtGui.QVBoxLayout(self)
-        self.vtk = VtkViewer() ## embedded into the VtkViewerWidget
+        self.vtk = VtkViewer()  # embedded into the VtkViewerWidget
         self.vtk.matrixAdded.connect(self.matrixAdded.emit)
         layout.addWidget(self.vtk)
 
@@ -259,23 +259,15 @@ class VtkViewerWidget(QtGui.QWidget, AbstractListener):
         self._create_actions()
         self._create_connections()
 
-    def show_control_panel(self):
-        from tissuelab.gui.vtkviewer.vtkcontrolpanel import VtkControlPanel
-        self.panel = VtkControlPanel()
-        self.matrixAdded.connect(self.panel.set_matrix)
-        self.panel.set_viewer(self.vtk)
-        self.panel.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-        self.panel.show()
-
     def _create_actions(self):
-        self.action_control_panel = QtGui.QAction('Control Panel', self)
+        self.action_auto_focus = QtGui.QAction(QtGui.QIcon(":/images/resources/resetzoom.png"), 'Auto focus', self)
 
     def _create_connections(self):
-        self.action_control_panel.triggered.connect(self.show_control_panel)
+        self.action_auto_focus.triggered.connect(self.vtk.auto_focus)
 
     def toolbar_actions(self):
         return [
-            self.action_control_panel
+            self.action_auto_focus
         ]
 
     def notify(self, sender, event=None):
@@ -315,13 +307,13 @@ class VtkViewer(QtGui.QWidget):
         expand(self.frame)
         expand(self.vtkWidget)
 
-        self.ren = vtk.vtkRenderer() ## vtk renderer
+        self.ren = vtk.vtkRenderer()  # vtk renderer
         self.vtkWidget.GetRenderWindow().AddRenderer(self.ren)
         self.iren = self.vtkWidget.GetRenderWindow().GetInteractor()
 
         layout.addWidget(self.frame)
         self.ren.ResetCamera()
-        
+
         # vtk objects (like vtk volumes, vtk actors...) sorted by name in a dictionnary
         self.matrix = {}
         self.reader = {}
@@ -430,8 +422,10 @@ class VtkViewer(QtGui.QWidget):
 
         self.iren.Initialize()
         self.iren.Start()
-        self.ren.ResetCamera()
         self.render()
+
+    def auto_focus(self):
+        self.ren.ResetCamera()
 
     def render(self):
         self.iren.Render()
