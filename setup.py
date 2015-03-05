@@ -26,7 +26,7 @@ setup(
     keywords='',
 
     # package installation
-    packages=['tissuelab'],
+    packages=packages,
     package_dir={'tissuelab': 'tissuelab'},
 
     zip_safe=False,
