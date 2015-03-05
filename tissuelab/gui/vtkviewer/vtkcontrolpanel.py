@@ -212,7 +212,7 @@ class VtkControlPanel(QtGui.QWidget):
         self._viewer.set_volume_alpha(self._current, alpha=new, alphamap=alphamap, bg_id=bg_id)
 
     def _lookuptable_changed(self, old, new):
-        self._viewer.set_lookuptable(self._current, colormap=new)
+        self._viewer.set_matrix_lookuptable(self._current, colormap=new)
 
     def _volume_alphamap_changed(self, old, new):
         self._volume_alpha_changed(None,  self['volume_alpha'].value)

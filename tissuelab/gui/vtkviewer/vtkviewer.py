@@ -434,6 +434,27 @@ class VtkViewer(QtGui.QWidget):
         self.actor[name] = actor
         self.property[name] = dict(disp=True)
 
+    def add_polydata(self, name, polydata, **kwargs):
+        cmap = kwargs.get('colormap', 'grey')
+
+        mapper = vtk.vtkPolyDataMapper()
+        if vtk.VTK_MAJOR_VERSION <= 5:
+            mapper.SetInput(polydata)
+        else:
+            mapper.SetInputData(polydata)
+        mapper.SetScalarRange(0, 255)
+
+        cell_data = np.frombuffer(polydata.GetCellData().GetArray(0), np.uint32)
+
+        lut = define_lookuptable(cell_data, colormap=cmap)
+        mapper.SetLookupTable(lut)
+
+        polydata_actor = vtk.vtkActor()
+        polydata_actor.SetMapper(mapper)
+        polydata_actor.GetProperty().SetPointSize(1)
+
+        self.add_actor('%s_polydata' % (name), polydata_actor)
+
     def add_matrix(self, name, data_matrix, datatype=np.uint8, decimate=1, **kwargs):
         self.matrix[name] = data_matrix
 
@@ -452,6 +473,8 @@ class VtkViewer(QtGui.QWidget):
         # bwLut = define_lookuptable(data_matrix, "grey")
         # colorLut = define_lookuptable(data_matrix, "glasbey")
         lut = define_lookuptable(data_matrix, colormap=cmap)
+        resolution = kwargs.get('resolution', (1.0, 1.0, 1.0))
+
         for orientation in [1, 2, 3]:
             nx, ny, nz = data_matrix.shape
             xMax = nx - 1
@@ -472,7 +495,9 @@ class VtkViewer(QtGui.QWidget):
                 imgactor.SetDisplayExtent(0, xMax, 0, yMax, np.round(zMax / 2), np.round(zMax / 2))
 
             imgactor.SetOrigin(nx / 2., ny / 2., nz / 2.)
-            imgactor.SetPosition(-(nx - 1) / 2., -(ny - 1) / 2., -(nz - 1) / 2.)
+            # imgactor.SetPosition(-(nx - 1) / 2., -(ny - 1) / 2., -(nz - 1) / 2.)
+            imgactor.SetPosition(- nx / 2., -ny / 2., -nz / 2.)
+            imgactor.SetScale(resolution[0], resolution[1], resolution[2])
             # imgactor, blend = blend_funct(data_matrix, reader, lut, reader, lut, orientation)
             # self.vtkdata['%s_blend_cut_plane_%d' % (name, orientation)] = blend
             self.vtkdata['%s_cut_plane_colors_%d' % (name, orientation)] = colors
@@ -502,13 +527,17 @@ class VtkViewer(QtGui.QWidget):
         volume.SetMapper(volumeMapper)
         volume.SetProperty(volume_property)
         volume.SetOrigin(nx / 2., ny / 2., nz / 2.)
-        volume.SetPosition(-(nx - 1) / 2., -(ny - 1) / 2., -(nz - 1) / 2.)
+        # volume.SetPosition(-(nx - 1) / 2., -(ny - 1) / 2., -(nz - 1) / 2.)
+        volume.SetPosition(- nx / 2., -ny / 2., -nz / 2.)
+
+        resolution = kwargs.get('resolution', (1.0, 1.0, 1.0))
+        volume.SetScale(resolution[0], resolution[1], resolution[2])
 
         cmap = kwargs.get('colormap', 'grey')
         alpha = kwargs.get('alpha', 1.0)
         alphamap = kwargs.get('alphamap', 'linear')
         # self.color_cell(name, alpha=alpha, colormap=cmap)
-        self.set_lookuptable(name, cmap, cut_planes=False)
+        self.set_matrix_lookuptable(name, cmap, cut_planes=False)
         self.set_volume_alpha(name, alpha, alphamap)
 
     def set_volume_alpha(self, name, alpha=1.0, alphamap="constant", **kwargs):
@@ -538,7 +567,7 @@ class VtkViewer(QtGui.QWidget):
         for orientation in [1, 2, 3]:
             self.actor[name + "_cut_plane_" + str(orientation)].SetOpacity(alpha)
 
-    def set_lookuptable(self, name, colormap='grey', **kwargs):
+    def set_matrix_lookuptable(self, name, colormap='grey', **kwargs):
         i_min = kwargs.get('i_min', None)
         i_max = kwargs.get('i_max', None)
         cut_planes = kwargs.get('cut_planes', True)
