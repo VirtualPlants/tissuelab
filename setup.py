@@ -94,6 +94,10 @@ setup(
             'TissueLab = tissuelab.plugin.lab:TissueLab',
         ],
 
+        'oalab.db': [
+            'omero = tissuelab.plugin.db:OmeroDb',
+        ],
+
         'oalab.interface': [
         ],
 
