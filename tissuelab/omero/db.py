@@ -18,6 +18,9 @@
 #
 ###############################################################################
 
+from openalea.core.db import ErrorDbDatoDoNotExists, ErrorDbNotReachable
+from openalea.core.path import path as Path
+
 
 def browse_db(conn):
     if conn is None:
