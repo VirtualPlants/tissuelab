@@ -30,10 +30,6 @@ def define_lookuptable(image, colormap, i_min=None, i_max=None):
         print 'unknown colormap', colormap
 
     if colormap == "grey":
-        # lut.SetTableRange(image.min(), image.max())
-        # lut.SetSaturationRange(0, 0)
-        # lut.SetHueRange(0, 0)
-        # lut.SetValueRange(0, 1)
         lut.AddRGBPoint(i_min, 0.0, 0.0, 0.0)
         lut.AddRGBPoint(i_max, 1.0, 1.0, 1.0)
 
@@ -442,11 +438,14 @@ class VtkViewer(QtGui.QWidget):
             mapper.SetInput(polydata)
         else:
             mapper.SetInputData(polydata)
-        mapper.SetScalarRange(0, 255)
+        # mapper.SetScalarRange(0, 255)
 
-        cell_data = np.frombuffer(polydata.GetCellData().GetArray(0), np.uint32)
+        # cell_data = np.frombuffer(polydata.GetCellData().GetArray(0), np.uint32)
+        # lut = define_lookuptable(cell_data, colormap=cmap)
 
-        lut = define_lookuptable(cell_data, colormap=cmap)
+        lut = define_lookuptable(np.arange(1), colormap=cmap,i_min=0,i_max=1)
+
+
         mapper.SetLookupTable(lut)
 
         polydata_actor = vtk.vtkActor()
@@ -454,6 +453,33 @@ class VtkViewer(QtGui.QWidget):
         polydata_actor.GetProperty().SetPointSize(1)
 
         self.add_actor('%s_polydata' % (name), polydata_actor)
+
+    def set_polydata_lookuptable(self, name, colormap='grey', **kwargs):
+        lut = define_lookuptable(np.arange(1), colormap=colormap)
+        self.actor[name+'_polydata'].GetMapper().SetLookupTable(lut)
+
+    def set_polydata_property(self, name, property=None, **kwargs):
+        cmap = kwargs.get('colormap', 'grey')
+        i_min = kwargs.get('i_min', None)
+        i_max = kwargs.get('i_max', None)
+
+        n_triangles = self.actor[name+'_polydata'].GetMapper().GetInput().GetPolys().GetNumberOfCells()
+
+        vtk_property = vtk.vtkLongArray()
+        if property is None:
+            for t in xrange(n_triangles):
+                vtk_property.InsertValue(t,t)
+            lut = define_lookuptable(np.arange(n_triangles), colormap=cmap)
+        else:
+            assert len(property.keys()) == n_triangles
+            for (fid,t) in zip (property.keys(),xrange(n_triangles)):
+                vtk_property.InsertValue(t,property[fid])
+            lut = define_lookuptable(np.array(property.values()), colormap=cmap, i_min=i_min, i_max=i_max)
+
+        self.actor[name+'_polydata'].GetMapper().GetInput().GetCellData().SetScalars(vtk_property)
+        
+        self.actor[name+'_polydata'].GetMapper().SetLookupTable(lut)
+
 
     def add_matrix(self, name, data_matrix, datatype=np.uint8, decimate=1, **kwargs):
         self.matrix[name] = data_matrix
