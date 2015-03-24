@@ -18,25 +18,31 @@
 #
 ###############################################################################
 
-colormap_names = ["atmosphere",
+colormap_names = ["acidity",
+                  "altitude",
+                  "atmosphere",
                   "blue",
+                  "climate",
                   "cold",
                   "color",
                   "curvature",
                   "density",
+                  "geology",
                   "glasbey",
                   "green",
                   "grey",
                   "hot",
                   "invert_grey",
                   "jet",
+                  "leaf",
                   "marocco",
                   "ocean",
                   "purple",
                   "red",
                   "sepia",
                   "temperature",
-                  "terrain",
                   "vegetation",
+                  "wine",
                   ]
+
 colormap_names.sort()
