@@ -40,7 +40,8 @@ class VtkControlPanel(QtGui.QWidget):
         self._cb_matrix_name = QtGui.QComboBox()
         p = QtGui.QSizePolicy
         self._cb_matrix_name.setSizePolicy(p(p.Expanding, p.Maximum))
-        self._cb_matrix_name.currentIndexChanged.connect(self._matrix_name_changed)
+        self._cb_matrix_name.currentIndexChanged.connect(
+            self._matrix_name_changed)
 
         self._viewer = None
         self._current = None
@@ -75,19 +76,24 @@ class VtkControlPanel(QtGui.QWidget):
             ('z', self._z_slider_changed),
         ]):
             name, func = data
-            c = manager.add(name, interface='IInt', value=1, alias='Move %s plane' % name)
+            c = manager.add(
+                name, interface='IInt', value=1, alias='Move %s plane' % name)
             c.interface.min = 0
             c.interface.max = 100
 
-        cut_planes = manager.add('cut_planes', interface='IBool', value=True, alias='Display cut plane')
-        volume = manager.add('volume', interface='IBool', value=True, alias='Display volume')
+        cut_planes = manager.add(
+            'cut_planes', interface='IBool', value=True, alias='Display cut plane')
+        volume = manager.add(
+            'volume', interface='IBool', value=True, alias='Display volume')
 
-        alpha = manager.add('cut_planes_alpha', interface='IFloat', value=1, alias=u'Cut planes α')
+        alpha = manager.add(
+            'cut_planes_alpha', interface='IFloat', value=1, alias=u'Cut planes α')
         alpha.interface.step = 0.1
         alpha.interface.min = 0
         alpha.interface.max = 1
 
-        alpha = manager.add('volume_alpha', interface='IFloat', value=1, alias=u'Volume α')
+        alpha = manager.add(
+            'volume_alpha', interface='IFloat', value=1, alias=u'Volume α')
         alpha.interface.step = 0.1
         alpha.interface.min = 0
         alpha.interface.max = 1
@@ -96,11 +102,18 @@ class VtkControlPanel(QtGui.QWidget):
                                alias=u'Volume α map')
         alphamap.interface.enum = ['constant', 'linear']
 
-        lut = manager.add('lookuptable', interface='IEnumStr', value='grey', alias=u'Lookup table')
-        from tissuelab.gui.vtkviewer.colormap_def import colormap_names
-        lut.interface.enum = colormap_names
+        lut = manager.add(
+            'lookuptable', interface='IEnumStr', value='grey', alias=u'Lookup table')
+        if viewer is not None:
+            colormap_names = viewer.vtk.colormaps.keys()
+            colormap_names.sort()
+            lut.interface.enum = colormap_names
+        else:
+            from tissuelab.gui.vtkviewer.colormap_def import colormap_names
+            lut.interface.enum = colormap_names
 
-        bg_id = manager.add('bg_id', interface='IInt', value=1, alias=u'Background Id')
+        bg_id = manager.add(
+            'bg_id', interface='IInt', value=1, alias=u'Background Id')
         #selected_id = manager.add('selected_id', interface='IInt', value=2, alias=u'Color cell')
 
         if viewer and matrix_name:
@@ -130,10 +143,13 @@ class VtkControlPanel(QtGui.QWidget):
 
     def _connect_manager(self, manager):
         manager.register_follower('volume', self._display_volume_changed)
-        manager.register_follower('cut_planes', self._display_cut_planes_changed)
-        manager.register_follower('cut_planes_alpha', self._cut_planes_alpha_changed)
+        manager.register_follower(
+            'cut_planes', self._display_cut_planes_changed)
+        manager.register_follower(
+            'cut_planes_alpha', self._cut_planes_alpha_changed)
         manager.register_follower('volume_alpha', self._volume_alpha_changed)
-        manager.register_follower('volume_alphamap_type', self._volume_alphamap_changed)
+        manager.register_follower(
+            'volume_alphamap_type', self._volume_alphamap_changed)
         manager.register_follower('lookuptable', self._lookuptable_changed)
         manager.register_follower('bg_id', self._bg_id_changed)
         #manager.register_follower('selected_id', self._selected_id_changed)
@@ -209,7 +225,8 @@ class VtkControlPanel(QtGui.QWidget):
     def _volume_alpha_changed(self, old, new):
         alphamap = self['volume_alphamap_type'].value
         bg_id = self['bg_id'].value
-        self._viewer.set_volume_alpha(self._current, alpha=new, alphamap=alphamap, bg_id=bg_id)
+        self._viewer.set_volume_alpha(
+            self._current, alpha=new, alphamap=alphamap, bg_id=bg_id)
 
     def _lookuptable_changed(self, old, new):
         self._viewer.set_matrix_lookuptable(self._current, colormap=new)
@@ -224,10 +241,13 @@ class VtkControlPanel(QtGui.QWidget):
         self._viewer.display_volume(name=self._current, disp=new)
 
     def _x_slider_changed(self, old, new):
-        self._viewer.move_cut_plane(name=self._current, position=new, orientation=1)
+        self._viewer.move_cut_plane(
+            name=self._current, position=new, orientation=1)
 
     def _y_slider_changed(self, old, new):
-        self._viewer.move_cut_plane(name=self._current, position=new, orientation=2)
+        self._viewer.move_cut_plane(
+            name=self._current, position=new, orientation=2)
 
     def _z_slider_changed(self, old, new):
-        self._viewer.move_cut_plane(name=self._current, position=new, orientation=3)
+        self._viewer.move_cut_plane(
+            name=self._current, position=new, orientation=3)

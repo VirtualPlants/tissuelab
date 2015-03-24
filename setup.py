@@ -49,6 +49,8 @@ data_ext = [
     '.mo', '.ts', '.po',
     # templates
     '.template', '.NFG',
+    # colormaps
+    '.lut'
 ]
 
 sphinx_ext = [
