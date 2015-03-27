@@ -2,7 +2,6 @@
 import vtk
 import numpy as np
 from scipy import ndimage as nd
-import itertools
 
 from openalea.core.observer import AbstractListener
 from openalea.core.path import path as Path
@@ -824,7 +823,11 @@ class VtkViewer(QtGui.QWidget):
                 if not sh_id - 1 == bg_id:
                     alphaChannelFunc.AddPoint(sh_id - 1, alpha)
                 alphaChannelFunc.AddPoint(sh_id, kwargs.get('shade_alpha', 0.1))
+<<<<<<< HEAD
                 if not sh_id + 1 == bg_id:
+=======
+                if not sh_id + 1 == sh_id:
+>>>>>>> no test done due to libtiff problem on ubuntu
                     alphaChannelFunc.AddPoint(sh_id + 1, alpha)
 
         elif alphamap == "linear":
