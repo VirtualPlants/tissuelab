@@ -1,6 +1,7 @@
 
 import vtk
 import numpy as np
+from scipy import ndimage as nd
 
 from openalea.core.observer import AbstractListener
 from openalea.core.path import path as Path
@@ -580,13 +581,10 @@ class VtkViewer(QtGui.QWidget):
                 vtk_property.InsertValue(t, property[fid])
 
             # lut = define_lookuptable(np.array(property.values()), colormap=self.colormaps[cmap], i_min=i_min, i_max=i_max)
-            lut = define_lookuptable(
-                np.array(
-                    property.values()),
-                colormap_points=self.colormaps[cmap]._color_points,
-                colormap_name=cmap,
-                i_min=i_min,
-                i_max=i_max)
+            lut = define_lookuptable(np.array(property.values()),
+                                     colormap_points=self.colormaps[cmap]._color_points,
+                                     colormap_name=cmap,
+                                     i_min=i_min, i_max=i_max)
 
         self.actor[name + '_polydata'].GetMapper().GetInput().GetCellData().SetScalars(vtk_property)
         self.actor[name + '_polydata'].GetMapper().SetLookupTable(lut)
@@ -609,6 +607,25 @@ class VtkViewer(QtGui.QWidget):
 
     def add_matrix(self, world_object, data_matrix, datatype=np.uint8, decimate=1, **kwargs):
         name = world_object.name
+        data_matrix = world_object.data
+        if 'shade' in kwargs:
+            data_matrix = np.copy(data_matrix)
+            boundary_boxes = nd.find_objects(data_matrix)
+            shade = kwargs.get('shade')
+            sh_id = kwargs.get('sh_id')
+            bg_id = kwargs.get('bg_id', None)
+            structure = kwargs.get('structure', np.ones((3, 3, 3)))
+            if shade == 'background' and bg_id:
+                tmp = data_matrix[boundary_boxes[bg_id - 1]] == bg_id
+                mask = nd.binary_erosion(tmp, structure=structure)
+                data_matrix[boundary_boxes[bg_id - 1]][tmp ^ mask] = sh_id
+            elif shade == 'objects':
+                for id in np.unique(data_matrix):
+                    if not id in [sh_id, bg_id]:
+                        tmp = data_matrix[boundary_boxes[id - 1]] == id
+                        mask = nd.binary_erosion(tmp, structure=structure)
+                        data_matrix[boundary_boxes[id - 1]][tmp ^ mask] = sh_id
+
         self.matrix[name] = data_matrix
         self.add_matrix_as_volume(
             world_object, data_matrix, datatype, decimate, **kwargs)
@@ -770,6 +787,9 @@ class VtkViewer(QtGui.QWidget):
         i_min = kwargs.get('i_min', 0)
         i_max = kwargs.get('i_max', 255)
         bg_id = kwargs.get('bg_id', None)
+        sh_id = kwargs.get('sh_id', None)
+        i_min = kwargs.get('i_min', self.matrix[name].min())
+        i_max = kwargs.get('i_max', self.matrix[name].max())
 
         if alphamap == "constant":
             alphaChannelFunc.ClampingOn()
@@ -777,9 +797,18 @@ class VtkViewer(QtGui.QWidget):
             alphaChannelFunc.AddPoint(i_max, alpha)
 
             if bg_id is not None:
-                alphaChannelFunc.AddPoint(bg_id - 1, alpha)
+                if not bg_id - 1 == sh_id:
+                    alphaChannelFunc.AddPoint(bg_id - 1, alpha)
                 alphaChannelFunc.AddPoint(bg_id, 0.0)
-                alphaChannelFunc.AddPoint(bg_id + 1, alpha)
+                if not bg_id + 1 == sh_id:
+                    alphaChannelFunc.AddPoint(bg_id + 1, alpha)
+
+            if sh_id is not None:
+                if not sh_id - 1 == bg_id:
+                    alphaChannelFunc.AddPoint(sh_id - 1, alpha)
+                alphaChannelFunc.AddPoint(sh_id, kwargs.get('shade_alpha', 0.1))
+                if not sh_id + 1 == sh_id:
+                    alphaChannelFunc.AddPoint(sh_id + 1, alpha)
 
         elif alphamap == "linear":
             alphaChannelFunc.ClampingOn()
