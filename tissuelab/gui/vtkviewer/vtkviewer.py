@@ -2,6 +2,7 @@
 import vtk
 import numpy as np
 from scipy import ndimage as nd
+import itertools
 
 from openalea.core.observer import AbstractListener
 from openalea.core.path import path as Path
@@ -608,12 +609,28 @@ class VtkViewer(QtGui.QWidget):
     def add_matrix(self, world_object, data_matrix, datatype=np.uint8, decimate=1, **kwargs):
         name = world_object.name
         data_matrix = world_object.data
-        if 'shade' in kwargs:
+        shade = kwargs.get('shade')
+        erosion = kwargs.get('erosion')
+        if shade and not erosion:
             data_matrix = np.copy(data_matrix)
+            sh_id = kwargs.get('sh_id', 0)
+            bg_id = kwargs.get('bg_id', 1)
+            structure = kwargs.get('structure', np.ones((3, 3, 3)))
+            tmp = data_matrix != bg_id
+            mask = nd.binary_dilation(tmp, structure=structure)
+            data_matrix[tmp ^ mask] = sh_id
+        if erosion:
+            data_matrix = np.copy(data_matrix)
+            if not shade:
+                sh_id = None
+            else:
+                sh_id = kwargs.get('sh_id', 1)
+            bg_id = kwargs.get('bg_id', 1)
+            if sh_id is None:
+                er_id = bg_id
+            else:
+                er_id = sh_id
             boundary_boxes = nd.find_objects(data_matrix)
-            shade = kwargs.get('shade')
-            sh_id = kwargs.get('sh_id')
-            bg_id = kwargs.get('bg_id', None)
             structure = kwargs.get('structure', np.ones((3, 3, 3)))
             if shade == 'background' and bg_id:
                 tmp = data_matrix[boundary_boxes[bg_id - 1]] == bg_id
@@ -807,7 +824,7 @@ class VtkViewer(QtGui.QWidget):
                 if not sh_id - 1 == bg_id:
                     alphaChannelFunc.AddPoint(sh_id - 1, alpha)
                 alphaChannelFunc.AddPoint(sh_id, kwargs.get('shade_alpha', 0.1))
-                if not sh_id + 1 == sh_id:
+                if not sh_id + 1 == bg_id:
                     alphaChannelFunc.AddPoint(sh_id + 1, alpha)
 
         elif alphamap == "linear":
@@ -824,9 +841,14 @@ class VtkViewer(QtGui.QWidget):
         i_min = kwargs.get('i_min', None)
         i_max = kwargs.get('i_max', None)
         cut_planes = kwargs.get('cut_planes', True)
+
         # lut = define_lookuptable(self.matrix[name], self.colormaps[colormap], i_min, i_max)
         lut = define_lookuptable(self.matrix[name],
-                                 colormap_points=colormap['color_points'], colormap_name=colormap['name'], i_min=i_min, i_max=i_max)
+                                 colormap_points=colormap['color_points'],
+                                 colormap_name=colormap['name'],
+                                 i_min=i_min, i_max=i_max)
+        if 'sh_id' in kwargs:
+            lut.AddRGBPoint(kwargs['sh_id'], *kwargs.get('shade_color', (0., 0., 0.)))
         self.volume_property[name]['vtkVolumeProperty'].SetColor(lut)
         if cut_planes:
             for orientation in [1, 2, 3]:
