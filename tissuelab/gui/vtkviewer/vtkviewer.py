@@ -374,6 +374,12 @@ class VtkViewer(QtGui.QWidget):
         polydata_actor.SetMapper(mapper)
         polydata_actor.GetProperty().SetPointSize(1)
 
+        position = kwargs.get('position',None)
+        if position is not None:
+            polydata_actor.SetOrigin(position[0],position[1],position[2])
+            # imgactor.SetPosition(-(nx - 1) / 2., -(ny - 1) / 2., -(nz - 1) / 2.)
+            polydata_actor.SetPosition(-position[0],-position[1],-position[2])
+
         self.add_actor('%s_polydata' % (name), polydata_actor)
 
     def set_polydata_lookuptable(self, name, colormap='grey', **kwargs):
