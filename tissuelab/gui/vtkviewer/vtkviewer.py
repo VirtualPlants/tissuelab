@@ -178,9 +178,9 @@ class VtkViewerWidget(QtGui.QWidget, AbstractListener):
                 self.vtk.add_matrix(
                     obj_name, obj, datatype=obj.dtype, **world_object.kwargs)
             if isinstance(obj, vtk.vtkPolyData):
-                self.vtk.add_polydata(obj_name, obj, datatype=obj.dtype, **world_object.kwargs)
+                self.vtk.add_polydata(obj_name, obj, **world_object.kwargs)
             if isinstance(obj, vtk.vtkActor):
-                self.vtk.add_actor(obj_name, obj)
+                self.vtk.add_actor(obj_name, obj, **world_object.kwargs)
         self.vtk.compute()
 
 
@@ -330,7 +330,7 @@ class VtkViewer(QtGui.QWidget):
     def render(self):
         self.iren.Render()
 
-    def add_actor(self, name, actor):
+    def add_actor(self, name, actor, **kwargs):
         if name in self.actor:
             old_actor = self.actor[name]
             self.ren.RemoveActor(old_actor)
