@@ -102,19 +102,27 @@ class VtkControlPanel(QtGui.QWidget):
                                alias=u'Volume α map')
         alphamap.interface.enum = ['constant', 'linear']
 
-        lut = manager.add(
-            'lookuptable', interface='IEnumStr', value='grey', alias=u'Lookup table')
-        if viewer is not None:
-            colormap_names = viewer.vtk.colormaps.keys()
-            colormap_names.sort()
-            lut.interface.enum = colormap_names
-        else:
-            from tissuelab.gui.vtkviewer.colormap_def import colormap_names
-            lut.interface.enum = colormap_names
+        # lut = manager.add(
+        #     'lookuptable', interface='IEnumStr', value='grey', alias=u'Lookup table')
+        # if viewer is not None:
+        #     colormap_names = viewer.vtk.colormaps.keys()
+        #     colormap_names.sort()
+        #     lut.interface.enum = colormap_names
+        # else:
+        #     from tissuelab.gui.vtkviewer.colormap_def import colormap_names
+        #     lut.interface.enum = colormap_names
+
+        cmap = manager.add('colormap', interface='IColormap', value=dict(name='grey',color_points=dict([(0, (0, 0, 0)), (1, (1, 1, 1))])), alias=u'Colormap')
+
+        intensity_range = manager.add(
+            'intensity_range', interface='IIntRange', value=(0,255), alias=u'Intensity range')
+        intensity_range.interface.min=0
+        intensity_range.interface.max=255
 
         bg_id = manager.add(
             'bg_id', interface='IInt', value=1, alias=u'Background Id')
         #selected_id = manager.add('selected_id', interface='IInt', value=2, alias=u'Color cell')
+
 
         if viewer and matrix_name:
             disp = True
@@ -139,6 +147,11 @@ class VtkControlPanel(QtGui.QWidget):
                 c.interface.min = data_matrix.min()
                 c.interface.max = data_matrix.max()
 
+            for c in [intensity_range]:
+                c.value = (data_matrix.min(),data_matrix.max())
+                c.interface.min = data_matrix.min()
+                c.interface.max = data_matrix.max()
+
         return manager
 
     def _connect_manager(self, manager):
@@ -150,9 +163,11 @@ class VtkControlPanel(QtGui.QWidget):
         manager.register_follower('volume_alpha', self._volume_alpha_changed)
         manager.register_follower(
             'volume_alphamap_type', self._volume_alphamap_changed)
-        manager.register_follower('lookuptable', self._lookuptable_changed)
+        # manager.register_follower('lookuptable', self._lookuptable_changed)
+        manager.register_follower('colormap',self._colormap_changed)
         manager.register_follower('bg_id', self._bg_id_changed)
         #manager.register_follower('selected_id', self._selected_id_changed)
+        manager.register_follower('intensity_range', self._intensity_range_changed)
 
         for data in [
             ('x', self._x_slider_changed),
@@ -219,17 +234,33 @@ class VtkControlPanel(QtGui.QWidget):
     def _bg_id_changed(self, old, new):
         self._volume_alpha_changed(None,  self['volume_alpha'].value)
 
+    def _intensity_range_changed(self, old, new):
+        # lookuptable = self['lookuptable'].value
+        colormap = self['colormap'].value
+        alpha = self['volume_alpha'].value
+        alphamap = self['volume_alphamap_type'].value
+        bg_id = self['bg_id'].value
+        self._viewer.set_matrix_lookuptable(self._current, colormap=colormap['name'], i_min=new[0], i_max=new[1])
+        self._viewer.set_volume_alpha(
+            self._current, alpha=alpha, alphamap=alphamap, bg_id=bg_id, i_min=new[0], i_max=new[1])
+
     def _cut_planes_alpha_changed(self, old, new):
         self._viewer.set_cut_planes_alpha(self._current, alpha=new)
 
     def _volume_alpha_changed(self, old, new):
         alphamap = self['volume_alphamap_type'].value
+        i_range = self['intensity_range'].value
         bg_id = self['bg_id'].value
         self._viewer.set_volume_alpha(
-            self._current, alpha=new, alphamap=alphamap, bg_id=bg_id)
+            self._current, alpha=new, alphamap=alphamap, bg_id=bg_id, i_min=i_range[0], i_max=i_range[1])
 
-    def _lookuptable_changed(self, old, new):
-        self._viewer.set_matrix_lookuptable(self._current, colormap=new)
+    # def _lookuptable_changed(self, old, new):
+    #     i_range = self['intensity_range'].value
+    #     self._viewer.set_matrix_lookuptable(self._current, colormap=new, i_min=i_range [0], i_max=i_range[1])
+
+    def _colormap_changed(self, old, new):
+        i_range = self['intensity_range'].value
+        self._viewer.set_matrix_lookuptable(self._current, colormap=new['name'], i_min=i_range [0], i_max=i_range[1])
 
     def _volume_alphamap_changed(self, old, new):
         self._volume_alpha_changed(None,  self['volume_alpha'].value)
