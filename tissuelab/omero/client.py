@@ -19,9 +19,8 @@ class OmeroClient(QtGui.QWidget):
         self._create_menu()
 
         # TODO: should be moved to service or manager
-        from openalea.oalab.session.session import Session
-        session = Session()
-        session.interpreter.locals['db'] = self
+        from openalea.core.service.ipython import interpreter
+        interpreter().user_ns['db'] = self
 
         self._current = [None, None, None]
         self._connection = None
