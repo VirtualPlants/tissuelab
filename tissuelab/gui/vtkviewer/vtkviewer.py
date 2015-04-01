@@ -177,6 +177,8 @@ class VtkViewerWidget(QtGui.QWidget, AbstractListener):
             if isinstance(obj, np.ndarray):
                 self.vtk.add_matrix(
                     obj_name, obj, datatype=obj.dtype, **world_object.kwargs)
+            if isinstance(obj, vtk.vtkPolyData):
+                self.vtk.add_polydata(obj_name, obj, datatype=obj.dtype, **world_object.kwargs)
             if isinstance(obj, vtk.vtkActor):
                 self.vtk.add_actor(obj_name, obj)
         self.vtk.compute()
@@ -350,7 +352,12 @@ class VtkViewer(QtGui.QWidget):
             lut = define_lookuptable(cell_data, colormap_points=self.colormaps[cmap]._color_points, colormap_name=cmap)
         else:
             cmap = kwargs.get('colormap', 'grey')
-            lut = define_lookuptable(np.arange(1), colormap_points=self.colormaps[cmap]._color_points, colormap_name=cmap, i_min=0, i_max=1)
+            lut = define_lookuptable(
+                np.arange(1),
+                colormap_points=self.colormaps[cmap]._color_points,
+                colormap_name=cmap,
+                i_min=0,
+                i_max=1)
             # lut = define_lookuptable(np.arange(1), colormap=self.colormaps[cmap], i_min=0, i_max=1)
 
         mapper.SetLookupTable(lut)
@@ -363,7 +370,10 @@ class VtkViewer(QtGui.QWidget):
 
     def set_polydata_lookuptable(self, name, colormap='grey', **kwargs):
         # lut = define_lookuptable(np.arange(1), colormap=self.colormaps[colormap])
-        lut = define_lookuptable(np.arange(1), colormap_points=self.colormaps[colormap]._color_points, colormap_name=colormap)
+        lut = define_lookuptable(
+            np.arange(1),
+            colormap_points=self.colormaps[colormap]._color_points,
+            colormap_name=colormap)
         self.actor[name + '_polydata'].GetMapper().SetLookupTable(lut)
 
     def set_polydata_property(self, name, property=None, **kwargs):
@@ -378,14 +388,23 @@ class VtkViewer(QtGui.QWidget):
             for t in xrange(n_triangles):
                 vtk_property.InsertValue(t, t)
             # lut = define_lookuptable(np.arange(n_triangles), colormap=self.colormaps[cmap])
-            lut = define_lookuptable(np.arange(n_triangles), colormap_points=self.colormaps[cmap]._color_points, colormap_name=cmap)
+            lut = define_lookuptable(
+                np.arange(n_triangles),
+                colormap_points=self.colormaps[cmap]._color_points,
+                colormap_name=cmap)
         else:
             assert len(property.keys()) == n_triangles
             for (fid, t) in zip(property.keys(), xrange(n_triangles)):
                 vtk_property.InsertValue(t, property[fid])
 
             # lut = define_lookuptable(np.array(property.values()), colormap=self.colormaps[cmap], i_min=i_min, i_max=i_max)
-            lut = define_lookuptable(np.array(property.values()), colormap_points=self.colormaps[cmap]._color_points, colormap_name=cmap, i_min=i_min, i_max=i_max)
+            lut = define_lookuptable(
+                np.array(
+                    property.values()),
+                colormap_points=self.colormaps[cmap]._color_points,
+                colormap_name=cmap,
+                i_min=i_min,
+                i_max=i_max)
 
         self.actor[name + '_polydata'].GetMapper().GetInput().GetCellData().SetScalars(vtk_property)
 
@@ -521,7 +540,7 @@ class VtkViewer(QtGui.QWidget):
         cut_planes = kwargs.get('cut_planes', True)
         # lut = define_lookuptable(self.matrix[name], self.colormaps[colormap], i_min, i_max)
         lut = define_lookuptable(self.matrix[name],
-            colormap_points=self.colormaps[colormap]._color_points, colormap_name=colormap,  i_min=i_min, i_max=i_max)
+                                 colormap_points=self.colormaps[colormap]._color_points, colormap_name=colormap, i_min=i_min, i_max=i_max)
         self.volume_property[name]['vtkVolumeProperty'].SetColor(lut)
         if cut_planes:
             for orientation in [1, 2, 3]:
