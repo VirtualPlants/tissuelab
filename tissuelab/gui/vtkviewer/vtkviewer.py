@@ -350,6 +350,10 @@ class VtkViewer(QtGui.QWidget):
             cmap = kwargs.get('colormap', 'glasbey')
             cell_data = np.frombuffer(polydata.GetCellData().GetArray(0), np.uint32)
             lut = define_lookuptable(cell_data, colormap_points=self.colormaps[cmap]._color_points, colormap_name=cmap)
+        elif polydata.GetPointData().GetNumberOfComponents() > 0:
+            cmap = kwargs.get('colormap', 'glasbey')
+            cell_data = np.frombuffer(polydata.GetPointData().GetArray(0), np.uint32)
+            lut = define_lookuptable(cell_data, colormap_points=self.colormaps[cmap]._color_points, colormap_name=cmap)
         else:
             cmap = kwargs.get('colormap', 'grey')
             lut = define_lookuptable(
