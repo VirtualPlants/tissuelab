@@ -59,10 +59,10 @@ def define_lookuptable(image, colormap_points, colormap_name, i_min=None, i_max=
     if colormap_name == 'glasbey':
         if i_max < 255:
             for i in xrange(256):
-                lut.AddRGBPoint(i, * colormap_points.values()[i])
+                lut.AddRGBPoint(i, * colormap_points.values()[int(i)])
         else:
             for i in np.unique(image):
-                lut.AddRGBPoint(i, *colormap_points.values()[i % 256])
+                lut.AddRGBPoint(i, *colormap_points.values()[int(i) % 256])
     else:
         for value in colormap_points.keys():
             lut.AddRGBPoint(
@@ -350,26 +350,6 @@ class VtkViewer(QtGui.QWidget):
         else:
             mapper.SetInputData(polydata)
 
-        if polydata.GetCellData().GetNumberOfComponents() > 0:
-            cmap = kwargs.get('colormap', 'glasbey')
-            cell_data = np.frombuffer(polydata.GetCellData().GetArray(0), np.uint32)
-            lut = define_lookuptable(cell_data, colormap_points=self.colormaps[cmap]._color_points, colormap_name=cmap)
-        elif polydata.GetPointData().GetNumberOfComponents() > 0:
-            cmap = kwargs.get('colormap', 'glasbey')
-            cell_data = np.frombuffer(polydata.GetPointData().GetArray(0), np.uint32)
-            lut = define_lookuptable(cell_data, colormap_points=self.colormaps[cmap]._color_points, colormap_name=cmap)
-        else:
-            cmap = kwargs.get('colormap', 'grey')
-            lut = define_lookuptable(
-                np.arange(1),
-                colormap_points=self.colormaps[cmap]._color_points,
-                colormap_name=cmap,
-                i_min=0,
-                i_max=1)
-            # lut = define_lookuptable(np.arange(1), colormap=self.colormaps[cmap], i_min=0, i_max=1)
-
-        mapper.SetLookupTable(lut)
-
         polydata_actor = vtk.vtkActor()
         polydata_actor.SetMapper(mapper)
         polydata_actor.GetProperty().SetPointSize(1)
@@ -382,13 +362,38 @@ class VtkViewer(QtGui.QWidget):
 
         self.add_actor('%s_polydata' % (name), polydata_actor)
 
+        if (polydata.GetCellData().GetNumberOfComponents() > 0) or (polydata.GetPointData().GetNumberOfComponents() > 0):
+            cmap = kwargs.get('colormap', 'glasbey')
+        else:
+            cmap = kwargs.get('colormap', 'grey')
+        alpha = kwargs.get('alpha',1.0)
+        self.set_polydata_lookuptable(name,colormap=cmap,alpha=alpha)
+
     def set_polydata_lookuptable(self, name, colormap='grey', **kwargs):
-        # lut = define_lookuptable(np.arange(1), colormap=self.colormaps[colormap])
-        lut = define_lookuptable(
-            np.arange(1),
-            colormap_points=self.colormaps[colormap]._color_points,
-            colormap_name=colormap)
+
+        if self.actor[name + '_polydata'].GetMapper().GetInput().GetCellData().GetNumberOfComponents() > 0:
+            if isinstance(self.actor[name + '_polydata'].GetMapper().GetInput().GetCellData().GetArray(0),vtk.vtkLongArray):
+                cell_data = np.frombuffer(self.actor[name + '_polydata'].GetMapper().GetInput().GetCellData().GetArray(0), np.uint32)
+            elif isinstance(self.actor[name + '_polydata'].GetMapper().GetInput().GetCellData().GetArray(0),vtk.vtkDoubleArray):
+                cell_data = np.frombuffer(self.actor[name + '_polydata'].GetMapper().GetInput().GetCellData().GetArray(0), np.float64)
+            lut = define_lookuptable(cell_data, colormap_points=self.colormaps[colormap]._color_points, colormap_name=colormap)
+        elif self.actor[name + '_polydata'].GetMapper().GetInput().GetPointData().GetNumberOfComponents() > 0:
+            if isinstance(self.actor[name + '_polydata'].GetMapper().GetInput().GetPointData().GetArray(0),vtk.vtkLongArray):
+                cell_data = np.frombuffer(self.actor[name + '_polydata'].GetMapper().GetInput().GetPointData().GetArray(0), np.uint32)
+            if isinstance(self.actor[name + '_polydata'].GetMapper().GetInput().GetPointData().GetArray(0),vtk.vtkDoubleArray):
+                cell_data = np.frombuffer(self.actor[name + '_polydata'].GetMapper().GetInput().GetPointData().GetArray(0), np.float64)
+            lut = define_lookuptable(cell_data, colormap_points=self.colormaps[colormap]._color_points, colormap_name=colormap)
+        else:
+            lut = define_lookuptable(
+                np.arange(1),
+                colormap_points=self.colormaps[colormap]._color_points,
+                colormap_name=colormap,
+                i_min=0,
+                i_max=1)
         self.actor[name + '_polydata'].GetMapper().SetLookupTable(lut)
+
+        alpha = kwargs.get('alpha',self.actor[name + '_polydata'].GetProperty().GetOpacity())
+        self.actor[name + '_polydata'].GetProperty().SetOpacity(alpha)
 
     def set_polydata_property(self, name, property=None, **kwargs):
         cmap = kwargs.get('colormap', 'grey')
@@ -421,8 +426,10 @@ class VtkViewer(QtGui.QWidget):
                 i_max=i_max)
 
         self.actor[name + '_polydata'].GetMapper().GetInput().GetCellData().SetScalars(vtk_property)
-
         self.actor[name + '_polydata'].GetMapper().SetLookupTable(lut)
+        
+        alpha = kwargs.get('alpha',self.actor[name + '_polydata'].GetProperty().GetOpacity())
+        self.actor[name + '_polydata'].GetProperty().SetOpacity(alpha)
 
     def add_matrix(self, name, data_matrix, datatype=np.uint8, decimate=1, **kwargs):
         self.matrix[name] = data_matrix
