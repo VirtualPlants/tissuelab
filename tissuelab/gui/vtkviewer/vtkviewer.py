@@ -161,9 +161,13 @@ class VtkViewerWidget(QtGui.QWidget, AbstractListener):
 
     def notify(self, sender, event=None):
         signal, data = event
+        print "VtkViewer : ",signal,"! ",data
         if signal == 'world_sync':
             self.worldChanged.emit()
             self.set_world(data)
+        elif signal == 'world_object_changed':
+            self.worldChanged.emit()
+            self.set_world(data[0])
 
     def set_world(self, world):
         self.vtk.clear()
