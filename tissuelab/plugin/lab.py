@@ -23,7 +23,8 @@ class TissueLab(DefaultLab):
 
     connections = [
         ('VtkViewer:matrixAdded', 'VtkControlPanel:set_matrix'),
-        ('VtkViewer:worldChanged', 'VtkControlPanel:clear'),
+        ('VtkControlPanel:attributeChanged', 'World:change_object_attribute'),
+#        ('VtkViewer:worldChanged', 'VtkControlPanel:clear'),
     ]
 
     layout = {
