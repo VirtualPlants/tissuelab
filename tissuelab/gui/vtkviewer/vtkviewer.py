@@ -328,6 +328,7 @@ class VtkViewer(QtGui.QWidget):
         self.volume = {}
         self.actor = {}
         self.property = {}
+        self.vtkdata = {}
 
     def display_volume(self, name=None, disp=True):
         self.clear_scene()
