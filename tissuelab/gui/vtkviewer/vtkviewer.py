@@ -476,9 +476,9 @@ class VtkViewer(QtGui.QWidget):
 
         self.set_polydata_lookuptable(name, colormap=cmap, alpha=alpha)
 
-        world_object.set_attribute('polydata_colormap', cmap, interface=IColormap)
-        world_object.set_attribute('polydata_alpha', alpha, interface=IFloat)
-        world_object.set_attribute('position', position, interface=ITuple)
+        world_object.set_attribute('polydata_colormap', cmap, interface=IColormap, alias=u'Colormap')
+        world_object.set_attribute('polydata_alpha', alpha, interface=IFloat, alias=u"Alpha (Polydata)")
+        world_object.set_attribute('position', position, interface=ITuple, alias=u"Position")
 
     def set_polydata_lookuptable(self, name, colormap, **kwargs):
 
@@ -575,13 +575,13 @@ class VtkViewer(QtGui.QWidget):
             world_object, data_matrix, datatype, decimate, **kwargs)
 
         display_volume = kwargs.pop('volume', world_object.get_attribute('volume', True))
-        world_object.set_attribute('volume', display_volume, interface=IBool)
+        world_object.set_attribute('volume', display_volume, interface=IBool, alias=u"Display Volume")
 
         self.add_matrix_cut_planes(
             world_object, data_matrix, datatype, decimate, **kwargs)
 
-        display_cut_planes = kwargs.pop('cut_planes', world_object.get_attribute('cut_planes', True))
-        world_object.set_attribute('cut_planes', display_cut_planes, interface=IBool)
+        display_cut_planes = kwargs.pop('cut_planes', world_object.get_attribute('cut_planes', False))
+        world_object.set_attribute('cut_planes', display_cut_planes, interface=IBool, alias=u"Display Cut planes")
 
         # self._display_volume(name, display_volume)
         # self._display_cut_planes(name, display_cut_planes)
@@ -638,11 +638,26 @@ class VtkViewer(QtGui.QWidget):
             self.add_actor('%s_cut_plane_%d' % (name, orientation), imgactor)
         self.set_cut_planes_alpha(name, alpha)
 
-        world_object.set_attribute('cut_planes_alpha', alpha, interface=IFloat)
-        world_object.set_attribute('x_plane_position', np.round((data_matrix.shape[0] - 1) / 2), interface=IInt)
-        world_object.set_attribute('y_plane_position', np.round((data_matrix.shape[1] - 1) / 2), interface=IInt)
-        world_object.set_attribute('z_plane_position', np.round((data_matrix.shape[2] - 1) / 2), interface=IInt)
-        world_object.set_attribute('resolution', resolution, interface=ITuple)
+        world_object.set_attribute('cut_planes_alpha', alpha, interface=IFloat, alias=u"Alpha (Cut planes)")
+        world_object.set_attribute(
+            'x_plane_position',
+            np.round(
+                (data_matrix.shape[0] - 1) / 2),
+            interface=IInt,
+            alias=u"Move x plane")
+        world_object.set_attribute(
+            'y_plane_position',
+            np.round(
+                (data_matrix.shape[1] - 1) / 2),
+            interface=IInt,
+            alias=u"Move y plane")
+        world_object.set_attribute(
+            'z_plane_position',
+            np.round(
+                (data_matrix.shape[2] - 1) / 2),
+            interface=IInt,
+            alias=u"Move z plane")
+        world_object.set_attribute('resolution', resolution, interface=ITuple, alias=u"Resolution")
 
     def add_matrix_as_volume(self, world_object, data_matrix, datatype=np.uint16, decimate=1, **kwargs):
         name = world_object.name
@@ -702,11 +717,11 @@ class VtkViewer(QtGui.QWidget):
         self.set_matrix_lookuptable(name, cmap, i_min=i_min, i_max=i_max, cut_planes=False)
         self.set_volume_alpha(name, alpha, alphamap, i_min=i_min, i_max=i_max)
 
-        world_object.set_attribute('matrix_colormap', cmap, interface=IColormap)
-        world_object.set_attribute('volume_alpha', alpha, interface=IFloat)
-        world_object.set_attribute('alphamap', alphamap, interface=IEnumStr)
-        world_object.set_attribute('intensity_range', (i_min, i_max), IIntRange)
-        world_object.set_attribute('resolution', resolution, interface=ITuple)
+        world_object.set_attribute('matrix_colormap', cmap, interface=IColormap, alias=u"Colormap")
+        world_object.set_attribute('volume_alpha', alpha, interface=IFloat, alias=u"Alpha (Volume)")
+        world_object.set_attribute('alphamap', alphamap, interface=IEnumStr, alias=u"Alpha Map")
+        world_object.set_attribute('intensity_range', (i_min, i_max), IIntRange, alias=u"Intensity Range")
+        world_object.set_attribute('resolution', resolution, interface=ITuple, alias=u"Resolution")
 
     def set_volume_alpha(self, name, alpha=1.0, alphamap="constant", **kwargs):
         alphaChannelFunc = self.volume_property[name][
