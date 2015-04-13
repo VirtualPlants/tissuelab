@@ -163,18 +163,18 @@ class VtkViewerWidget(QtGui.QWidget, AbstractListener):
 
     def notify(self, sender, event=None):
         signal, data = event
-        print "VtkViewer < ",signal,"!"
+        print "VtkViewer < ", signal, "!"
         if signal == 'world_sync':
             self.worldChanged.emit()
             self.set_world(data)
         elif signal == 'world_object_changed':
             self.worldChanged.emit()
             world, old, new = data
-            self.set_world_object(world,new)
+            self.set_world_object(world, new)
         elif signal == 'world_object_item_changed':
             world, obj, item, old, new = data
             if item == 'attribute':
-                self.update_world_object(world,obj,new)
+                self.update_world_object(world, obj, new)
 
     def set_world(self, world):
         self.vtk.clear()
@@ -189,17 +189,17 @@ class VtkViewerWidget(QtGui.QWidget, AbstractListener):
             if isinstance(object_data, np.ndarray):
                 self.vtk.add_matrix(
                     world_object, object_data, datatype=object_data.dtype, **world_object.kwargs)
-                world_object.kwargs.pop('colormap',None)
-                world_object.kwargs.pop('alpha',None)
-                world_object.kwargs.pop('alphamap',None)
-                world_object.kwargs.pop('resolution',None)
-                world_object.kwargs.pop('volume',None)
-                world_object.kwargs.pop('cut_planes',None)
+                world_object.kwargs.pop('colormap', None)
+                world_object.kwargs.pop('alpha', None)
+                world_object.kwargs.pop('alphamap', None)
+                world_object.kwargs.pop('resolution', None)
+                world_object.kwargs.pop('volume', None)
+                world_object.kwargs.pop('cut_planes', None)
             elif isinstance(object_data, vtk.vtkPolyData):
                 self.vtk.add_polydata(world_object, object_data, **world_object.kwargs)
-                world_object.kwargs.pop('position',None)
-                world_object.kwargs.pop('colormap',None)
-                world_object.kwargs.pop('alpha',None)
+                world_object.kwargs.pop('position', None)
+                world_object.kwargs.pop('colormap', None)
+                world_object.kwargs.pop('alpha', None)
             elif isinstance(object_data, vtk.vtkActor):
                 self.vtk.add_actor(object_name, object_data, **world_object.kwargs)
         self.vtk.compute()
@@ -212,21 +212,21 @@ class VtkViewerWidget(QtGui.QWidget, AbstractListener):
             object_data = world_object._repr_vtk_()
         else:
             object_data = world_object.data
-        
+
         if isinstance(object_data, np.ndarray):
             self.vtk.add_matrix(
                 world_object, object_data, datatype=object_data.dtype, **world_object.kwargs)
-            world_object.kwargs.pop('colormap',None)
-            world_object.kwargs.pop('alpha',None)
-            world_object.kwargs.pop('alphamap',None)
-            world_object.kwargs.pop('resolution',None)
-            world_object.kwargs.pop('volume',None)
-            world_object.kwargs.pop('cut_planes',None)
+            world_object.kwargs.pop('colormap', None)
+            world_object.kwargs.pop('alpha', None)
+            world_object.kwargs.pop('alphamap', None)
+            world_object.kwargs.pop('resolution', None)
+            world_object.kwargs.pop('volume', None)
+            world_object.kwargs.pop('cut_planes', None)
         elif isinstance(object_data, vtk.vtkPolyData):
             self.vtk.add_polydata(world_object, object_data, **world_object.kwargs)
-            world_object.kwargs.pop('position',None)
-            world_object.kwargs.pop('colormap',None)
-            world_object.kwargs.pop('alpha',None)
+            world_object.kwargs.pop('position', None)
+            world_object.kwargs.pop('colormap', None)
+            world_object.kwargs.pop('alpha', None)
         elif isinstance(object_data, vtk.vtkActor):
             self.vtk.add_actor(object_name, object_data, **world_object.kwargs)
         self.vtk.compute()
@@ -235,35 +235,60 @@ class VtkViewerWidget(QtGui.QWidget, AbstractListener):
         if attribute['name'] == 'volume':
             self.vtk.display_volume(name=world_object.name, disp=attribute['value'])
         elif attribute['name'] == 'matrix_colormap':
-            i_range = world_object.get_attribute('intensity_range',(0,255))
-            self.vtk.set_matrix_lookuptable(world_object.name, colormap=attribute['value'], i_min=i_range[0], i_max=i_range[1])
+            i_range = world_object.get_attribute('intensity_range', (0, 255))
+            self.vtk.set_matrix_lookuptable(
+                world_object.name,
+                colormap=attribute['value'],
+                i_min=i_range[0],
+                i_max=i_range[1])
         elif attribute['name'] == 'polydata_colormap':
-            alpha = world_object.get_attribute('polydata_alpha',1.0)
+            alpha = world_object.get_attribute('polydata_alpha', 1.0)
             self.vtk.set_polydata_lookuptable(world_object.name, colormap=attribute['value'], alpha=alpha)
         elif attribute['name'] == 'polydata_alpha':
-            colormap = world_object.get_attribute('polydata_colormap',dict(name='grey',color_points=dict([(0,(0,0,0)),(1,(1,1,1))])))
+            colormap = world_object.get_attribute(
+                'polydata_colormap', dict(name='grey', color_points=dict([(0, (0, 0, 0)), (1, (1, 1, 1))])))
             self.vtk.set_polydata_lookuptable(world_object.name, colormap=colormap, alpha=attribute['value'])
         elif attribute['name'] == 'alphamap':
-            alpha = world_object.get_attribute('volume_alpha',1.0)
-            i_range = world_object.get_attribute('intensity_range',(0,255))
-            self.vtk.set_volume_alpha(world_object.name, alpha=alpha, alphamap=attribute['value'], i_min=i_range[0], i_max=i_range[1])
+            alpha = world_object.get_attribute('volume_alpha', 1.0)
+            i_range = world_object.get_attribute('intensity_range', (0, 255))
+            self.vtk.set_volume_alpha(
+                world_object.name,
+                alpha=alpha,
+                alphamap=attribute['value'],
+                i_min=i_range[0],
+                i_max=i_range[1])
         elif attribute['name'] == 'volume_alpha':
-            alphamap = world_object.get_attribute('alphamap','linear')
-            i_range = world_object.get_attribute('intensity_range',(0,255))
-            self.vtk.set_volume_alpha(world_object.name, alpha=attribute['value'], alphamap=alphamap, i_min=i_range[0], i_max=i_range[1])
+            alphamap = world_object.get_attribute('alphamap', 'linear')
+            i_range = world_object.get_attribute('intensity_range', (0, 255))
+            self.vtk.set_volume_alpha(
+                world_object.name,
+                alpha=attribute['value'],
+                alphamap=alphamap,
+                i_min=i_range[0],
+                i_max=i_range[1])
         elif attribute['name'] == 'intensity_range':
-            colormap = world_object.get_attribute('matrix_colormap',dict(name='grey',color_points=dict([(0,(0,0,0)),(1,(1,1,1))])))
-            self.vtk.set_matrix_lookuptable(world_object.name, colormap=colormap, i_min=attribute['value'][0], i_max=attribute['value'][1])
-            alpha = world_object.get_attribute('volume_alpha',1.0)
-            alphamap = world_object.get_attribute('alphamap','linear')
-            self.vtk.set_volume_alpha(world_object.name, alpha=alpha, alphamap=alphamap, i_min=attribute['value'][0], i_max=attribute['value'][1])
+            colormap = world_object.get_attribute(
+                'matrix_colormap', dict(name='grey', color_points=dict([(0, (0, 0, 0)), (1, (1, 1, 1))])))
+            self.vtk.set_matrix_lookuptable(
+                world_object.name,
+                colormap=colormap,
+                i_min=attribute['value'][0],
+                i_max=attribute['value'][1])
+            alpha = world_object.get_attribute('volume_alpha', 1.0)
+            alphamap = world_object.get_attribute('alphamap', 'linear')
+            self.vtk.set_volume_alpha(
+                world_object.name,
+                alpha=alpha,
+                alphamap=alphamap,
+                i_min=attribute['value'][0],
+                i_max=attribute['value'][1])
         elif attribute['name'] == 'cut_planes':
             self.vtk.display_cut_planes(name=world_object.name, disp=attribute['value'])
         elif attribute['name'] == 'cut_planes_alpha':
             self.vtk.set_cut_planes_alpha(world_object.name, alpha=attribute['value'])
-        for i,axis in enumerate(['x','y','z']):
-            if attribute['name'] == axis+'_plane_position':
-                self.vtk.move_cut_plane(name=world_object.name, position=attribute['value'], orientation=i+1)
+        for i, axis in enumerate(['x', 'y', 'z']):
+            if attribute['name'] == axis + '_plane_position':
+                self.vtk.move_cut_plane(name=world_object.name, position=attribute['value'], orientation=i + 1)
 
 
 class VtkViewer(QtGui.QWidget):
@@ -432,52 +457,78 @@ class VtkViewer(QtGui.QWidget):
         polydata_actor.SetMapper(mapper)
         polydata_actor.GetProperty().SetPointSize(1)
 
-        position = tuple(kwargs.pop('position',world_object.get_attribute('position',(0,0,0))))
+        position = tuple(kwargs.pop('position', world_object.get_attribute('position', (0, 0, 0))))
         if position is not None:
-            polydata_actor.SetOrigin(position[0],position[1],position[2])
+            polydata_actor.SetOrigin(position[0], position[1], position[2])
             # imgactor.SetPosition(-(nx - 1) / 2., -(ny - 1) / 2., -(nz - 1) / 2.)
-            polydata_actor.SetPosition(-position[0],-position[1],-position[2])
+            polydata_actor.SetPosition(-position[0], -position[1], -position[2])
 
         self.add_actor('%s_polydata' % (name), polydata_actor)
 
         # if (polydata.GetCellData().GetNumberOfComponents() > 0) or (polydata.GetPointData().GetNumberOfComponents() > 0):
         #     cmap = kwargs.get('colormap', 'glasbey')
         # else:
-        cmap = kwargs.pop('colormap', world_object.get_attribute('polydata_colormap',dict(name='grey',color_points=dict([(0,(0,0,0)),(1,(1,1,1))]))))
-        if isinstance(cmap,str):
-            cmap = dict(name=cmap,color_points=self.colormaps[cmap]._color_points)
-        alpha = kwargs.pop('alpha', world_object.get_attribute('polydata_alpha',1.0))
+        cmap = kwargs.pop('colormap', world_object.get_attribute(
+            'polydata_colormap', dict(name='grey', color_points=dict([(0, (0, 0, 0)), (1, (1, 1, 1))]))))
+        if isinstance(cmap, str):
+            cmap = dict(name=cmap, color_points=self.colormaps[cmap]._color_points)
+        alpha = kwargs.pop('alpha', world_object.get_attribute('polydata_alpha', 1.0))
 
-        self.set_polydata_lookuptable(name,colormap=cmap,alpha=alpha)
+        self.set_polydata_lookuptable(name, colormap=cmap, alpha=alpha)
 
-        world_object.set_attribute('polydata_colormap',cmap,interface = IColormap)
-        world_object.set_attribute('polydata_alpha',alpha,interface = IFloat)
-        world_object.set_attribute('position',position,interface = ITuple)
+        world_object.set_attribute('polydata_colormap', cmap, interface=IColormap)
+        world_object.set_attribute('polydata_alpha', alpha, interface=IFloat)
+        world_object.set_attribute('position', position, interface=ITuple)
 
     def set_polydata_lookuptable(self, name, colormap, **kwargs):
 
         if self.actor[name + '_polydata'].GetMapper().GetInput().GetCellData().GetNumberOfComponents() > 0:
-            if isinstance(self.actor[name + '_polydata'].GetMapper().GetInput().GetCellData().GetArray(0),vtk.vtkLongArray):
-                cell_data = np.frombuffer(self.actor[name + '_polydata'].GetMapper().GetInput().GetCellData().GetArray(0), np.uint32)
-            elif isinstance(self.actor[name + '_polydata'].GetMapper().GetInput().GetCellData().GetArray(0),vtk.vtkDoubleArray):
-                cell_data = np.frombuffer(self.actor[name + '_polydata'].GetMapper().GetInput().GetCellData().GetArray(0), np.float64)
-            lut = define_lookuptable(cell_data, colormap_points=colormap['color_points'], colormap_name=colormap['name'])
+            if isinstance(
+                    self.actor[name + '_polydata'].GetMapper().GetInput().GetCellData().GetArray(0), vtk.vtkLongArray):
+                cell_data = np.frombuffer(
+                    self.actor[
+                        name +
+                        '_polydata'].GetMapper().GetInput().GetCellData().GetArray(0),
+                    np.uint32)
+            elif isinstance(self.actor[name + '_polydata'].GetMapper().GetInput().GetCellData().GetArray(0), vtk.vtkDoubleArray):
+                cell_data = np.frombuffer(
+                    self.actor[
+                        name +
+                        '_polydata'].GetMapper().GetInput().GetCellData().GetArray(0),
+                    np.float64)
+            lut = define_lookuptable(
+                cell_data,
+                colormap_points=colormap['color_points'],
+                colormap_name=colormap['name'])
         elif self.actor[name + '_polydata'].GetMapper().GetInput().GetPointData().GetNumberOfComponents() > 0:
-            if isinstance(self.actor[name + '_polydata'].GetMapper().GetInput().GetPointData().GetArray(0),vtk.vtkLongArray):
-                cell_data = np.frombuffer(self.actor[name + '_polydata'].GetMapper().GetInput().GetPointData().GetArray(0), np.uint32)
-            if isinstance(self.actor[name + '_polydata'].GetMapper().GetInput().GetPointData().GetArray(0),vtk.vtkDoubleArray):
-                cell_data = np.frombuffer(self.actor[name + '_polydata'].GetMapper().GetInput().GetPointData().GetArray(0), np.float64)
-            lut = define_lookuptable(cell_data, colormap_points=colormap['color_points'], colormap_name=colormap['name'])
+            if isinstance(
+                    self.actor[name + '_polydata'].GetMapper().GetInput().GetPointData().GetArray(0), vtk.vtkLongArray):
+                cell_data = np.frombuffer(
+                    self.actor[
+                        name +
+                        '_polydata'].GetMapper().GetInput().GetPointData().GetArray(0),
+                    np.uint32)
+            if isinstance(
+                    self.actor[name + '_polydata'].GetMapper().GetInput().GetPointData().GetArray(0), vtk.vtkDoubleArray):
+                cell_data = np.frombuffer(
+                    self.actor[
+                        name +
+                        '_polydata'].GetMapper().GetInput().GetPointData().GetArray(0),
+                    np.float64)
+            lut = define_lookuptable(
+                cell_data,
+                colormap_points=colormap['color_points'],
+                colormap_name=colormap['name'])
         else:
             lut = define_lookuptable(
                 np.arange(1),
-                colormap_points=colormap['color_points'], 
+                colormap_points=colormap['color_points'],
                 colormap_name=colormap['name'],
                 i_min=0,
                 i_max=1)
         self.actor[name + '_polydata'].GetMapper().SetLookupTable(lut)
 
-        alpha = kwargs.get('alpha',self.actor[name + '_polydata'].GetProperty().GetOpacity())
+        alpha = kwargs.get('alpha', self.actor[name + '_polydata'].GetProperty().GetOpacity())
         self.actor[name + '_polydata'].GetProperty().SetOpacity(alpha)
 
     def set_polydata_property(self, name, property=None, **kwargs):
@@ -512,8 +563,8 @@ class VtkViewer(QtGui.QWidget):
 
         self.actor[name + '_polydata'].GetMapper().GetInput().GetCellData().SetScalars(vtk_property)
         self.actor[name + '_polydata'].GetMapper().SetLookupTable(lut)
-        
-        alpha = kwargs.get('alpha',self.actor[name + '_polydata'].GetProperty().GetOpacity())
+
+        alpha = kwargs.get('alpha', self.actor[name + '_polydata'].GetProperty().GetOpacity())
         self.actor[name + '_polydata'].GetProperty().SetOpacity(alpha)
 
     def add_matrix(self, world_object, data_matrix, datatype=np.uint8, decimate=1, **kwargs):
@@ -523,18 +574,17 @@ class VtkViewer(QtGui.QWidget):
         self.add_matrix_as_volume(
             world_object, data_matrix, datatype, decimate, **kwargs)
 
-        display_volume = kwargs.pop('volume',world_object.get_attribute('volume',True))
-        world_object.set_attribute('volume',display_volume,interface = IBool)
+        display_volume = kwargs.pop('volume', world_object.get_attribute('volume', True))
+        world_object.set_attribute('volume', display_volume, interface=IBool)
 
         self.add_matrix_cut_planes(
             world_object, data_matrix, datatype, decimate, **kwargs)
 
-        display_cut_planes = kwargs.pop('cut_planes',world_object.get_attribute('cut_planes',True))
-        world_object.set_attribute('cut_planes',display_cut_planes,interface = IBool)
+        display_cut_planes = kwargs.pop('cut_planes', world_object.get_attribute('cut_planes', True))
+        world_object.set_attribute('cut_planes', display_cut_planes, interface=IBool)
 
         # self._display_volume(name, display_volume)
         # self._display_cut_planes(name, display_cut_planes)
-
 
         print world_object.kwargs
         self.matrixAdded.emit(name)
@@ -546,15 +596,14 @@ class VtkViewer(QtGui.QWidget):
         cmap = kwargs.pop('colormap', 'grey')
         alpha = kwargs.get('alpha', 1.0)
 
-        alpha = kwargs.pop('alpha', world_object.get_attribute('cut_planes_alpha',1.0))
-        alphamap = kwargs.pop('alphamap', world_object.get_attribute('alphamap','linear'))
-        resolution = tuple(kwargs.get('resolution',world_object.get_attribute('resolution',(1.0,1.0,1.0))))
+        alpha = kwargs.pop('alpha', world_object.get_attribute('cut_planes_alpha', 1.0))
+        alphamap = kwargs.pop('alphamap', world_object.get_attribute('alphamap', 'linear'))
+        resolution = tuple(kwargs.get('resolution', world_object.get_attribute('resolution', (1.0, 1.0, 1.0))))
 
         # bwLut = define_lookuptable(data_matrix, colormap=self.colormaps["grey"])
         # colorLut = define_lookuptable(data_matrix, colormap=self.colormaps["glasbey"])
         # lut = define_lookuptable(data_matrix, colormap=self.colormaps[cmap])
         lut = define_lookuptable(data_matrix, colormap_points=self.colormaps[cmap]._color_points, colormap_name=cmap)
-        
 
         for orientation in [1, 2, 3]:
             nx, ny, nz = data_matrix.shape
@@ -589,11 +638,11 @@ class VtkViewer(QtGui.QWidget):
             self.add_actor('%s_cut_plane_%d' % (name, orientation), imgactor)
         self.set_cut_planes_alpha(name, alpha)
 
-        world_object.set_attribute('cut_planes_alpha',alpha,interface = IFloat)
-        world_object.set_attribute('x_plane_position',np.round((data_matrix.shape[0]-1)/2),interface = IInt)
-        world_object.set_attribute('y_plane_position',np.round((data_matrix.shape[1]-1)/2),interface = IInt)
-        world_object.set_attribute('z_plane_position',np.round((data_matrix.shape[2]-1)/2),interface = IInt)
-        world_object.set_attribute('resolution',resolution,interface = ITuple)
+        world_object.set_attribute('cut_planes_alpha', alpha, interface=IFloat)
+        world_object.set_attribute('x_plane_position', np.round((data_matrix.shape[0] - 1) / 2), interface=IInt)
+        world_object.set_attribute('y_plane_position', np.round((data_matrix.shape[1] - 1) / 2), interface=IInt)
+        world_object.set_attribute('z_plane_position', np.round((data_matrix.shape[2] - 1) / 2), interface=IInt)
+        world_object.set_attribute('resolution', resolution, interface=ITuple)
 
     def add_matrix_as_volume(self, world_object, data_matrix, datatype=np.uint16, decimate=1, **kwargs):
         name = world_object.name
@@ -623,40 +672,47 @@ class VtkViewer(QtGui.QWidget):
         # volume.SetPosition(-(nx - 1) / 2., -(ny - 1) / 2., -(nz - 1) / 2.)
         volume.SetPosition(- nx / 2., -ny / 2., -nz / 2.)
 
-        resolution = tuple(kwargs.get('resolution',world_object.get_attribute('resolution',(1.0,1.0,1.0))))
+        resolution = tuple(kwargs.get('resolution', world_object.get_attribute('resolution', (1.0, 1.0, 1.0))))
         volume.SetScale(resolution[0], resolution[1], resolution[2])
-        
+
         if name in self.volume:
             old_volume = self.volume[name]
             self.ren.RemoveVolume(old_volume)
             del old_volume
         self.volume[name] = volume
 
-        cmap = kwargs.pop('colormap', world_object.get_attribute('matrix_colormap',dict(name='grey',color_points=dict([(0,(0,0,0)),(1,(1,1,1))]))))
-        if isinstance(cmap,str):
-            cmap = dict(name=cmap,color_points=self.colormaps[cmap]._color_points)
+        cmap = kwargs.pop('colormap', world_object.get_attribute(
+            'matrix_colormap', dict(name='grey', color_points=dict([(0, (0, 0, 0)), (1, (1, 1, 1))]))))
+        if isinstance(cmap, str):
+            cmap = dict(name=cmap, color_points=self.colormaps[cmap]._color_points)
 
-
-        alpha = kwargs.pop('alpha', world_object.get_attribute('volume_alpha',1.0))
-        alphamap = kwargs.pop('alphamap', world_object.get_attribute('alphamap','linear'))
-        i_min = kwargs.pop('i_min', world_object.get_attribute('intensity_range',(int(np.min(data_matrix)),int(np.max(data_matrix))))[0])
-        i_max = kwargs.pop('i_max', world_object.get_attribute('intensity_range',(int(np.min(data_matrix)),int(np.max(data_matrix))))[1])
+        alpha = kwargs.pop('alpha', world_object.get_attribute('volume_alpha', 1.0))
+        alphamap = kwargs.pop('alphamap', world_object.get_attribute('alphamap', 'linear'))
+        i_min = kwargs.pop(
+            'i_min', world_object.get_attribute(
+                'intensity_range', (int(
+                    np.min(data_matrix)), int(
+                    np.max(data_matrix))))[0])
+        i_max = kwargs.pop(
+            'i_max', world_object.get_attribute(
+                'intensity_range', (int(
+                    np.min(data_matrix)), int(
+                    np.max(data_matrix))))[1])
         # self.color_cell(name, alpha=alpha, colormap=cmap)
         self.set_matrix_lookuptable(name, cmap, i_min=i_min, i_max=i_max, cut_planes=False)
         self.set_volume_alpha(name, alpha, alphamap, i_min=i_min, i_max=i_max)
 
-        world_object.set_attribute('matrix_colormap',cmap,interface = IColormap)
-        world_object.set_attribute('volume_alpha',alpha,interface = IFloat)
-        world_object.set_attribute('alphamap',alphamap,interface = IEnumStr)
-        world_object.set_attribute('intensity_range',(i_min,i_max),IIntRange)
-        world_object.set_attribute('resolution',resolution,interface = ITuple)
-
+        world_object.set_attribute('matrix_colormap', cmap, interface=IColormap)
+        world_object.set_attribute('volume_alpha', alpha, interface=IFloat)
+        world_object.set_attribute('alphamap', alphamap, interface=IEnumStr)
+        world_object.set_attribute('intensity_range', (i_min, i_max), IIntRange)
+        world_object.set_attribute('resolution', resolution, interface=ITuple)
 
     def set_volume_alpha(self, name, alpha=1.0, alphamap="constant", **kwargs):
         alphaChannelFunc = self.volume_property[name][
             'vtkVolumeProperty'].GetScalarOpacity()
         alphaChannelFunc.RemoveAllPoints()
-        
+
         i_min = kwargs.get('i_min', 0)
         i_max = kwargs.get('i_max', 255)
         bg_id = kwargs.get('bg_id', None)
@@ -691,7 +747,7 @@ class VtkViewer(QtGui.QWidget):
         self.volume_property[name]['vtkVolumeProperty'].SetColor(lut)
         if cut_planes:
             for orientation in [1, 2, 3]:
-                if self.vtkdata.has_key(name + "_cut_plane_colors_" + str(orientation)):
+                if name + "_cut_plane_colors_" + str(orientation) in self.vtkdata:
                     self.vtkdata[
                         name + "_cut_plane_colors_" + str(orientation)].SetLookupTable(lut)
 
