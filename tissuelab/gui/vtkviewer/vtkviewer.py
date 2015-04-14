@@ -391,6 +391,15 @@ class VtkViewer(QtGui.QWidget):
         self.actor = {}
         self.vtkdata = {}
 
+    def save_screenshot(self, filename):
+        screenshooter = vtk.vtkWindowToImageFilter()
+        screenshooter.SetInput(self.vtkWidget.GetRenderWindow())
+        screenshooter.Update()
+        writer = vtk.vtkPNGWriter()
+        writer.SetFileName(filename)
+        writer.SetInput(screenshooter.GetOutput())
+        writer.Write()
+
     def move_cut_plane(self, name, position=0, orientation=1):
         actor = self.actor['%s_cut_plane_%d' % (name, orientation)]
         data_matrix = self.matrix[name]
