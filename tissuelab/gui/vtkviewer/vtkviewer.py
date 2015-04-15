@@ -235,22 +235,22 @@ class VtkViewerWidget(QtGui.QWidget, AbstractListener):
         if attribute['name'] == 'volume':
             self.vtk.display_volume(name=world_object.name, disp=attribute['value'])
         elif attribute['name'] == 'matrix_colormap':
-            i_range = world_object.get_attribute('intensity_range', (0, 255))
+            i_range = world_object.get('intensity_range', (0, 255))
             self.vtk.set_matrix_lookuptable(
                 world_object.name,
                 colormap=attribute['value'],
                 i_min=i_range[0],
                 i_max=i_range[1])
         elif attribute['name'] == 'polydata_colormap':
-            alpha = world_object.get_attribute('polydata_alpha', 1.0)
+            alpha = world_object.get('polydata_alpha', 1.0)
             self.vtk.set_polydata_lookuptable(world_object.name, colormap=attribute['value'], alpha=alpha)
         elif attribute['name'] == 'polydata_alpha':
-            colormap = world_object.get_attribute(
+            colormap = world_object.get(
                 'polydata_colormap', dict(name='grey', color_points=dict([(0, (0, 0, 0)), (1, (1, 1, 1))])))
             self.vtk.set_polydata_lookuptable(world_object.name, colormap=colormap, alpha=attribute['value'])
         elif attribute['name'] == 'alphamap':
-            alpha = world_object.get_attribute('volume_alpha', 1.0)
-            i_range = world_object.get_attribute('intensity_range', (0, 255))
+            alpha = world_object.get('volume_alpha', 1.0)
+            i_range = world_object.get('intensity_range', (0, 255))
             self.vtk.set_volume_alpha(
                 world_object.name,
                 alpha=alpha,
@@ -258,8 +258,8 @@ class VtkViewerWidget(QtGui.QWidget, AbstractListener):
                 i_min=i_range[0],
                 i_max=i_range[1])
         elif attribute['name'] == 'volume_alpha':
-            alphamap = world_object.get_attribute('alphamap', 'linear')
-            i_range = world_object.get_attribute('intensity_range', (0, 255))
+            alphamap = world_object.get('alphamap', 'linear')
+            i_range = world_object.get('intensity_range', (0, 255))
             self.vtk.set_volume_alpha(
                 world_object.name,
                 alpha=attribute['value'],
@@ -267,15 +267,15 @@ class VtkViewerWidget(QtGui.QWidget, AbstractListener):
                 i_min=i_range[0],
                 i_max=i_range[1])
         elif attribute['name'] == 'intensity_range':
-            colormap = world_object.get_attribute(
+            colormap = world_object.get(
                 'matrix_colormap', dict(name='grey', color_points=dict([(0, (0, 0, 0)), (1, (1, 1, 1))])))
             self.vtk.set_matrix_lookuptable(
                 world_object.name,
                 colormap=colormap,
                 i_min=attribute['value'][0],
                 i_max=attribute['value'][1])
-            alpha = world_object.get_attribute('volume_alpha', 1.0)
-            alphamap = world_object.get_attribute('alphamap', 'linear')
+            alpha = world_object.get('volume_alpha', 1.0)
+            alphamap = world_object.get('alphamap', 'linear')
             self.vtk.set_volume_alpha(
                 world_object.name,
                 alpha=alpha,
@@ -467,7 +467,7 @@ class VtkViewer(QtGui.QWidget):
         polydata_actor.SetMapper(mapper)
         polydata_actor.GetProperty().SetPointSize(1)
 
-        position = tuple(kwargs.pop('position', world_object.get_attribute('position', (0, 0, 0))))
+        position = tuple(kwargs.pop('position', world_object.get('position', (0, 0, 0))))
         if position is not None:
             polydata_actor.SetOrigin(position[0], position[1], position[2])
             # imgactor.SetPosition(-(nx - 1) / 2., -(ny - 1) / 2., -(nz - 1) / 2.)
@@ -478,11 +478,11 @@ class VtkViewer(QtGui.QWidget):
         # if (polydata.GetCellData().GetNumberOfComponents() > 0) or (polydata.GetPointData().GetNumberOfComponents() > 0):
         #     cmap = kwargs.get('colormap', 'glasbey')
         # else:
-        cmap = kwargs.pop('colormap', world_object.get_attribute(
+        cmap = kwargs.pop('colormap', world_object.get(
             'polydata_colormap', dict(name='grey', color_points=dict([(0, (0, 0, 0)), (1, (1, 1, 1))]))))
         if isinstance(cmap, str):
             cmap = dict(name=cmap, color_points=self.colormaps[cmap]._color_points)
-        alpha = kwargs.pop('alpha', world_object.get_attribute('polydata_alpha', 1.0))
+        alpha = kwargs.pop('alpha', world_object.get('polydata_alpha', 1.0))
 
         self.set_polydata_lookuptable(name, colormap=cmap, alpha=alpha)
 
@@ -584,13 +584,13 @@ class VtkViewer(QtGui.QWidget):
         self.add_matrix_as_volume(
             world_object, data_matrix, datatype, decimate, **kwargs)
 
-        display_volume = kwargs.pop('volume', world_object.get_attribute('volume', True))
+        display_volume = kwargs.pop('volume', world_object.get('volume', True))
         world_object.set_attribute('volume', display_volume, interface=IBool, alias=u"Display Volume")
 
         self.add_matrix_cut_planes(
             world_object, data_matrix, datatype, decimate, **kwargs)
 
-        display_cut_planes = kwargs.pop('cut_planes', world_object.get_attribute('cut_planes', False))
+        display_cut_planes = kwargs.pop('cut_planes', world_object.get('cut_planes', False))
         world_object.set_attribute('cut_planes', display_cut_planes, interface=IBool, alias=u"Display Cut planes")
 
         # self._display_volume(name, display_volume)
@@ -606,9 +606,9 @@ class VtkViewer(QtGui.QWidget):
         cmap = kwargs.pop('colormap', 'grey')
         alpha = kwargs.get('alpha', 1.0)
 
-        alpha = kwargs.pop('alpha', world_object.get_attribute('cut_planes_alpha', 1.0))
-        alphamap = kwargs.pop('alphamap', world_object.get_attribute('alphamap', 'linear'))
-        resolution = tuple(kwargs.get('resolution', world_object.get_attribute('resolution', (1.0, 1.0, 1.0))))
+        alpha = kwargs.pop('alpha', world_object.get('cut_planes_alpha', 1.0))
+        alphamap = kwargs.pop('alphamap', world_object.get('alphamap', 'linear'))
+        resolution = tuple(kwargs.get('resolution', world_object.get('resolution', (1.0, 1.0, 1.0))))
 
         # bwLut = define_lookuptable(data_matrix, colormap=self.colormaps["grey"])
         # colorLut = define_lookuptable(data_matrix, colormap=self.colormaps["glasbey"])
@@ -697,7 +697,7 @@ class VtkViewer(QtGui.QWidget):
         # volume.SetPosition(-(nx - 1) / 2., -(ny - 1) / 2., -(nz - 1) / 2.)
         volume.SetPosition(- nx / 2., -ny / 2., -nz / 2.)
 
-        resolution = tuple(kwargs.get('resolution', world_object.get_attribute('resolution', (1.0, 1.0, 1.0))))
+        resolution = tuple(kwargs.get('resolution', world_object.get('resolution', (1.0, 1.0, 1.0))))
         volume.SetScale(resolution[0], resolution[1], resolution[2])
 
         if name in self.volume:
@@ -706,20 +706,20 @@ class VtkViewer(QtGui.QWidget):
             del old_volume
         self.volume[name] = volume
 
-        cmap = kwargs.pop('colormap', world_object.get_attribute(
+        cmap = kwargs.pop('colormap', world_object.get(
             'matrix_colormap', dict(name='grey', color_points=dict([(0, (0, 0, 0)), (1, (1, 1, 1))]))))
         if isinstance(cmap, str):
             cmap = dict(name=cmap, color_points=self.colormaps[cmap]._color_points)
 
-        alpha = kwargs.pop('alpha', world_object.get_attribute('volume_alpha', 1.0))
-        alphamap = kwargs.pop('alphamap', world_object.get_attribute('alphamap', 'linear'))
+        alpha = kwargs.pop('alpha', world_object.get('volume_alpha', 1.0))
+        alphamap = kwargs.pop('alphamap', world_object.get('alphamap', 'linear'))
         i_min = kwargs.pop(
-            'i_min', world_object.get_attribute(
+            'i_min', world_object.get(
                 'intensity_range', (int(
                     np.min(data_matrix)), int(
                     np.max(data_matrix))))[0])
         i_max = kwargs.pop(
-            'i_max', world_object.get_attribute(
+            'i_max', world_object.get(
                 'intensity_range', (int(
                     np.min(data_matrix)), int(
                     np.max(data_matrix))))[1])
