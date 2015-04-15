@@ -6,6 +6,7 @@ from openalea.core.observer import AbstractListener
 from openalea.core.path import path as Path
 from openalea.core.interface import IBool, IInt, IFloat, ITuple, IEnumStr
 from openalea.oalab.plugins.interface import IIntRange, IColormap
+from openalea.oalab.gui.utils import qicon
 from openalea.deploy.shared_data import shared_data
 
 from openalea.vpltk.qt import QtGui, QtCore
@@ -152,14 +153,24 @@ class VtkViewerWidget(QtGui.QWidget, AbstractListener):
     def _create_actions(self):
         self.action_auto_focus = QtGui.QAction(
             QtGui.QIcon(":/images/resources/resetzoom.png"), 'Auto focus', self)
+        self.action_save_screenshot = QtGui.QAction(
+            qicon("Crystal_Clear_app_camera.png"), 'Screenshot', self)
 
     def _create_connections(self):
         self.action_auto_focus.triggered.connect(self.vtk.auto_focus)
+        self.action_save_screenshot.triggered.connect(self.save_screenshot)
 
     def toolbar_actions(self):
         return [
-            self.action_auto_focus
+            self.action_auto_focus,
+            self.action_save_screenshot
         ]
+
+    def save_screenshot(self):
+        from openalea.vpltk.qt.compat import getsavefilename
+        filename, filters = getsavefilename(self, "Image filename")
+        if filename:
+            self.vtk.save_screenshot(filename)
 
     def notify(self, sender, event=None):
         signal, data = event
