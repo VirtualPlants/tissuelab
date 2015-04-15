@@ -325,8 +325,8 @@ class VtkViewer(QtGui.QWidget):
         self.ren = vtk.vtkRenderer()  # vtk renderer
         self.vtkWidget.GetRenderWindow().AddRenderer(self.ren)
         self.iren = self.vtkWidget.GetRenderWindow().GetInteractor()
-        
-        #rajout picker    
+
+        #rajout picker
         self.picker = vtk.vtkPointPicker()
         self.picker.SetTolerance(0.005)
         self.iren.SetPicker(self.picker)
@@ -590,14 +590,26 @@ class VtkViewer(QtGui.QWidget):
 
         self.actor[name + '_polydata'].GetMapper().GetInput().GetCellData().SetScalars(vtk_property)
         self.actor[name + '_polydata'].GetMapper().SetLookupTable(lut)
-
         alpha = kwargs.get('alpha', self.actor[name + '_polydata'].GetProperty().GetOpacity())
         self.actor[name + '_polydata'].GetProperty().SetOpacity(alpha)
+
+    def add_outline(self, name, data_matrix, **kwargs):
+        self.reader[name] = reader = matrix_to_image_reader(name, data_matrix, np.uint16, 1)
+        nx, ny, nz = data_matrix.shape
+        outline = vtk.vtkOutlineFilter()
+        outline.SetInputConnection(reader.GetOutputPort())
+        outline_mapper = vtk.vtkPolyDataMapper()
+        outline_mapper.SetInputConnection(outline.GetOutputPort())
+        outline_actor = vtk.vtkActor()
+        outline_actor.SetOrigin(nx / 2., ny / 2., nz / 2.)
+        outline_actor.SetPosition(- nx / 2., -ny / 2., -nz / 2.)
+        outline_actor.SetMapper(outline_mapper)
+        outline_actor.GetProperty().SetColor(1, 1, 1)
+        self.add_actor('%s_outline' % (name), outline_actor)
 
     def add_matrix(self, world_object, data_matrix, datatype=np.uint8, decimate=1, **kwargs):
         name = world_object.name
         self.matrix[name] = data_matrix
-
         self.add_matrix_as_volume(
             world_object, data_matrix, datatype, decimate, **kwargs)
 
@@ -934,7 +946,7 @@ class VtkViewer(QtGui.QWidget):
     def resizeEvent(self, *args, **kwargs):
         self.render()
         return QtGui.QWidget.resizeEvent(self, *args, **kwargs)
-        
+
     def setInteractor(self, interactor, **kwargs):
         self.iren.SetInteractorStyle(interactor)
         interactor.SetCurrentRenderer(self.ren)
