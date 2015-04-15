@@ -29,6 +29,8 @@ class VtkControlPanel(QtGui.QWidget):
     StylePanel = 1
     DEFAULT_STYLE = StylePanel
 
+    attributeChanged = QtCore.Signal(str,dict)
+
     def __init__(self, parent=None, style=None):
         QtGui.QWidget.__init__(self, parent=parent)
         if style is None:
@@ -188,7 +190,6 @@ class VtkControlPanel(QtGui.QWidget):
         viewer = self.sender()
         if viewer is None:
             return
-
         self.set_viewer(viewer.vtk)
 
         if not isinstance(name, basestring):
