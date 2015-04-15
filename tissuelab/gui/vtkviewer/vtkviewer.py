@@ -325,6 +325,12 @@ class VtkViewer(QtGui.QWidget):
         self.ren = vtk.vtkRenderer()  # vtk renderer
         self.vtkWidget.GetRenderWindow().AddRenderer(self.ren)
         self.iren = self.vtkWidget.GetRenderWindow().GetInteractor()
+        
+        #rajout picker    
+        self.picker = vtk.vtkPointPicker()
+        self.picker.SetTolerance(0.005)
+        self.iren.SetPicker(self.picker)
+        #fin rajout
 
         layout.addWidget(self.frame)
         self.ren.ResetCamera()
@@ -648,9 +654,9 @@ class VtkViewer(QtGui.QWidget):
                 imgactor.SetDisplayExtent(
                     0, xMax, 0, yMax, np.round(zMax / 2), np.round(zMax / 2))
 
-            imgactor.SetOrigin(nx / 2., ny / 2., nz / 2.)
+            #imgactor.SetOrigin(nx / 2., ny / 2., nz / 2.)
             # imgactor.SetPosition(-(nx - 1) / 2., -(ny - 1) / 2., -(nz - 1) / 2.)
-            imgactor.SetPosition(- nx / 2., -ny / 2., -nz / 2.)
+            #imgactor.SetPosition(- nx / 2., -ny / 2., -nz / 2.)
             imgactor.SetScale(resolution[0], resolution[1], resolution[2])
             # imgactor, blend = blend_funct(data_matrix, reader, lut, reader, lut, orientation)
             # self.vtkdata['%s_blend_cut_plane_%d' % (name, orientation)] = blend
@@ -704,9 +710,9 @@ class VtkViewer(QtGui.QWidget):
         volume = vtk.vtkVolume()
         volume.SetMapper(volumeMapper)
         volume.SetProperty(volume_property)
-        volume.SetOrigin(nx / 2., ny / 2., nz / 2.)
+        #volume.SetOrigin(nx / 2., ny / 2., nz / 2.)
         # volume.SetPosition(-(nx - 1) / 2., -(ny - 1) / 2., -(nz - 1) / 2.)
-        volume.SetPosition(- nx / 2., -ny / 2., -nz / 2.)
+        #volume.SetPosition(- nx / 2., -ny / 2., -nz / 2.)
 
         resolution = tuple(kwargs.get('resolution', world_object.get('resolution', (1.0, 1.0, 1.0))))
         volume.SetScale(resolution[0], resolution[1], resolution[2])
@@ -928,3 +934,7 @@ class VtkViewer(QtGui.QWidget):
     def resizeEvent(self, *args, **kwargs):
         self.render()
         return QtGui.QWidget.resizeEvent(self, *args, **kwargs)
+        
+    def setInteractor(self, interactor, **kwargs):
+        self.iren.SetInteractorStyle(interactor)
+        interactor.SetCurrentRenderer(self.ren)
