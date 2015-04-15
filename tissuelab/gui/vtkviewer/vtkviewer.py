@@ -623,7 +623,7 @@ class VtkViewer(QtGui.QWidget):
             if not shade:
                 sh_id = None
             else:
-                sh_id = kwargs.get('sh_id', 1)
+                sh_id = kwargs.get('sh_id', 0)
             bg_id = kwargs.get('bg_id', 1)
             if sh_id is None:
                 er_id = bg_id
@@ -631,17 +631,11 @@ class VtkViewer(QtGui.QWidget):
                 er_id = sh_id
             boundary_boxes = nd.find_objects(data_matrix)
             structure = kwargs.get('structure', np.ones((3, 3, 3)))
-            if shade == 'background' and bg_id:
-                tmp = data_matrix[boundary_boxes[bg_id - 1]] == bg_id
-                mask = nd.binary_erosion(tmp, structure=structure)
-                data_matrix[boundary_boxes[bg_id - 1]][tmp ^ mask] = sh_id
-            elif shade == 'objects':
-                for id in np.unique(data_matrix):
-                    if not id in [sh_id, bg_id]:
-                        tmp = data_matrix[boundary_boxes[id - 1]] == id
-                        mask = nd.binary_erosion(tmp, structure=structure)
-                        data_matrix[boundary_boxes[id - 1]][tmp ^ mask] = sh_id
-
+            for i in np.unique(data_matrix):
+                if not i in [sh_id, bg_id]:
+                    tmp = data_matrix[boundary_boxes[i - 1]] == i
+                    mask = nd.binary_erosion(tmp, structure=structure)
+                    data_matrix[boundary_boxes[i - 1]][tmp ^ mask] = er_id
         self.matrix[name] = data_matrix
         self.add_matrix_as_volume(
             world_object, data_matrix, datatype, decimate, **kwargs)
