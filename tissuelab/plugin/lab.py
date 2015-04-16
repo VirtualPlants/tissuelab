@@ -21,11 +21,7 @@ class TissueLab(DefaultLab):
         'LineageViewer',
     ]
 
-    connections = [
-        ('VtkViewer:matrixAdded', 'VtkControlPanel:set_matrix'),
-        ('VtkControlPanel:attributeChanged', 'World:change_object_attribute'),
-#        ('VtkViewer:worldChanged', 'VtkControlPanel:clear'),
-    ]
+    connections = []
 
     layout = {
         'children': {0: [1, 2], 2: [3, 4], 3: [5, 6], 4: [7, 8], 7: [11, 12], 8: [9, 10]},

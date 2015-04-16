@@ -173,21 +173,14 @@ def attribute_args(dtype, attr_name, value=None):
     return attribute
 
 
-class VtkViewerWidget(QtGui.QWidget, AbstractListener):
-    matrixAdded = QtCore.Signal(str)
-    worldChanged = QtCore.Signal()
+class VtkViewerWidget(QtGui.QWidget):
 
     def __init__(self):
         QtGui.QWidget.__init__(self)
-        AbstractListener.__init__(self)
 
         layout = QtGui.QVBoxLayout(self)
         self.vtk = VtkViewer()  # embedded into the VtkViewerWidget
-        self.vtk.matrixAdded.connect(self.matrixAdded.emit)
         layout.addWidget(self.vtk)
-
-        self.world = World()
-        self.world.register_listener(self)
 
         self.interpreter = get_interpreter()
         self.interpreter.locals['world_viewer'] = self
@@ -218,155 +211,15 @@ class VtkViewerWidget(QtGui.QWidget, AbstractListener):
         if filename:
             self.vtk.save_screenshot(filename)
 
-    def notify(self, sender, event=None):
-        signal, data = event
-        print "VtkViewer < ", signal, "!"
-        if signal == 'world_sync':
-            self.worldChanged.emit()
-            self.set_world(data)
-        elif signal == 'world_object_changed':
-            self.worldChanged.emit()
-            world, old, new = data
-            self.set_world_object(world, new)
-        elif signal == 'world_object_item_changed':
-            world, obj, item, old, new = data
-            if item == 'attribute':
-                self.update_world_object(world, obj, new)
 
-    def set_world(self, world):
-        self.vtk.clear()
-        for obj_name, world_object in world.items():
-            if hasattr(world_object, "transform"):
-                object_data = world_object.transform()
-            elif hasattr(world_object, "_repr_vtk_"):
-                object_data = world_object._repr_vtk_()
-            else:
-                object_data = world_object.data
-
-            if isinstance(object_data, np.ndarray):
-                self.vtk.add_matrix(
-                    world_object, object_data, datatype=object_data.dtype, **world_object.kwargs)
-                world_object.kwargs.pop('colormap', None)
-                world_object.kwargs.pop('alpha', None)
-                world_object.kwargs.pop('alphamap', None)
-                world_object.kwargs.pop('resolution', None)
-                world_object.kwargs.pop('volume', None)
-                world_object.kwargs.pop('cut_planes', None)
-            elif isinstance(object_data, vtk.vtkPolyData):
-                self.vtk.add_polydata(world_object, object_data, **world_object.kwargs)
-                world_object.kwargs.pop('position', None)
-                world_object.kwargs.pop('colormap', None)
-                world_object.kwargs.pop('alpha', None)
-            elif isinstance(object_data, vtk.vtkActor):
-                self.vtk.add_actor(object_name, object_data, **world_object.kwargs)
-        self.vtk.compute()
-
-    def set_world_object(self, world, world_object):
-        """
-        Add a world object in the viewer's scene
-        """
-
-        # Convert the world object data into its VTK representation
-        object_name = world_object.name
-        if hasattr(world_object, "transform"):
-            object_data = world_object.transform()
-        elif hasattr(world_object, "_repr_vtk_"):
-            object_data = world_object._repr_vtk_()
-        else:
-            object_data = world_object.data
-        self.vtk.object_repr[object_name] = object_data
-
-        if isinstance(object_data, np.ndarray):
-            self.vtk.add_matrix(
-                world_object, object_data, datatype=object_data.dtype, **world_object.kwargs)
-            world_object.kwargs.pop('colormap', None)
-            world_object.kwargs.pop('alpha', None)
-            world_object.kwargs.pop('alphamap', None)
-            world_object.kwargs.pop('bg_id', None)
-            world_object.kwargs.pop('resolution', None)
-            world_object.kwargs.pop('volume', None)
-            world_object.kwargs.pop('cut_planes', None)
-        elif isinstance(object_data, vtk.vtkPolyData):
-            self.vtk.add_polydata(world_object, object_data, **world_object.kwargs)
-            world_object.kwargs.pop('position', None)
-            world_object.kwargs.pop('colormap', None)
-            world_object.kwargs.pop('alpha', None)
-        elif isinstance(object_data, vtk.vtkActor):
-            self.vtk.add_actor(object_name, object_data, **world_object.kwargs)
-        self.vtk.compute()
-
-    def update_world_object(self, world, world_object, attribute):
-        object_name = world_object.name
-        object_data = self.vtk.object_repr[object_name]
-        if isinstance(object_data, np.ndarray):
-            dtype = 'matrix'
-            colormap = attribute_value(world_object, dtype, 'matrix_colormap')
-            alpha = attribute_value(world_object, dtype, 'volume_alpha')
-            alphamap = attribute_value(world_object, dtype, 'alphamap')
-            bg_id = attribute_value(world_object, dtype, 'bg_id')
-            i_range = attribute_value(world_object, dtype, 'intensity_range')
-            if attribute['name'] == 'volume':
-                self.vtk.display_volume(name=world_object.name, disp=attribute['value'])
-            elif attribute['name'] == 'matrix_colormap':
-                self.vtk.set_matrix_lookuptable(
-                    world_object.name,
-                    colormap=attribute['value'],
-                    i_min=i_range[0],
-                    i_max=i_range[1])
-            elif attribute['name'] == 'alphamap':
-                self.vtk.set_volume_alpha(
-                    world_object.name,
-                    alpha=alpha,
-                    alphamap=attribute['value'],
-                    i_min=i_range[0],
-                    i_max=i_range[1],
-                    bg_id=bg_id)
-            elif attribute['name'] == 'volume_alpha':
-                self.vtk.set_volume_alpha(
-                    world_object.name,
-                    alpha=attribute['value'],
-                    alphamap=alphamap,
-                    i_min=i_range[0],
-                    i_max=i_range[1],
-                    bg_id=bg_id)
-            elif attribute['name'] == 'intensity_range':
-                self.vtk.set_matrix_lookuptable(
-                    world_object.name,
-                    colormap=colormap,
-                    i_min=attribute['value'][0],
-                    i_max=attribute['value'][1])
-                self.vtk.set_volume_alpha(
-                    world_object.name,
-                    alpha=alpha,
-                    alphamap=alphamap,
-                    i_min=attribute['value'][0],
-                    i_max=attribute['value'][1],
-                    bg_id=bg_id)
-            elif attribute['name'] == 'cut_planes':
-                self.vtk.display_cut_planes(name=world_object.name, disp=attribute['value'])
-            elif attribute['name'] == 'cut_planes_alpha':
-                self.vtk.set_cut_planes_alpha(world_object.name, alpha=attribute['value'])
-            else:
-                for i, axis in enumerate(['x', 'y', 'z']):
-                    if attribute['name'] == axis + '_plane_position':
-                        self.vtk.move_cut_plane(name=world_object.name, position=attribute['value'], orientation=i + 1)
-        elif isinstance(object_data, vtk.vtkPolyData):
-            dtype = 'polydata'
-            alpha = attribute_value(world_object, dtype, 'polydata_alpha')
-            colormap = attribute_value(world_object, dtype, 'polydata_colormap')
-            if attribute['name'] == 'polydata':
-                self.vtk.display_polydata(name=world_object.name, disp=attribute['value'])
-            elif attribute['name'] == 'polydata_colormap':
-                self.vtk.set_polydata_lookuptable(world_object.name, colormap=attribute['value'], alpha=alpha)
-            elif attribute['name'] == 'polydata_alpha':
-                self.vtk.set_polydata_lookuptable(world_object.name, colormap=colormap, alpha=attribute['value'])
-
-
-class VtkViewer(QtGui.QWidget):
-    matrixAdded = QtCore.Signal(str)
+class VtkViewer(QtGui.QWidget, AbstractListener):
 
     def __init__(self):
         QtGui.QWidget.__init__(self)
+        AbstractListener.__init__(self)
+
+        self.world = World()
+        self.world.register_listener(self)
 
         layout = QtGui.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -468,7 +321,6 @@ class VtkViewer(QtGui.QWidget):
             self.ren.RemoveVolume(volume)
         for name, actor in self.actor.items():
             self.ren.RemoveActor(actor)
-        self.ren.RemoveAllProps()
 
     def clear(self):
         for name, volume in self.volume.items():
@@ -477,7 +329,6 @@ class VtkViewer(QtGui.QWidget):
         for name, actor in self.actor.items():
             self.ren.RemoveActor(actor)
             del self.actor[name]
-        self.ren.RemoveAllProps()
 
         self.matrix = {}
         self.reader = {}
@@ -515,6 +366,147 @@ class VtkViewer(QtGui.QWidget):
 
     def render(self):
         self.iren.Render()
+
+    def notify(self, sender, event=None):
+        signal, data = event
+        print "VtkViewer < ", signal, "!"
+        if signal == 'world_sync':
+            self.set_world(data)
+        elif signal == 'world_object_changed':
+            world, old, new = data
+            self.set_world_object(world, new)
+        elif signal == 'world_object_item_changed':
+            world, obj, item, old, new = data
+            if item == 'attribute':
+                self.update_world_object(world, obj, new)
+
+    def set_world(self, world):
+        self.clear()
+        for obj_name, world_object in world.items():
+            if hasattr(world_object, "transform"):
+                object_data = world_object.transform()
+            elif hasattr(world_object, "_repr_vtk_"):
+                object_data = world_object._repr_vtk_()
+            else:
+                object_data = world_object.data
+
+            if isinstance(object_data, np.ndarray):
+                self.add_matrix(
+                    world_object, object_data, datatype=object_data.dtype, **world_object.kwargs)
+                world_object.kwargs.pop('colormap', None)
+                world_object.kwargs.pop('alpha', None)
+                world_object.kwargs.pop('alphamap', None)
+                world_object.kwargs.pop('resolution', None)
+                world_object.kwargs.pop('volume', None)
+                world_object.kwargs.pop('cut_planes', None)
+            elif isinstance(object_data, vtk.vtkPolyData):
+                self.add_polydata(world_object, object_data, **world_object.kwargs)
+                world_object.kwargs.pop('position', None)
+                world_object.kwargs.pop('colormap', None)
+                world_object.kwargs.pop('alpha', None)
+            elif isinstance(object_data, vtk.vtkActor):
+                self.add_actor(obj_name, object_data, **world_object.kwargs)
+        self.compute()
+
+    def set_world_object(self, world, world_object):
+        """
+        Add a world object in the viewer's scene
+        """
+
+        # Convert the world object data into its VTK representation
+        object_name = world_object.name
+        if hasattr(world_object, "transform"):
+            object_data = world_object.transform()
+        elif hasattr(world_object, "_repr_vtk_"):
+            object_data = world_object._repr_vtk_()
+        else:
+            object_data = world_object.data
+        self.object_repr[object_name] = object_data
+
+        if isinstance(object_data, np.ndarray):
+            self.add_matrix(
+                world_object, object_data, datatype=object_data.dtype, **world_object.kwargs)
+            world_object.kwargs.pop('colormap', None)
+            world_object.kwargs.pop('alpha', None)
+            world_object.kwargs.pop('alphamap', None)
+            world_object.kwargs.pop('bg_id', None)
+            world_object.kwargs.pop('resolution', None)
+            world_object.kwargs.pop('volume', None)
+            world_object.kwargs.pop('cut_planes', None)
+        elif isinstance(object_data, vtk.vtkPolyData):
+            self.add_polydata(world_object, object_data, **world_object.kwargs)
+            world_object.kwargs.pop('position', None)
+            world_object.kwargs.pop('colormap', None)
+            world_object.kwargs.pop('alpha', None)
+        elif isinstance(object_data, vtk.vtkActor):
+            self.add_actor(object_name, object_data, **world_object.kwargs)
+        self.compute()
+
+    def update_world_object(self, world, world_object, attribute):
+        object_name = world_object.name
+        object_data = self.object_repr[object_name]
+        if isinstance(object_data, np.ndarray):
+            dtype = 'matrix'
+            colormap = attribute_value(world_object, dtype, 'matrix_colormap')
+            alpha = attribute_value(world_object, dtype, 'volume_alpha')
+            alphamap = attribute_value(world_object, dtype, 'alphamap')
+            bg_id = attribute_value(world_object, dtype, 'bg_id')
+            i_range = attribute_value(world_object, dtype, 'intensity_range')
+            if attribute['name'] == 'volume':
+                self.display_volume(name=world_object.name, disp=attribute['value'])
+            elif attribute['name'] == 'matrix_colormap':
+                self.set_matrix_lookuptable(
+                    world_object.name,
+                    colormap=attribute['value'],
+                    i_min=i_range[0],
+                    i_max=i_range[1])
+            elif attribute['name'] == 'alphamap':
+                self.set_volume_alpha(
+                    world_object.name,
+                    alpha=alpha,
+                    alphamap=attribute['value'],
+                    i_min=i_range[0],
+                    i_max=i_range[1],
+                    bg_id=bg_id)
+            elif attribute['name'] == 'volume_alpha':
+                self.set_volume_alpha(
+                    world_object.name,
+                    alpha=attribute['value'],
+                    alphamap=alphamap,
+                    i_min=i_range[0],
+                    i_max=i_range[1],
+                    bg_id=bg_id)
+            elif attribute['name'] == 'intensity_range':
+                self.set_matrix_lookuptable(
+                    world_object.name,
+                    colormap=colormap,
+                    i_min=attribute['value'][0],
+                    i_max=attribute['value'][1])
+                self.set_volume_alpha(
+                    world_object.name,
+                    alpha=alpha,
+                    alphamap=alphamap,
+                    i_min=attribute['value'][0],
+                    i_max=attribute['value'][1],
+                    bg_id=bg_id)
+            elif attribute['name'] == 'cut_planes':
+                self.display_cut_planes(name=world_object.name, disp=attribute['value'])
+            elif attribute['name'] == 'cut_planes_alpha':
+                self.set_cut_planes_alpha(world_object.name, alpha=attribute['value'])
+            else:
+                for i, axis in enumerate(['x', 'y', 'z']):
+                    if attribute['name'] == axis + '_plane_position':
+                        self.move_cut_plane(name=world_object.name, position=attribute['value'], orientation=i + 1)
+        elif isinstance(object_data, vtk.vtkPolyData):
+            dtype = 'polydata'
+            alpha = attribute_value(world_object, dtype, 'polydata_alpha')
+            colormap = attribute_value(world_object, dtype, 'polydata_colormap')
+            if attribute['name'] == 'polydata':
+                self.display_polydata(name=world_object.name, disp=attribute['value'])
+            elif attribute['name'] == 'polydata_colormap':
+                self.set_polydata_lookuptable(world_object.name, colormap=attribute['value'], alpha=alpha)
+            elif attribute['name'] == 'polydata_alpha':
+                self.set_polydata_lookuptable(world_object.name, colormap=colormap, alpha=attribute['value'])
 
     def add_actor(self, name, actor, **kwargs):
         if name in self.actor:
@@ -710,7 +702,6 @@ class VtkViewer(QtGui.QWidget):
         # self._display_cut_planes(name, display_cut_planes)
 
         print world_object.kwargs
-        self.matrixAdded.emit(name)
 
     def add_matrix_cut_planes(self, world_object, data_matrix, datatype=np.uint16, decimate=1, **kwargs):
         name = world_object.name
