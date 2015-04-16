@@ -468,6 +468,7 @@ class VtkViewer(QtGui.QWidget):
             self.ren.RemoveVolume(volume)
         for name, actor in self.actor.items():
             self.ren.RemoveActor(actor)
+        self.ren.RemoveAllProps()
 
     def clear(self):
         for name, volume in self.volume.items():
@@ -476,6 +477,7 @@ class VtkViewer(QtGui.QWidget):
         for name, actor in self.actor.items():
             self.ren.RemoveActor(actor)
             del self.actor[name]
+        self.ren.RemoveAllProps()
 
         self.matrix = {}
         self.reader = {}
