@@ -1,48 +1,44 @@
 # -*- coding: utf-8 -*-
 # -*- python -*-
 #
+#       TissueLab
 #
-#       OpenAlea.OALab: Multi-Paradigm GUI
+#       Copyright 2015 INRIA - CIRAD - INRA
 #
-#       Copyright 2014 INRIA - CIRAD - INRA
-#
-#       File author(s): Guillaume Baty <guillaume.baty@inria.fr>
-#
+#       File author(s): Guillaume Cerutti <guillaume.cerutti@inria.fr>
 #       File contributor(s):
 #
 #       Distributed under the Cecill-C License.
 #       See accompanying file LICENSE.txt or copy at
 #           http://www.cecill.info/licences/Licence_CeCILL-C_V1-en.html
 #
-#       OpenAlea WebSite : http://openalea.gforge.inria.fr
+#       TissueLab Website : http://virtualplants.github.io/
 #
 ###############################################################################
 
-colormap_names = ["acidity",
-                  "altitude",
-                  "atmosphere",
-                  "blue",
-                  "climate",
-                  "cold",
-                  "color",
-                  "curvature",
-                  "density",
-                  "geology",
-                  "glasbey",
-                  "green",
-                  "grey",
-                  "hot",
-                  "invert_grey",
-                  "jet",
-                  "leaf",
-                  "marocco",
-                  "ocean",
-                  "purple",
-                  "red",
-                  "sepia",
-                  "temperature",
-                  "vegetation",
-                  "wine",
-                  ]
+import tissuelab
+from openalea.core.path import path as Path
+from openalea.deploy.shared_data import shared_data
 
-colormap_names.sort()
+
+def list_colormaps():
+    colormap_names = []
+    colormaps_path = Path(shared_data(tissuelab, 'colormaps/grey.lut')).parent
+
+    for colormap_file in colormaps_path.walkfiles('*.lut'):
+        colormap_name = str(colormap_file.name[:-4])
+        colormap_names.append(colormap_name)
+    colormap_names.sort()
+    return colormap_names
+
+
+def load_colormaps():
+    from tissuelab.gui.vtkviewer.colormap_utils import Colormap, colormap_from_file
+    colormaps = {}
+    colormaps_path = Path(shared_data(tissuelab, 'colormaps/grey.lut')).parent
+
+    for colormap_file in colormaps_path.walkfiles('*.lut'):
+        colormap_name = str(colormap_file.name[:-4])
+        colormaps[colormap_name] = colormap_from_file(
+            colormap_file, name=colormap_name)
+    return colormaps

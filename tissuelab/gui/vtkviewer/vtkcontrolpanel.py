@@ -1,20 +1,18 @@
 # -*- coding: utf-8 -*-
 # -*- python -*-
 #
-#
-#       OpenAlea.OALab: Multi-Paradigm GUI
+#       TissueLab
 #
 #       Copyright 2014 INRIA - CIRAD - INRA
 #
 #       File author(s): Guillaume Baty <guillaume.baty@inria.fr>
-#
 #       File contributor(s):
 #
 #       Distributed under the Cecill-C License.
 #       See accompanying file LICENSE.txt or copy at
 #           http://www.cecill.info/licences/Licence_CeCILL-C_V1-en.html
 #
-#       OpenAlea WebSite : http://openalea.gforge.inria.fr
+#       TissueLab Website : http://virtualplants.github.io/
 #
 ###############################################################################
 
@@ -29,7 +27,7 @@ class VtkControlPanel(QtGui.QWidget):
     StylePanel = 1
     DEFAULT_STYLE = StylePanel
 
-    attributeChanged = QtCore.Signal(str,dict)
+    attributeChanged = QtCore.Signal(str, dict)
 
     def __init__(self, parent=None, style=None):
         QtGui.QWidget.__init__(self, parent=parent)
@@ -114,17 +112,16 @@ class VtkControlPanel(QtGui.QWidget):
         #     from tissuelab.gui.vtkviewer.colormap_def import colormap_names
         #     lut.interface.enum = colormap_names
 
-        cmap = manager.add('colormap', interface='IColormap', value=dict(name='grey',color_points=dict([(0, (0, 0, 0)), (1, (1, 1, 1))])), alias=u'Colormap')
+        cmap = manager.add('colormap', interface='IColormap', value=dict(name='grey', color_points=dict([(0, (0, 0, 0)), (1, (1, 1, 1))])), alias=u'Colormap')
 
         intensity_range = manager.add(
-            'intensity_range', interface='IIntRange', value=(0,255), alias=u'Intensity range')
-        intensity_range.interface.min=0
-        intensity_range.interface.max=255
+            'intensity_range', interface='IIntRange', value=(0, 255), alias=u'Intensity range')
+        intensity_range.interface.min = 0
+        intensity_range.interface.max = 255
 
         bg_id = manager.add(
             'bg_id', interface='IInt', value=1, alias=u'Background Id')
         #selected_id = manager.add('selected_id', interface='IInt', value=2, alias=u'Color cell')
-
 
         if viewer and matrix_name:
             disp = True
@@ -150,7 +147,7 @@ class VtkControlPanel(QtGui.QWidget):
                 c.interface.max = data_matrix.max()
 
             for c in [intensity_range]:
-                c.value = (data_matrix.min(),data_matrix.max())
+                c.value = (data_matrix.min(), data_matrix.max())
                 c.interface.min = data_matrix.min()
                 c.interface.max = data_matrix.max()
 
@@ -166,7 +163,7 @@ class VtkControlPanel(QtGui.QWidget):
         manager.register_follower(
             'volume_alphamap_type', self._volume_alphamap_changed)
         # manager.register_follower('lookuptable', self._lookuptable_changed)
-        manager.register_follower('colormap',self._colormap_changed)
+        manager.register_follower('colormap', self._colormap_changed)
         manager.register_follower('bg_id', self._bg_id_changed)
         #manager.register_follower('selected_id', self._selected_id_changed)
         manager.register_follower('intensity_range', self._intensity_range_changed)
@@ -233,7 +230,7 @@ class VtkControlPanel(QtGui.QWidget):
         self._viewer.color_cell(self._current, new, (1., 0., 0.))
 
     def _bg_id_changed(self, old, new):
-        self._volume_alpha_changed(None,  self['volume_alpha'].value)
+        self._volume_alpha_changed(None, self['volume_alpha'].value)
 
     def _intensity_range_changed(self, old, new):
         # lookuptable = self['lookuptable'].value
@@ -261,10 +258,10 @@ class VtkControlPanel(QtGui.QWidget):
 
     def _colormap_changed(self, old, new):
         i_range = self['intensity_range'].value
-        self._viewer.set_matrix_lookuptable(self._current, colormap=new['name'], i_min=i_range [0], i_max=i_range[1])
+        self._viewer.set_matrix_lookuptable(self._current, colormap=new['name'], i_min=i_range[0], i_max=i_range[1])
 
     def _volume_alphamap_changed(self, old, new):
-        self._volume_alpha_changed(None,  self['volume_alpha'].value)
+        self._volume_alpha_changed(None, self['volume_alpha'].value)
 
     def _display_cut_planes_changed(self, old, new):
         self._viewer.display_cut_planes(name=self._current, disp=new)
