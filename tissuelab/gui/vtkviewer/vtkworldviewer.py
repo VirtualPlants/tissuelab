@@ -374,15 +374,13 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         self.add_actor('%s_outline' % (name), outline_actor)
 
     def add_matrix(self, world_object, data_matrix, datatype=np.uint8, decimate=1, **kwargs):
-        world_object.silent=True
+        world_object.silent = True
 
         name = world_object.name
         dtype = 'matrix'
         data_matrix = world_object.data
         shade = kwargs.get('shade')
         erosion = kwargs.get('erosion')
-
-
 
         if shade and not erosion:
             data_matrix = np.copy(data_matrix)
@@ -420,11 +418,11 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         display_volume = kwargs.pop('volume', attribute_value(world_object, dtype, 'volume'))
         world_object.set_attribute(**attribute_args(dtype, 'volume', display_volume))
 
-        world_object.silent=True
+        world_object.silent = True
 
         self.add_matrix_cut_planes(
             world_object, data_matrix, datatype, decimate, **kwargs)
-        
+
         world_object.silent = False
 
         display_cut_planes = kwargs.pop('cut_planes', attribute_value(world_object, dtype, 'cut_planes'))
