@@ -86,7 +86,7 @@ setup(
     entry_points={
 
         'oalab.applet': [
-            'VtkViewer = tissuelab.plugin.applet:VtkViewer',
+            'TissueViewer = tissuelab.plugin.applet:TissueViewer',
             'VtkControlPanel = tissuelab.plugin.applet:VtkControlPanel',
             'OmeroClient = tissuelab.plugin.applet:OmeroClient',
             'LineageViewer = tissuelab.plugin.applet:LineageViewer',
