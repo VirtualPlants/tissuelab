@@ -1,10 +1,29 @@
+# -*- coding: utf-8 -*-
+# -*- python -*-
+#
+#       TissueLab
+#
+#       Copyright 2014 INRIA - CIRAD - INRA
+#
+#       File author(s): Guillaume Baty <guillaume.baty@inria.fr>
+#       File contributor(s):
+#
+#       Distributed under the Cecill-C License.
+#       See accompanying file LICENSE.txt or copy at
+#           http://www.cecill.info/licences/Licence_CeCILL-C_V1-en.html
+#
+#       TissueLab Website : http://virtualplants.github.io/
+#
+###############################################################################
 
 __all__ = ['IImage5DViewer', 'IOmeroImage', 'ISpatialImage', 'IAdapter']
 
 from openalea.oalab.legacy.catalog.interface import IInterface
 
+
 class IAdapter(IInterface):
     name = 'IAdapter'
+
 
 class IImage5DViewer(IInterface):
     name = 'IImage5DViewer'
@@ -15,7 +34,9 @@ class IImage5DViewer(IInterface):
     def update(self):
         raise NotImplementedError
 
-class ISpatialImage(IInterface) :
+
+class ISpatialImage(IInterface):
+
     """
     Associate meta data to np.ndarray
 
@@ -33,12 +54,12 @@ class ISpatialImage(IInterface) :
     """
     name = 'ISpatialImage'
 
-    def invert_z_axis( self ):
+    def invert_z_axis(self):
         """
         invert allong 'Z' axis
         """
 
-    def clone (self, data) :
+    def clone(self, data):
         """Clone the current image metadata
         on the given data.
 
@@ -54,6 +75,7 @@ class ISpatialImage(IInterface) :
     def valid_array(cls, array_like):
         pass
 
+
 class IOmeroImage(ISpatialImage):
     name = 'IOmeroImage'
 
@@ -68,6 +90,7 @@ class IOmeroImage(ISpatialImage):
 
     def getPlane(self, z, c, t):
         pass
+
 
 class IImage5D(ISpatialImage):
     name = 'IImage5D'
@@ -87,8 +110,8 @@ class IImage5D(ISpatialImage):
 
 
 class IDocumentDbConnection(IInterface):
+
     """
     Interface used to connect to a document DB
     """
     name = "IDocumentDbConnection"
-

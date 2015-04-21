@@ -1,10 +1,29 @@
+# -*- coding: utf-8 -*-
+# -*- python -*-
+#
+#       TissueLab
+#
+#       Copyright 2014 INRIA - CIRAD - INRA
+#
+#       File author(s): Guillaume Baty <guillaume.baty@inria.fr>
+#       File contributor(s):
+#
+#       Distributed under the Cecill-C License.
+#       See accompanying file LICENSE.txt or copy at
+#           http://www.cecill.info/licences/Licence_CeCILL-C_V1-en.html
+#
+#       TissueLab Website : http://virtualplants.github.io/
+#
+###############################################################################
 
 from openalea.vpltk.qt import QtGui
 
 from openalea.grapheditor import qt
 from custom_graph_model import Graph
 
+
 class SimpleView(qt.View):
+
     def __init__(self, *args, **kwargs):
         qt.View.__init__(self, *args, **kwargs)
         self.set_default_drop_handler(self.dropHandler)
@@ -13,7 +32,6 @@ class SimpleView(qt.View):
         position = self.mapToScene(event.pos())
         position = [position.x(), position.y()]
         self.scene().new_vertex(position=position)
-
 
     def clear(self):
         self.__observableGraph.unregister_listener(self)
@@ -24,7 +42,9 @@ class SimpleView(qt.View):
 
     mouseDoubleClickEvent = dropHandler
 
+
 class SimpleVertex(qt.DefaultGraphicalVertex):
+
     def __init__(self, *args, **kwargs):
         qt.DefaultGraphicalVertex.__init__(self, *args, **kwargs)
         self.initialise(self.get_observed().get_ad_hoc_dict())
@@ -34,14 +54,15 @@ class SimpleVertex(qt.DefaultGraphicalVertex):
         return self.get_observed().get_ad_hoc_dict().get_metadata(key)
 
 SimpleGraph = qt.QtGraphStrategyMaker(graphView=SimpleView,
-                                       vertexWidgetMap={"vertex":SimpleVertex},
-                                       edgeWidgetMap={"default":qt.DefaultGraphicalEdge,
-                                                               "floating-default":qt.DefaultGraphicalFloatingEdge},
-                                       graphViewInitialiser=None,
-                                       adapterType=None)
+                                      vertexWidgetMap={"vertex": SimpleVertex},
+                                      edgeWidgetMap={"default": qt.DefaultGraphicalEdge,
+                                                     "floating-default": qt.DefaultGraphicalFloatingEdge},
+                                      graphViewInitialiser=None,
+                                      adapterType=None)
 
 
 class LineageViewer(QtGui.QWidget):
+
     def __init__(self):
         QtGui.QWidget.__init__(self)
         self.graph = Graph()
@@ -63,4 +84,3 @@ class LineageViewer(QtGui.QWidget):
         import random
         for i in range(50):
             graph.new_vertex(i, (i * 40, random.randint(0, 4) * 10))
-
