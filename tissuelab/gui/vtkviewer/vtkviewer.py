@@ -22,8 +22,8 @@
 
 import vtk
 from openalea.vpltk.qt import QtGui
-from vtk.qt4.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
+from tissuelab.gui.vtkviewer.qvtkrenderwindowinteractor import QVTKRenderWindowInteractor
 from tissuelab.gui.vtkviewer.colormap_def import load_colormaps
 
 
