@@ -379,8 +379,8 @@ class VtkViewer(QtGui.QWidget):
             del old_volume
         self.volume[name] = volume
 
-        self.set_matrix_lookuptable(name, cmap, i_min=irange[0], i_max=irange[1], cut_planes=False)
-        self.set_volume_alpha(name, alpha, alphamap, i_min=irange[0], i_max=irange[1], bg_id=bg_id)
+        self.set_matrix_lookuptable(name, cmap, intensity_range=irange, cut_planes=False)
+        self.set_volume_alpha(name, alpha, alphamap, intensity_range=irange, bg_id=bg_id)
 
     def set_cut_planes_alpha(self, name, alpha):
         alpha = default_value('matrix', 'cut_planes_alpha', cut_planes_alpha=alpha)
@@ -394,13 +394,12 @@ class VtkViewer(QtGui.QWidget):
 
         bg_id = kwargs.get('bg_id', None)
         sh_id = kwargs.get('sh_id', None)
-        i_min = kwargs.get('i_min', self.matrix[name].min())
-        i_max = kwargs.get('i_max', self.matrix[name].max())
+        irange = kwargs.get('intensity_range', (self.matrix[name].min(), self.matrix[name].max()))
 
         if alphamap == "constant":
             alphaChannelFunc.ClampingOn()
-            alphaChannelFunc.AddPoint(i_min, alpha)
-            alphaChannelFunc.AddPoint(i_max, alpha)
+            alphaChannelFunc.AddPoint(irange[0], alpha)
+            alphaChannelFunc.AddPoint(irange[1], alpha)
 
             if bg_id is not None:
                 if not bg_id - 1 == sh_id:
@@ -418,18 +417,18 @@ class VtkViewer(QtGui.QWidget):
 
         elif alphamap == "linear":
             alphaChannelFunc.ClampingOn()
-            alphaChannelFunc.AddPoint(i_min, 0.0)
-            alphaChannelFunc.AddPoint(i_max, alpha)
+            alphaChannelFunc.AddPoint(irange[0], 0.0)
+            alphaChannelFunc.AddPoint(irange[1], alpha)
 
     def set_matrix_lookuptable(self, name, colormap, **kwargs):
-        i_min = kwargs.get('i_min', None)
-        i_max = kwargs.get('i_max', None)
+        irange = kwargs.pop('intensity_range', None)
+
         cut_planes = kwargs.get('cut_planes', True)
 
         lut = define_lookuptable(self.matrix[name],
                                  colormap_points=colormap['color_points'],
                                  colormap_name=colormap['name'],
-                                 i_min=i_min, i_max=i_max)
+                                 i_min=irange[0], i_max=irange[1])
         if 'sh_id' in kwargs:
             lut.AddRGBPoint(kwargs['sh_id'], *kwargs.get('shade_color', (0., 0., 0.)))
         self.volume_property[name]['vtkVolumeProperty'].SetColor(lut)

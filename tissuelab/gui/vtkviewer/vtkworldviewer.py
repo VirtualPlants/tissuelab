@@ -89,7 +89,11 @@ def setdefault(world_object, dtype, attr_name, obj_attr_name=None, conv=None, **
                 value = attribute_definition[dtype][attr_name]['value']
                 break
 
+    # Set as attribute
     world_object.set_attribute(**attribute_args(dtype, obj_attr_name, value))
+
+    # And clear from kwargs
+    world_object.kwargs.pop(obj_attr_name, None)
     return value
 
 
@@ -116,6 +120,8 @@ def _irange(world_object, attr_name, irange, **kwargs):
     if irange is None:
         imin = kwargs.get('i_min', world_object.data.min())
         imax = kwargs.get('i_max', world_object.data.max())
+        world_object.kwargs.pop('i_min', None)
+        world_object.kwargs.pop('i_max', None)
         return (imin, imax)
     else:
         return irange
@@ -163,19 +169,9 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                 object_data = world_object.data
 
             if isinstance(object_data, np.ndarray):
-                self.add_matrix(
-                    world_object, object_data, datatype=object_data.dtype, **world_object.kwargs)
-                world_object.kwargs.pop('colormap', None)
-                world_object.kwargs.pop('alpha', None)
-                world_object.kwargs.pop('alphamap', None)
-                world_object.kwargs.pop('resolution', None)
-                world_object.kwargs.pop('volume', None)
-                world_object.kwargs.pop('cut_planes', None)
+                self.add_matrix(world_object, object_data, datatype=object_data.dtype, **world_object.kwargs)
             elif isinstance(object_data, vtk.vtkPolyData):
                 self.add_polydata(world_object, object_data, **world_object.kwargs)
-                world_object.kwargs.pop('position', None)
-                world_object.kwargs.pop('colormap', None)
-                world_object.kwargs.pop('alpha', None)
             elif isinstance(object_data, vtk.vtkActor):
                 self.add_actor(obj_name, object_data, **world_object.kwargs)
         self.compute()
@@ -196,20 +192,9 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         self.object_repr[object_name] = object_data
 
         if isinstance(object_data, np.ndarray):
-            self.add_matrix(
-                world_object, object_data, datatype=object_data.dtype, **world_object.kwargs)
-            world_object.kwargs.pop('colormap', None)
-            world_object.kwargs.pop('alpha', None)
-            world_object.kwargs.pop('alphamap', None)
-            world_object.kwargs.pop('bg_id', None)
-            world_object.kwargs.pop('resolution', None)
-            world_object.kwargs.pop('volume', None)
-            world_object.kwargs.pop('cut_planes', None)
+            self.add_matrix(world_object, object_data, datatype=object_data.dtype, **world_object.kwargs)
         elif isinstance(object_data, vtk.vtkPolyData):
             self.add_polydata(world_object, object_data, **world_object.kwargs)
-            world_object.kwargs.pop('position', None)
-            world_object.kwargs.pop('colormap', None)
-            world_object.kwargs.pop('alpha', None)
         elif isinstance(object_data, vtk.vtkActor):
             self.add_actor(object_name, object_data, **world_object.kwargs)
         self.compute()
@@ -223,43 +208,40 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
             alpha = attribute_value(world_object, dtype, 'volume_alpha')
             alphamap = attribute_value(world_object, dtype, 'alphamap')
             bg_id = attribute_value(world_object, dtype, 'bg_id')
-            i_range = attribute_value(world_object, dtype, 'intensity_range')
+            irange = attribute_value(world_object, dtype, 'intensity_range')
             if attribute['name'] == 'volume':
                 self.display_volume(name=world_object.name, disp=attribute['value'])
             elif attribute['name'] == 'matrix_colormap':
                 self.set_matrix_lookuptable(
                     world_object.name,
                     colormap=attribute['value'],
-                    i_min=i_range[0],
-                    i_max=i_range[1])
+                    intensity_range=irange
+                )
             elif attribute['name'] == 'alphamap':
                 self.set_volume_alpha(
                     world_object.name,
                     alpha=alpha,
                     alphamap=attribute['value'],
-                    i_min=i_range[0],
-                    i_max=i_range[1],
+                    intensity_range=irange,
                     bg_id=bg_id)
             elif attribute['name'] == 'volume_alpha':
                 self.set_volume_alpha(
                     world_object.name,
                     alpha=attribute['value'],
                     alphamap=alphamap,
-                    i_min=i_range[0],
-                    i_max=i_range[1],
+                    intensity_range=irange,
                     bg_id=bg_id)
             elif attribute['name'] == 'intensity_range':
                 self.set_matrix_lookuptable(
                     world_object.name,
                     colormap=colormap,
-                    i_min=attribute['value'][0],
-                    i_max=attribute['value'][1])
+                    intensity_range=attribute['value']
+                )
                 self.set_volume_alpha(
                     world_object.name,
                     alpha=alpha,
                     alphamap=alphamap,
-                    i_min=attribute['value'][0],
-                    i_max=attribute['value'][1],
+                    intensity_range=attribute['value'],
                     bg_id=bg_id)
             elif attribute['name'] == 'cut_planes':
                 self.display_cut_planes(name=world_object.name, disp=attribute['value'])
