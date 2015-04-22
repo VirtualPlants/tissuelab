@@ -91,6 +91,10 @@ class TestCase(QtTestCase, unittest.TestCase):
         self.widget.set_cut_planes_alpha(n, 0.5)
         self.widget.render()
 
+    def test_volume(self):
+        matrix = demo_matrix_xyz()
+        self.widget.add_matrix_as_volume("matrix", matrix)
+
     def tearDown(self):
         self.widget.compute()
         self.widget.show()
