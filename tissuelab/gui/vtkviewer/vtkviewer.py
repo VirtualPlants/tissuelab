@@ -25,8 +25,10 @@ import numpy as np
 import vtk
 
 from openalea.vpltk.qt import QtGui
-from tissuelab.gui.vtkviewer.qvtkrenderwindowinteractor import QVTKRenderWindowInteractor
+from openalea.core.interface import IBool, IInt, IFloat, ITuple, IEnumStr
+from openalea.oalab.plugins.interface import IIntRange, IColormap
 
+from tissuelab.gui.vtkviewer.qvtkrenderwindowinteractor import QVTKRenderWindowInteractor
 from tissuelab.gui.vtkviewer.colormap_def import load_colormaps
 from tissuelab.gui.vtkviewer.vtk_utils import matrix_to_image_reader, define_lookuptable
 
