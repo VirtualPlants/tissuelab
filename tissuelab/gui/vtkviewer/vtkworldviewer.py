@@ -29,8 +29,8 @@ from openalea.oalab.world import World
 from openalea.vpltk.qt import QtGui
 
 
-from tissuelab.gui.vtkviewer.vtk_utils import define_lookuptable, matrix_to_image_reader
-from tissuelab.gui.vtkviewer.vtkviewer import VtkViewer, attribute_args, attribute_definition, attribute_meta
+from tissuelab.gui.vtkviewer.vtk_utils import define_lookuptable
+from tissuelab.gui.vtkviewer.vtkviewer import VtkViewer, attribute_args, attribute_definition, colormaps
 
 
 def expand(widget):
@@ -38,8 +38,96 @@ def expand(widget):
     widget.setSizePolicy(p(p.MinimumExpanding, p.MinimumExpanding))
 
 
-def attribute_value(world_object, dtype, attr_name):
-    return world_object.get(attr_name, attribute_definition[dtype][attr_name]['value'])
+def attribute_value(world_object, dtype, attr_name, **kwargs):
+    """
+    Return a value for attr_name. Try to get value in this order:
+        1. kwargs
+        2. world object
+        3. viewer's default
+    """
+    if isinstance(attr_name, basestring):
+        attr_names = [attr_name]
+    else:
+        attr_names = attr_name
+    for attr_name in attr_names:
+        if attr_name in kwargs:
+            return kwargs[attr_name]
+    else:
+        return world_object.get(attr_name, attribute_definition[dtype][attr_name]['value'])
+
+
+def setdefault(world_object, dtype, attr_name, obj_attr_name=None, conv=None, **kwargs):
+    if obj_attr_name is None:
+        obj_attr_name = attr_name
+    if isinstance(attr_name, basestring):
+        attr_names = [attr_name]
+    else:
+        attr_names = attr_name
+    if obj_attr_name != attr_name:
+        attr_names.insert(0, obj_attr_name)
+
+    #Try to get value in this order:
+    #    1. kwargs
+    value = None
+    for attr_name in attr_names:
+        if attr_name in kwargs:
+            value = kwargs[attr_name]
+            break
+
+    #    2. world object
+    if value is None:
+        value = world_object.get(attr_name, None)
+
+    # If a conversion has been defined, apply it
+    if conv:
+        value = conv(world_object, obj_attr_name, value, **kwargs)
+
+    # If value is still None after conversion, use viewer's default
+    if value is None:
+        for attr_name in attr_names:
+            if attr_name in attribute_definition[dtype]:
+                value = attribute_definition[dtype][attr_name]['value']
+                break
+
+    world_object.set_attribute(**attribute_args(dtype, obj_attr_name, value))
+    return value
+
+
+def world_kwargs(world_object):
+    kwargs = {}
+    for attribute in world_object.attributes:
+        kwargs[attribute['name']] = attribute['value']
+    return kwargs
+
+
+def _tuple(world_object, attr_name, value, **kwargs):
+    if value is not None:
+        return tuple(value)
+
+
+def _colormap(world_object, attr_name, cmap, **kwargs):
+    if isinstance(cmap, str):
+        return dict(name=cmap, color_points=colormaps[cmap]._color_points)
+    else:
+        return cmap
+
+
+def _irange(world_object, attr_name, irange, **kwargs):
+    if irange is None:
+        imin = kwargs.get('i_min', world_object.data.min())
+        imax = kwargs.get('i_max', world_object.data.max())
+        return (imin, imax)
+    else:
+        return irange
+
+
+def _plane_position(world_object, attr_name, position, **kwargs):
+    if position is None:
+        lst = list('xyz')
+        i = attr_name[0]
+        return (world_object.data.shape[lst.index(i)] - 1) / 2
+    else:
+        return position
 
 
 class VtkWorldViewer(VtkViewer, AbstractListener):
@@ -352,65 +440,45 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
 
         self.add_matrix_as_volume(
             world_object, data_matrix, datatype, decimate, **kwargs)
-
         world_object.silent = False
 
-        display_volume = kwargs.pop('volume', attribute_value(world_object, dtype, 'volume'))
-        world_object.set_attribute(**attribute_args(dtype, 'volume', display_volume))
+        setdefault(world_object, dtype, 'volume', **kwargs)
 
         world_object.silent = True
-
         self.add_matrix_cut_planes(
             world_object, data_matrix, datatype, decimate, **kwargs)
-
         world_object.silent = False
 
-        display_cut_planes = kwargs.pop('cut_planes', attribute_value(world_object, dtype, 'cut_planes'))
-        world_object.set_attribute(**attribute_args(dtype, 'cut_planes', display_cut_planes))
+        setdefault(world_object, dtype, 'cut_planes', **kwargs)
 
         # self._display_volume(name, display_volume)
         # self._display_cut_planes(name, display_cut_planes)
 
-        print world_object.kwargs
-
     def add_matrix_cut_planes(self, world_object, data_matrix, datatype=np.uint16, decimate=1, **kwargs):
         name = world_object.name
         dtype = "matrix"
-        alpha = kwargs.pop('alpha', attribute_value(world_object, dtype, 'cut_planes_alpha'))
 
+        setdefault(world_object, dtype, 'alpha', 'cut_planes_alpha', **kwargs)
+
+        for axis in ['x', 'y', 'z']:
+            attr_name = axis + '_plane_position'
+            setdefault(world_object, dtype, attr_name, conv=_plane_position, **kwargs)
+
+        kwargs = world_kwargs(world_object)
         super(VtkWorldViewer, self).add_matrix_cut_planes(name, data_matrix, datatype=datatype, **kwargs)
-
-        world_object.set_attribute(**attribute_args(dtype, 'cut_planes_alpha', alpha))
-        for i, axis in enumerate(['x', 'y', 'z']):
-            world_object.set_attribute(
-                **attribute_args(dtype, axis + '_plane_position', (data_matrix.shape[i] - 1) / 2))
-
-        world_object.set_attribute(**attribute_args(dtype, 'cut_planes_alpha', alpha))
-        for i, axis in enumerate(['x', 'y', 'z']):
-            world_object.set_attribute(
-                **attribute_args(dtype, axis + '_plane_position', (data_matrix.shape[i] - 1) / 2))
 
     def add_matrix_as_volume(self, world_object, data_matrix, datatype=np.uint16, decimate=1, **kwargs):
         dtype = 'matrix'
 
-        position = tuple(kwargs.pop('position', attribute_value(world_object, dtype, 'position')))
-        resolution = tuple(kwargs.get('resolution', attribute_value(world_object, dtype, 'resolution')))
-        cmap = kwargs.pop('colormap', attribute_value(world_object, dtype, 'matrix_colormap'))
-        if isinstance(cmap, str):
-            cmap = dict(name=cmap, color_points=self.colormaps[cmap]._color_points)
-        alpha = kwargs.pop('alpha', attribute_value(world_object, dtype, 'volume_alpha'))
-        alphamap = kwargs.pop('alphamap', attribute_value(world_object, dtype, 'alphamap'))
-        bg_id = kwargs.pop('bg_id', attribute_value(world_object, dtype, 'bg_id'))
+        setdefault(world_object, dtype, 'colormap', 'matrix_colormap', conv=_colormap, **kwargs)
+        setdefault(world_object, dtype, 'alpha', 'volume_alpha', **kwargs)
+        setdefault(world_object, dtype, 'alphamap', **kwargs)
+        setdefault(world_object, dtype, 'intensity_range', conv=_irange, **kwargs)
+        setdefault(world_object, dtype, 'position', conv=_tuple, **kwargs)
+        setdefault(world_object, dtype, 'resolution', conv=_tuple, **kwargs)
+        setdefault(world_object, dtype, 'bg_id', **kwargs)
 
-        i_min = kwargs.pop('i_min', world_object.get('intensity_range', (data_matrix.min(), 0))[0])
-        i_max = kwargs.pop('i_max', world_object.get('intensity_range', (0, data_matrix.max()))[1])
-
-        super(VtkWorldViewer, self).add_matrix_as_volume(self, world_object.name, data_matrix, datatype=np.uint16, decimate=1, **kwargs)
-
-        world_object.set_attribute(**attribute_args(dtype, 'matrix_colormap', cmap))
-        world_object.set_attribute(**attribute_args(dtype, 'volume_alpha', alpha))
-        world_object.set_attribute(**attribute_args(dtype, 'alphamap', alphamap))
-        world_object.set_attribute(**attribute_args(dtype, 'intensity_range', (i_min, i_max)))
-        world_object.set_attribute(**attribute_args(dtype, 'position', position))
-        world_object.set_attribute(**attribute_args(dtype, 'resolution', resolution))
-        world_object.set_attribute(**attribute_args(dtype, 'bg_id', bg_id))
+        kwargs = world_kwargs(world_object)
+        super(VtkWorldViewer, self).add_matrix_as_volume(world_object.name, data_matrix,
+                                                         datatype=np.uint16, decimate=1,
+                                                         **kwargs)

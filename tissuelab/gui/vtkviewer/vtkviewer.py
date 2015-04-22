@@ -50,14 +50,8 @@ attribute_definition['matrix']['cut_planes_alpha'] = dict(value=1.0, interface=I
 attribute_definition['matrix']['resolution'] = dict(value=(1.0, 1.0, 1.0), interface=ITuple, alias=u"Resolution")
 attribute_definition['matrix']['position'] = dict(value=(0.0, 0.0, 0.0), interface=ITuple, alias=u"Position")
 for axis in ['x', 'y', 'z']:
-    attribute_definition['matrix'][
-        axis +
-        "_plane_position"] = dict(
-        value=0,
-        interface=IInt,
-        alias=u"Move " +
-        axis +
-        " plane")
+    alias = u"Move " + axis + " plane"
+    attribute_definition['matrix'][axis + "_plane_position"] = dict(value=0, interface=IInt, alias=alias)
 attribute_definition['matrix']['cut_planes'] = dict(value=False, interface=IBool, alias=u"Display Cut planes")
 attribute_definition['polydata'] = {}
 attribute_definition['polydata']['polydata_colormap'] = dict(
@@ -65,6 +59,9 @@ attribute_definition['polydata']['polydata_colormap'] = dict(
 attribute_definition['polydata']['polydata_alpha'] = dict(value=1.0, interface=IFloat, alias=u"Alpha (Polydata)")
 attribute_definition['polydata']['position'] = dict(value=(0.0, 0.0, 0.0), interface=ITuple, alias=u"Position")
 attribute_definition['polydata']['polydata'] = dict(value=True, interface=IBool, alias=u"Display Polydata")
+
+
+colormaps = load_colormaps()
 
 
 def attribute_meta(dtype, attr_name):
@@ -80,11 +77,24 @@ def attribute_args(dtype, attr_name, value=None):
     return attribute
 
 
-def default(dtype, attr_name, **kwargs):
-    if attr_name in kwargs:
-        return kwargs[attr_name]
+def default_value(dtype, attr_name, **kwargs):
+    """
+    Returns attribute in kwargs if defined else viewer's default
+    """
+    if isinstance(attr_name, basestring):
+        attr_names = [attr_name]
     else:
-        return attribute_definition[dtype][attr_name]['value']
+        attr_names = attr_name
+
+    for attr_name in attr_names:
+        if attr_name in kwargs:
+            return kwargs[attr_name]
+
+    for attr_name in attr_names:
+        if attr_name in attribute_definition[dtype]:
+            return attribute_definition[dtype][attr_name]['value']
+
+    raise NotImplementedError(attr_name)
 
 
 class VtkViewer(QtGui.QWidget):
@@ -119,7 +129,7 @@ class VtkViewer(QtGui.QWidget):
         layout.addWidget(self.frame)
         self.ren.ResetCamera()
 
-        self.colormaps = load_colormaps()
+        self.colormaps = colormaps
 
         # vtk objects (like vtk volumes, vtk actors...) sorted by name in a
         # dictionnary
@@ -258,10 +268,13 @@ class VtkViewer(QtGui.QWidget):
         else:
             self.matrix[name] = data_matrix
         dtype = 'matrix'
-        cmap = kwargs.pop('colormap', 'grey')
-        resolution = default(dtype, 'resolution', **kwargs)
-        position = default(dtype, 'position', **kwargs)
-        alpha = default(dtype, 'cut_planes_alpha', **kwargs)
+        cmap = default_value(dtype, ['matrix_colormap', 'colormap'], **kwargs)
+        if isinstance(cmap, str):
+            cmap = dict(name=cmap, color_points=self.colormaps[cmap]._color_points)
+
+        resolution = default_value(dtype, 'resolution', **kwargs)
+        position = default_value(dtype, 'position', **kwargs)
+        alpha = default_value(dtype, 'cut_planes_alpha', **kwargs)
 
         self.reader[name] = reader = matrix_to_image_reader(name, data_matrix, datatype, decimate)
 
@@ -269,7 +282,7 @@ class VtkViewer(QtGui.QWidget):
         # colorLut = define_lookuptable(data_matrix, colormap=self.colormaps["glasbey"])
         # lut = define_lookuptable(data_matrix, colormap=self.colormaps[cmap])
 
-        lut = define_lookuptable(data_matrix, colormap_points=self.colormaps[cmap]._color_points, colormap_name=cmap)
+        lut = define_lookuptable(data_matrix, colormap_points=cmap['color_points'], colormap_name=cmap['name'])
 
         for orientation in [1, 2, 3]:
             nx, ny, nz = data_matrix.shape
@@ -312,12 +325,23 @@ class VtkViewer(QtGui.QWidget):
         return imgactor
 
     def add_matrix_as_volume(self, name, data_matrix, datatype=np.uint16, decimate=1, **kwargs):
+        dtype = 'matrix'
+        position = tuple(default_value(dtype, 'position', **kwargs))
+        resolution = tuple(default_value(dtype, 'resolution', **kwargs))
+        alpha = default_value(dtype, ['volume_alpha', 'alpha'], **kwargs)
+        alphamap = default_value(dtype, 'alphamap', **kwargs)
+        cmap = default_value(dtype, ['matrix_colormap', 'colormap'], **kwargs)
+        bg_id = default_value(dtype, 'bg_id', **kwargs)
+
+        irange = default_value(dtype, 'intensity_range', **kwargs)
+        if irange == attribute_definition[dtype]['intensity_range']:
+            irange = (data_matrix.min(), data_matrix.max())
+
         if name in self.matrix:
             data_matrix = self.matrix[name]
         else:
             self.matrix[name] = data_matrix
 
-        dtype = 'matrix'
         self.reader[name] = reader = matrix_to_image_reader(
             name, data_matrix, datatype, decimate)
 
@@ -340,13 +364,13 @@ class VtkViewer(QtGui.QWidget):
         volume.SetMapper(volumeMapper)
         volume.SetProperty(volume_property)
 
-        position = tuple(kwargs.pop('position', default(dtype, 'position')))
-
         if position is not None:
             volume.SetOrigin(position[0], position[1], position[2])
             volume.SetPosition(-position[0], -position[1], -position[2])
 
-        resolution = tuple(kwargs.get('resolution', default(dtype, 'resolution')))
+        if isinstance(cmap, str):
+            cmap = dict(name=cmap, color_points=self.colormaps[cmap]._color_points)
+
         volume.SetScale(resolution[0], resolution[1], resolution[2])
 
         if name in self.volume:
@@ -355,21 +379,11 @@ class VtkViewer(QtGui.QWidget):
             del old_volume
         self.volume[name] = volume
 
-        cmap = kwargs.pop('colormap', default(dtype, 'matrix_colormap'))
-        if isinstance(cmap, str):
-            cmap = dict(name=cmap, color_points=self.colormaps[cmap]._color_points)
-
-        alpha = kwargs.pop('alpha', default(dtype, 'volume_alpha'))
-        alphamap = kwargs.pop('alphamap', default(dtype, 'alphamap'))
-        bg_id = kwargs.pop('bg_id', default(dtype, 'bg_id'))
-
-        i_min = kwargs.pop('i_min', kwargs.get('intensity_range', (data_matrix.min(), 0))[0])
-        i_max = kwargs.pop('i_max', kwargs.get('intensity_range', (0, data_matrix.max()))[1])
-        self.set_matrix_lookuptable(name, cmap, i_min=i_min, i_max=i_max, cut_planes=False)
-        self.set_volume_alpha(name, alpha, alphamap, i_min=i_min, i_max=i_max, bg_id=bg_id)
+        self.set_matrix_lookuptable(name, cmap, i_min=irange[0], i_max=irange[1], cut_planes=False)
+        self.set_volume_alpha(name, alpha, alphamap, i_min=irange[0], i_max=irange[1], bg_id=bg_id)
 
     def set_cut_planes_alpha(self, name, alpha):
-        alpha = default('matrix', 'cut_planes_alpha', cut_planes_alpha=alpha)
+        alpha = default_value('matrix', 'cut_planes_alpha', cut_planes_alpha=alpha)
         for orientation in [1, 2, 3]:
             self.actor[name + "_cut_plane_" + str(orientation)].SetOpacity(alpha)
 

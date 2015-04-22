@@ -93,7 +93,7 @@ class TestCase(QtTestCase, unittest.TestCase):
 
     def test_volume(self):
         matrix = demo_matrix_xyz()
-        self.widget.add_matrix_as_volume("matrix", matrix)
+        self.widget.add_matrix_as_volume("matrix", matrix, colormap='glasbey')
 
     def tearDown(self):
         self.widget.compute()
