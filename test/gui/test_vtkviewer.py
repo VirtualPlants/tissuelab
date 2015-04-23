@@ -52,6 +52,14 @@ def demo_matrix_xyz():
     return matrix
 
 
+def demo_matrix_range(delta=0):
+    dtype = np.uint16
+    matrix = np.zeros([255, 255, 255], dtype=dtype)
+    for i in range(0, 255, 10):
+        matrix[i:i + 5, delta + 0:delta + 5, 0:5] = i
+    return matrix
+
+
 class QtTestCase(object):
 
     def init(self):
@@ -93,7 +101,15 @@ class TestCase(QtTestCase, unittest.TestCase):
 
     def test_volume(self):
         matrix = demo_matrix_xyz()
-        self.widget.add_matrix_as_volume("matrix", matrix, colormap='glasbey')
+        self.widget.add_matrix_as_volume("matrix", matrix, colormap='glasbey', alphamap='constant',
+                                         alpha=1, bg_id=0)
+
+    def test_intensity_range(self):
+        self.widget.add_matrix_as_volume("matrix_ref", demo_matrix_range(delta=0), colormap='curvature',
+                                         alphamap='constant', alpha=1, bg_id=0)
+        self.widget.add_matrix_as_volume("matrix_2", demo_matrix_range(delta=10), colormap='curvature',
+                                         alphamap='constant', alpha=1, bg_id=0,
+                                         intensity_range=(105, 135))
 
     def tearDown(self):
         self.widget.compute()
