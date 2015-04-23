@@ -60,6 +60,7 @@ class TissueViewer(QtGui.QWidget):
 
     def save_screenshot(self):
         from openalea.vpltk.qt.compat import getsavefilename
-        filename, filters = getsavefilename(self, "Image filename")
+        filters = "PNG Images (*.png);;Tiff Images (*.tiff);; JPEG Images (*.jpg)"
+        filename, filters = getsavefilename(self, "Image filename", filters=filters)
         if filename:
             self.vtk.save_screenshot(filename)

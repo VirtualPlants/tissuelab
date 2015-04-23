@@ -24,6 +24,7 @@ import copy
 import numpy as np
 import vtk
 
+import mimetypes
 
 from openalea.vpltk.qt import QtGui
 from openalea.core.interface import IBool, IInt, IFloat, ITuple, IEnumStr
@@ -97,6 +98,12 @@ def default_value(dtype, attr_name, **kwargs):
             return attribute_definition[dtype][attr_name]['value']
 
     raise NotImplementedError(attr_name)
+
+image_writers = {
+    'image/jpeg': vtk.vtkJPEGWriter,
+    'image/png': vtk.vtkPNGWriter,
+    'image/tiff': vtk.vtkTIFFWriter,
+}
 
 
 class VtkViewer(QtGui.QWidget):
@@ -234,10 +241,14 @@ class VtkViewer(QtGui.QWidget):
         self.vtkdata = {}
 
     def save_screenshot(self, filename):
+        mimetype = mimetypes.guess_type(filename)
+        if mimetype not in image_writers:
+            return
+        self.render()
         screenshooter = vtk.vtkWindowToImageFilter()
         screenshooter.SetInput(self.vtkWidget.GetRenderWindow())
         screenshooter.Update()
-        writer = vtk.vtkPNGWriter()
+        writer = image_writers[mimetype]()
         writer.SetFileName(filename)
         writer.SetInput(screenshooter.GetOutput())
         writer.Write()
