@@ -21,19 +21,16 @@
 ###############################################################################
 
 import vtk
-import copy
 import numpy as np
 from scipy import ndimage as nd
 
-from openalea.core.interface import IBool, IInt, IFloat, ITuple, IEnumStr
 from openalea.core.observer import AbstractListener
-from openalea.oalab.plugins.interface import IIntRange, IColormap
 from openalea.oalab.world import World
 from openalea.vpltk.qt import QtGui
 
 
-from tissuelab.gui.vtkviewer.vtk_utils import define_lookuptable, matrix_to_image_reader
-from tissuelab.gui.vtkviewer.vtkviewer import VtkViewer
+from tissuelab.gui.vtkviewer.vtk_utils import define_lookuptable
+from tissuelab.gui.vtkviewer.vtkviewer import VtkViewer, attribute_args, attribute_definition, colormaps
 
 
 def expand(widget):
@@ -41,54 +38,110 @@ def expand(widget):
     widget.setSizePolicy(p(p.MinimumExpanding, p.MinimumExpanding))
 
 
-attribute_definition = {}
-attribute_definition['matrix'] = {}
-attribute_definition['matrix']['matrix_colormap'] = dict(
-    value=dict(name='grey', color_points=dict([(0, (0, 0, 0)), (1, (1, 1, 1))])), interface=IColormap, alias="Colormap")
-attribute_definition['matrix']['volume_alpha'] = dict(value=1.0, interface=IFloat, alias=u"Alpha (Volume)")
-attribute_definition['matrix']['alphamap'] = dict(value='linear', interface=IEnumStr, alias="Alpha Map")
-attribute_definition['matrix']['bg_id'] = dict(value=1, interface=IInt, alias="Background Intensity")
-attribute_definition['matrix']['intensity_range'] = dict(value=(0, 255), interface=IIntRange, alias="Intensity Range")
-attribute_definition['matrix']['volume'] = dict(value=True, interface=IBool, alias="Display Volume")
-attribute_definition['matrix']['cut_planes_alpha'] = dict(value=1.0, interface=IFloat, alias=u"Alpha (Cut planes)")
-attribute_definition['matrix']['resolution'] = dict(value=(1.0, 1.0, 1.0), interface=ITuple, alias=u"Resolution")
-attribute_definition['matrix']['position'] = dict(value=(0.0, 0.0, 0.0), interface=ITuple, alias=u"Position")
-for axis in ['x', 'y', 'z']:
-    attribute_definition['matrix'][
-        axis +
-        "_plane_position"] = dict(
-        value=0,
-        interface=IInt,
-        alias=u"Move " +
-        axis +
-        " plane")
-attribute_definition['matrix']['cut_planes'] = dict(value=False, interface=IBool, alias=u"Display Cut planes")
-attribute_definition['polydata'] = {}
-attribute_definition['polydata']['polydata_colormap'] = dict(
-    value=dict(name='grey', color_points=dict([(0, (0, 0, 0)), (1, (1, 1, 1))])), interface=IColormap, alias="Colormap")
-attribute_definition['polydata']['polydata_alpha'] = dict(value=1.0, interface=IFloat, alias=u"Alpha (Polydata)")
-attribute_definition['polydata']['position'] = dict(value=(0.0, 0.0, 0.0), interface=ITuple, alias=u"Position")
-attribute_definition['polydata']['polydata'] = dict(value=True, interface=IBool, alias=u"Display Polydata")
+def attribute_value(world_object, dtype, attr_name, **kwargs):
+    """
+    Return a value for attr_name. Try to get value in this order:
+        1. kwargs
+        2. world object
+        3. viewer's default
+    """
+    if isinstance(attr_name, basestring):
+        attr_names = [attr_name]
+    else:
+        attr_names = attr_name
+    for attr_name in attr_names:
+        if attr_name in kwargs:
+            return kwargs[attr_name]
+    else:
+        return world_object.get(attr_name, attribute_definition[dtype][attr_name]['value'])
 
 
-def attribute_value(world_object, dtype, attr_name):
-    return world_object.get(attr_name, attribute_definition[dtype][attr_name]['value'])
+def setdefault(world_object, dtype, attr_name, obj_attr_name=None, conv=None, **kwargs):
+    if obj_attr_name is None:
+        obj_attr_name = attr_name
+    if isinstance(attr_name, basestring):
+        attr_names = [attr_name]
+    else:
+        attr_names = attr_name
+    if obj_attr_name != attr_name:
+        attr_names.insert(0, obj_attr_name)
+
+    #Try to get value in this order:
+    #    1. kwargs
+    value = None
+    for attr_name in attr_names:
+        if attr_name in kwargs:
+            value = kwargs[attr_name]
+            break
+
+    #    2. world object
+    if value is None:
+        value = world_object.get(attr_name, None)
+
+    # If a conversion has been defined, apply it
+    if conv:
+        value = conv(world_object, obj_attr_name, value, **kwargs)
+
+    # If value is still None after conversion, use viewer's default
+    if value is None:
+        for attr_name in attr_names:
+            if attr_name in attribute_definition[dtype]:
+                value = attribute_definition[dtype][attr_name]['value']
+                break
+
+    # Set as attribute
+    world_object.set_attribute(**attribute_args(dtype, obj_attr_name, value))
+
+    # And clear from kwargs
+    world_object.kwargs.pop(obj_attr_name, None)
+    return value
 
 
-def attribute_meta(dtype, attr_name):
-    return dict(interface=attribute_definition[dtype][attr_name]['interface'],
-                alias=attribute_definition[dtype][attr_name]['alias'])
+def world_kwargs(world_object):
+    kwargs = {}
+    for attribute in world_object.attributes:
+        kwargs[attribute['name']] = attribute['value']
+    return kwargs
 
 
-def attribute_args(dtype, attr_name, value=None):
-    attribute = copy.deepcopy(attribute_definition[dtype][attr_name])
-    attribute['name'] = attr_name
+def _tuple(world_object, attr_name, value, **kwargs):
     if value is not None:
-        attribute['value'] = value
-    return attribute
+        return tuple(value)
+
+
+def _colormap(world_object, attr_name, cmap, **kwargs):
+    if isinstance(cmap, str):
+        return dict(name=cmap, color_points=colormaps[cmap]._color_points)
+    else:
+        return cmap
+
+
+def _irange(world_object, attr_name, irange, **kwargs):
+    if irange is None:
+        imin = kwargs.get('i_min', world_object.data.min())
+        imax = kwargs.get('i_max', world_object.data.max())
+        world_object.kwargs.pop('i_min', None)
+        world_object.kwargs.pop('i_max', None)
+        return (imin, imax)
+    else:
+        return irange
+
+
+def _plane_position(world_object, attr_name, position, **kwargs):
+    if position is None:
+        lst = list('xyz')
+        i = attr_name[0]
+        return (world_object.data.shape[lst.index(i)] - 1) / 2
+    else:
+        return position
 
 
 class VtkWorldViewer(VtkViewer, AbstractListener):
+
+    """
+    Class able to listen events of world and world objects and update scene depending on it.
+    Ths class is based on VtkViewer that provide pure vtk methods.
+    """
 
     def __init__(self):
         VtkViewer.__init__(self)
@@ -121,19 +174,9 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                 object_data = world_object.data
 
             if isinstance(object_data, np.ndarray):
-                self.add_matrix(
-                    world_object, object_data, datatype=object_data.dtype, **world_object.kwargs)
-                world_object.kwargs.pop('colormap', None)
-                world_object.kwargs.pop('alpha', None)
-                world_object.kwargs.pop('alphamap', None)
-                world_object.kwargs.pop('resolution', None)
-                world_object.kwargs.pop('volume', None)
-                world_object.kwargs.pop('cut_planes', None)
+                self.add_matrix(world_object, object_data, datatype=object_data.dtype, **world_object.kwargs)
             elif isinstance(object_data, vtk.vtkPolyData):
                 self.add_polydata(world_object, object_data, **world_object.kwargs)
-                world_object.kwargs.pop('position', None)
-                world_object.kwargs.pop('colormap', None)
-                world_object.kwargs.pop('alpha', None)
             elif isinstance(object_data, vtk.vtkActor):
                 self.add_actor(obj_name, object_data, **world_object.kwargs)
         self.compute()
@@ -154,20 +197,9 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         self.object_repr[object_name] = object_data
 
         if isinstance(object_data, np.ndarray):
-            self.add_matrix(
-                world_object, object_data, datatype=object_data.dtype, **world_object.kwargs)
-            world_object.kwargs.pop('colormap', None)
-            world_object.kwargs.pop('alpha', None)
-            world_object.kwargs.pop('alphamap', None)
-            world_object.kwargs.pop('bg_id', None)
-            world_object.kwargs.pop('resolution', None)
-            world_object.kwargs.pop('volume', None)
-            world_object.kwargs.pop('cut_planes', None)
+            self.add_matrix(world_object, object_data, datatype=object_data.dtype, **world_object.kwargs)
         elif isinstance(object_data, vtk.vtkPolyData):
             self.add_polydata(world_object, object_data, **world_object.kwargs)
-            world_object.kwargs.pop('position', None)
-            world_object.kwargs.pop('colormap', None)
-            world_object.kwargs.pop('alpha', None)
         elif isinstance(object_data, vtk.vtkActor):
             self.add_actor(object_name, object_data, **world_object.kwargs)
         self.compute()
@@ -181,43 +213,40 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
             alpha = attribute_value(world_object, dtype, 'volume_alpha')
             alphamap = attribute_value(world_object, dtype, 'alphamap')
             bg_id = attribute_value(world_object, dtype, 'bg_id')
-            i_range = attribute_value(world_object, dtype, 'intensity_range')
+            irange = attribute_value(world_object, dtype, 'intensity_range')
             if attribute['name'] == 'volume':
                 self.display_volume(name=world_object.name, disp=attribute['value'])
             elif attribute['name'] == 'matrix_colormap':
                 self.set_matrix_lookuptable(
                     world_object.name,
                     colormap=attribute['value'],
-                    i_min=i_range[0],
-                    i_max=i_range[1])
+                    intensity_range=irange
+                )
             elif attribute['name'] == 'alphamap':
                 self.set_volume_alpha(
                     world_object.name,
                     alpha=alpha,
                     alphamap=attribute['value'],
-                    i_min=i_range[0],
-                    i_max=i_range[1],
+                    intensity_range=irange,
                     bg_id=bg_id)
             elif attribute['name'] == 'volume_alpha':
                 self.set_volume_alpha(
                     world_object.name,
                     alpha=attribute['value'],
                     alphamap=alphamap,
-                    i_min=i_range[0],
-                    i_max=i_range[1],
+                    intensity_range=irange,
                     bg_id=bg_id)
             elif attribute['name'] == 'intensity_range':
                 self.set_matrix_lookuptable(
                     world_object.name,
                     colormap=colormap,
-                    i_min=attribute['value'][0],
-                    i_max=attribute['value'][1])
+                    intensity_range=attribute['value']
+                )
                 self.set_volume_alpha(
                     world_object.name,
                     alpha=alpha,
                     alphamap=alphamap,
-                    i_min=attribute['value'][0],
-                    i_max=attribute['value'][1],
+                    intensity_range=attribute['value'],
                     bg_id=bg_id)
             elif attribute['name'] == 'cut_planes':
                 self.display_cut_planes(name=world_object.name, disp=attribute['value'])
@@ -359,20 +388,6 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         alpha = kwargs.get('alpha', self.actor[name + '_polydata'].GetProperty().GetOpacity())
         self.actor[name + '_polydata'].GetProperty().SetOpacity(alpha)
 
-    def add_outline(self, name, data_matrix, **kwargs):
-        self.reader[name] = reader = matrix_to_image_reader(name, data_matrix, np.uint16, 1)
-        nx, ny, nz = data_matrix.shape
-        outline = vtk.vtkOutlineFilter()
-        outline.SetInputConnection(reader.GetOutputPort())
-        outline_mapper = vtk.vtkPolyDataMapper()
-        outline_mapper.SetInputConnection(outline.GetOutputPort())
-        outline_actor = vtk.vtkActor()
-        outline_actor.SetOrigin(nx / 2., ny / 2., nz / 2.)
-        outline_actor.SetPosition(- nx / 2., -ny / 2., -nz / 2.)
-        outline_actor.SetMapper(outline_mapper)
-        outline_actor.GetProperty().SetColor(1, 1, 1)
-        self.add_actor('%s_outline' % (name), outline_actor)
-
     def add_matrix(self, world_object, data_matrix, datatype=np.uint8, decimate=1, **kwargs):
         world_object.silent = True
 
@@ -412,294 +427,45 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
 
         self.add_matrix_as_volume(
             world_object, data_matrix, datatype, decimate, **kwargs)
-
         world_object.silent = False
 
-        display_volume = kwargs.pop('volume', attribute_value(world_object, dtype, 'volume'))
-        world_object.set_attribute(**attribute_args(dtype, 'volume', display_volume))
+        setdefault(world_object, dtype, 'volume', **kwargs)
 
         world_object.silent = True
-
         self.add_matrix_cut_planes(
             world_object, data_matrix, datatype, decimate, **kwargs)
-
         world_object.silent = False
 
-        display_cut_planes = kwargs.pop('cut_planes', attribute_value(world_object, dtype, 'cut_planes'))
-        world_object.set_attribute(**attribute_args(dtype, 'cut_planes', display_cut_planes))
+        setdefault(world_object, dtype, 'cut_planes', **kwargs)
 
         # self._display_volume(name, display_volume)
         # self._display_cut_planes(name, display_cut_planes)
 
-        print world_object.kwargs
-
     def add_matrix_cut_planes(self, world_object, data_matrix, datatype=np.uint16, decimate=1, **kwargs):
         name = world_object.name
         dtype = "matrix"
-        self.reader[name] = reader = matrix_to_image_reader(
-            name, data_matrix, datatype, decimate)
-        cmap = kwargs.pop('colormap', 'grey')
 
-        alpha = kwargs.pop('alpha', attribute_value(world_object, dtype, 'cut_planes_alpha'))
-        resolution = tuple(kwargs.get('resolution', attribute_value(world_object, dtype, 'resolution')))
+        setdefault(world_object, dtype, 'alpha', 'cut_planes_alpha', **kwargs)
 
-        position = tuple(kwargs.pop('position', attribute_value(world_object, dtype, 'position')))
+        for axis in ['x', 'y', 'z']:
+            attr_name = axis + '_plane_position'
+            setdefault(world_object, dtype, attr_name, conv=_plane_position, **kwargs)
 
-        # bwLut = define_lookuptable(data_matrix, colormap=self.colormaps["grey"])
-        # colorLut = define_lookuptable(data_matrix, colormap=self.colormaps["glasbey"])
-        # lut = define_lookuptable(data_matrix, colormap=self.colormaps[cmap])
-        lut = define_lookuptable(data_matrix, colormap_points=self.colormaps[cmap]._color_points, colormap_name=cmap)
-
-        for orientation in [1, 2, 3]:
-            nx, ny, nz = data_matrix.shape
-            xMax = nx - 1
-            yMax = ny - 1
-            zMax = nz - 1
-
-            colors = vtk.vtkImageMapToColors()
-            colors.SetInputConnection(reader.GetOutputPort())
-            colors.SetLookupTable(lut)
-
-            imgactor = vtk.vtkImageActor()
-            imgactor.SetInput(colors.GetOutput())
-            if orientation == 1:
-                imgactor.SetDisplayExtent(
-                    np.round(xMax / 2), np.round(xMax / 2), 0, yMax, 0, zMax)
-            elif orientation == 2:
-                imgactor.SetDisplayExtent(
-                    0, xMax, np.round(yMax / 2), np.round(yMax / 2), 0, zMax)
-            elif orientation == 3:
-                imgactor.SetDisplayExtent(
-                    0, xMax, 0, yMax, np.round(zMax / 2), np.round(zMax / 2))
-
-            if position is not None:
-                imgactor.SetOrigin(position[0], position[1], position[2])
-                imgactor.SetPosition(-position[0], -position[1], -position[2])
-
-            imgactor.SetScale(resolution[0], resolution[1], resolution[2])
-            # imgactor, blend = blend_funct(data_matrix, reader, lut, reader, lut, orientation)
-            # self.vtkdata['%s_blend_cut_plane_%d' % (name, orientation)] = blend
-            self.vtkdata['%s_cut_plane_colors_%d' %
-                         (name, orientation)] = colors
-            self.add_actor('%s_cut_plane_%d' % (name, orientation), imgactor)
-        self.set_cut_planes_alpha(name, alpha)
-
-        world_object.set_attribute(**attribute_args(dtype, 'cut_planes_alpha', alpha))
-        for i, axis in enumerate(['x', 'y', 'z']):
-            world_object.set_attribute(
-                **attribute_args(dtype, axis + '_plane_position', (data_matrix.shape[i] - 1) / 2))
-
-    def move_cut_plane(self, name, position=0, orientation=1):
-        actor = self.actor['%s_cut_plane_%d' % (name, orientation)]
-        data_matrix = self.matrix[name]
-        nx, ny, nz = data_matrix.shape
-
-        xMax = nx - 1
-        yMax = ny - 1
-        zMax = nz - 1
-        bounds = [xMax, yMax, zMax]
-
-        if position > bounds[orientation - 1]:
-            position = bounds[orientation - 1]
-        elif position < 0:
-            position = 0
-
-        if orientation == 1:
-            actor.SetDisplayExtent(position, position, 0, yMax, 0, zMax)
-
-        elif orientation == 2:
-            actor.SetDisplayExtent(0, xMax, position, position, 0, zMax)
-
-        elif orientation == 3:
-            actor.SetDisplayExtent(0, xMax, 0, yMax, position, position)
-
-        self.render()
+        kwargs = world_kwargs(world_object)
+        super(VtkWorldViewer, self).add_matrix_cut_planes(name, data_matrix, datatype=datatype, **kwargs)
 
     def add_matrix_as_volume(self, world_object, data_matrix, datatype=np.uint16, decimate=1, **kwargs):
-        name = world_object.name
         dtype = 'matrix'
-        self.reader[name] = reader = matrix_to_image_reader(
-            name, data_matrix, datatype, decimate)
 
-        compositeFunction = vtk.vtkVolumeRayCastCompositeFunction()
-        volumeMapper = vtk.vtkVolumeRayCastMapper()
-        volumeMapper.SetVolumeRayCastFunction(compositeFunction)
-        volumeMapper.SetInputConnection(reader.GetOutputPort())
+        setdefault(world_object, dtype, 'colormap', 'matrix_colormap', conv=_colormap, **kwargs)
+        setdefault(world_object, dtype, 'alpha', 'volume_alpha', **kwargs)
+        setdefault(world_object, dtype, 'alphamap', **kwargs)
+        setdefault(world_object, dtype, 'intensity_range', conv=_irange, **kwargs)
+        setdefault(world_object, dtype, 'position', conv=_tuple, **kwargs)
+        setdefault(world_object, dtype, 'resolution', conv=_tuple, **kwargs)
+        setdefault(world_object, dtype, 'bg_id', **kwargs)
 
-        # colorFunc = vtk.vtkColorTransferFunction()
-        colorFunc = vtk.vtkDiscretizableColorTransferFunction()
-        alphaChannelFunc = vtk.vtkPiecewiseFunction()
-
-        volume_property = vtk.vtkVolumeProperty()
-        volume_property.SetColor(colorFunc)
-        volume_property.SetScalarOpacity(alphaChannelFunc)
-        self.volume_property[name] = dict(
-            vtkVolumeProperty=volume_property, disp=True)
-
-        volume = vtk.vtkVolume()
-        volume.SetMapper(volumeMapper)
-        volume.SetProperty(volume_property)
-
-        position = tuple(kwargs.pop('position', attribute_value(world_object, dtype, 'position')))
-
-        if position is not None:
-            volume.SetOrigin(position[0], position[1], position[2])
-            volume.SetPosition(-position[0], -position[1], -position[2])
-
-        resolution = tuple(kwargs.get('resolution', attribute_value(world_object, dtype, 'resolution')))
-        volume.SetScale(resolution[0], resolution[1], resolution[2])
-
-        if name in self.volume:
-            old_volume = self.volume[name]
-            self.ren.RemoveVolume(old_volume)
-            del old_volume
-        self.volume[name] = volume
-
-        cmap = kwargs.pop('colormap', attribute_value(world_object, dtype, 'matrix_colormap'))
-        if isinstance(cmap, str):
-            cmap = dict(name=cmap, color_points=self.colormaps[cmap]._color_points)
-
-        alpha = kwargs.pop('alpha', attribute_value(world_object, dtype, 'volume_alpha'))
-        alphamap = kwargs.pop('alphamap', attribute_value(world_object, dtype, 'alphamap'))
-        bg_id = kwargs.pop('bg_id', attribute_value(world_object, dtype, 'bg_id'))
-
-        i_min = kwargs.pop('i_min', world_object.get('intensity_range', (data_matrix.min(), 0))[0])
-        i_max = kwargs.pop('i_max', world_object.get('intensity_range', (0, data_matrix.max()))[1])
-        self.set_matrix_lookuptable(name, cmap, i_min=i_min, i_max=i_max, cut_planes=False)
-        self.set_volume_alpha(name, alpha, alphamap, i_min=i_min, i_max=i_max, bg_id=bg_id)
-
-        world_object.set_attribute(**attribute_args(dtype, 'matrix_colormap', cmap))
-        world_object.set_attribute(**attribute_args(dtype, 'volume_alpha', alpha))
-        world_object.set_attribute(**attribute_args(dtype, 'alphamap', alphamap))
-        world_object.set_attribute(**attribute_args(dtype, 'intensity_range', (i_min, i_max)))
-        world_object.set_attribute(**attribute_args(dtype, 'position', position))
-        world_object.set_attribute(**attribute_args(dtype, 'resolution', resolution))
-        world_object.set_attribute(**attribute_args(dtype, 'bg_id', bg_id))
-
-    def set_volume_alpha(self, name, alpha=1.0, alphamap="constant", **kwargs):
-        alphaChannelFunc = self.volume_property[name][
-            'vtkVolumeProperty'].GetScalarOpacity()
-        alphaChannelFunc.RemoveAllPoints()
-
-        bg_id = kwargs.get('bg_id', None)
-        sh_id = kwargs.get('sh_id', None)
-        i_min = kwargs.get('i_min', self.matrix[name].min())
-        i_max = kwargs.get('i_max', self.matrix[name].max())
-
-        if alphamap == "constant":
-            alphaChannelFunc.ClampingOn()
-            alphaChannelFunc.AddPoint(i_min, alpha)
-            alphaChannelFunc.AddPoint(i_max, alpha)
-
-            if bg_id is not None:
-                if not bg_id - 1 == sh_id:
-                    alphaChannelFunc.AddPoint(bg_id - 1, alpha)
-                alphaChannelFunc.AddPoint(bg_id, 0.0)
-                if not bg_id + 1 == sh_id:
-                    alphaChannelFunc.AddPoint(bg_id + 1, alpha)
-
-            if sh_id is not None:
-                if not sh_id - 1 == bg_id:
-                    alphaChannelFunc.AddPoint(sh_id - 1, alpha)
-                alphaChannelFunc.AddPoint(sh_id, kwargs.get('shade_alpha', 0.1))
-                if not sh_id + 1 == bg_id:
-                    alphaChannelFunc.AddPoint(sh_id + 1, alpha)
-
-        elif alphamap == "linear":
-            alphaChannelFunc.ClampingOn()
-            alphaChannelFunc.AddPoint(i_min, 0.0)
-            alphaChannelFunc.AddPoint(i_max, alpha)
-
-    def set_cut_planes_alpha(self, name, alpha=1.0, **kwargs):
-        for orientation in [1, 2, 3]:
-            self.actor[
-                name + "_cut_plane_" + str(orientation)].SetOpacity(alpha)
-
-    def set_matrix_lookuptable(self, name, colormap, **kwargs):
-        i_min = kwargs.get('i_min', None)
-        i_max = kwargs.get('i_max', None)
-        cut_planes = kwargs.get('cut_planes', True)
-
-        lut = define_lookuptable(self.matrix[name],
-                                 colormap_points=colormap['color_points'],
-                                 colormap_name=colormap['name'],
-                                 i_min=i_min, i_max=i_max)
-        if 'sh_id' in kwargs:
-            lut.AddRGBPoint(kwargs['sh_id'], *kwargs.get('shade_color', (0., 0., 0.)))
-        self.volume_property[name]['vtkVolumeProperty'].SetColor(lut)
-        if cut_planes:
-            for orientation in [1, 2, 3]:
-                if name + "_cut_plane_colors_" + str(orientation) in self.vtkdata:
-                    self.vtkdata[
-                        name + "_cut_plane_colors_" + str(orientation)].SetLookupTable(lut)
-
-    def cell_color(self, name, cell_id):
-        colorFunc = self.volume_property[name][
-            'vtkVolumeProperty'].GetRGBTransferFunction()
-        return colorFunc.GetColor(cell_id)
-
-    def color_cell(self, name, cell_id=None, color=None, alpha=None):
-        if color is None:
-            color = (1., 1., 1.)
-        if cell_id is None:
-            cell_id = 1
-        colorFunc = self.volume_property[name][
-            'vtkVolumeProperty'].GetRGBTransferFunction()
-        colorFunc.RemoveAllPoints()
-        colorFunc.AddRGBPoint(cell_id - 1, 1., 1., 1.)
-        colorFunc.AddRGBPoint(cell_id, *color)
-        colorFunc.AddRGBPoint(cell_id + 1, 1., 1., 1.)
-
-    def old_color_cell(self, name, cell_id=None, color=None, alpha=None, bg_id=1, colormap='glasbey'):
-        """
-        TODO: replace with method that allows user to identify a cell
-        """
-
-        alphaChannelFunc = self.volume_property[name][
-            'vtkVolumeProperty'].GetScalarOpacity()
-
-        if alpha is None:
-            alpha = 1.
-
-        # colorFunc.AddRGBPoint(bg_id, 1.0, 1.0, 1.0)
-
-        for matrix in self.matrix.values():
-
-            if cell_id is None:
-                # colorFunc.RemoveAllPoints()
-
-                # self.volume_property[name]['vtkVolumeProperty'].SetColor(
-                    # define_lookuptable(matrix, colormap=self.colormaps[colormap]))
-
-                self.volume_property[name]['vtkVolumeProperty'].SetColor(
-                    define_lookuptable(matrix, colormap_points=self.colormaps[colormap]._color_points, colormap_name=colormap))
-
-                alphaChannelFunc.RemoveAllPoints()
-
-                alphaChannelFunc.AddPoint(bg_id, 0.0)
-
-                if colormap not in ['glasbey']:
-                    alphaChannelFunc.RemoveAllPoints()
-                    alphaChannelFunc.AddPoint(matrix.min(), 0.0)
-                    alphaChannelFunc.AddPoint(matrix.max(), alpha)
-                else:
-                    # alphaChannelFunc.AddPoint(1, 0.0)
-                    alphaChannelFunc.AddPoint(bg_id + 1, alpha)
-                    alphaChannelFunc.AddPoint(matrix.max(), alpha)
-
-            else:
-                if color is None:
-                    color = (1., 1., 1.)
-                colorFunc = self.volume_property[name][
-                    'vtkVolumeProperty'].GetRGBTransferFunction()
-                colorFunc.AddRGBPoint(cell_id, *color)
-
-                alphaChannelFunc.AddPoint(cell_id, alpha)
-
-    def resizeEvent(self, *args, **kwargs):
-        self.render()
-        return QtGui.QWidget.resizeEvent(self, *args, **kwargs)
-
-    def setInteractor(self, interactor, **kwargs):
-        self.iren.SetInteractorStyle(interactor)
-        interactor.SetCurrentRenderer(self.ren)
+        kwargs = world_kwargs(world_object)
+        super(VtkWorldViewer, self).add_matrix_as_volume(world_object.name, data_matrix,
+                                                         datatype=np.uint16, decimate=1,
+                                                         **kwargs)
