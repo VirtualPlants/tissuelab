@@ -138,6 +138,11 @@ def _plane_position(world_object, attr_name, position, **kwargs):
 
 class VtkWorldViewer(VtkViewer, AbstractListener):
 
+    """
+    Class able to listen events of world and world objects and update scene depending on it.
+    Ths class is based on VtkViewer that provide pure vtk methods.
+    """
+
     def __init__(self):
         VtkViewer.__init__(self)
         AbstractListener.__init__(self)

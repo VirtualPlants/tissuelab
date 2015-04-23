@@ -24,9 +24,11 @@ import copy
 import numpy as np
 import vtk
 
+
 from openalea.vpltk.qt import QtGui
 from openalea.core.interface import IBool, IInt, IFloat, ITuple, IEnumStr
 from openalea.oalab.plugins.interface import IIntRange, IColormap
+# Do not import world related module in this module, see vtkworldviewer instead!
 
 from tissuelab.gui.vtkviewer.qvtkrenderwindowinteractor import QVTKRenderWindowInteractor
 from tissuelab.gui.vtkviewer.colormap_def import load_colormaps
@@ -99,6 +101,21 @@ def default_value(dtype, attr_name, **kwargs):
 
 class VtkViewer(QtGui.QWidget):
 
+    """
+    Class providing a VtkViewer and convenience methods
+      - to add actors, matrices (3d images), polydata,
+      - to define and set colormaps
+      - generate cut planes
+
+    .. warning::
+
+        Though this class can be embedded directly in a QWidget,
+        it doesn't contain Qt features like buttons, toolbars or QAction.
+        This class use only pure vtk features.
+
+        For end-user features, please have a look to TissueViewer class.
+    """
+
     def __init__(self):
         QtGui.QWidget.__init__(self)
 
@@ -141,6 +158,14 @@ class VtkViewer(QtGui.QWidget):
         self.actor = {}
         self.property = {}
         self.vtkdata = {}
+
+    def resizeEvent(self, *args, **kwargs):
+        self.render()
+        return QtGui.QWidget.resizeEvent(self, *args, **kwargs)
+
+    ################################################
+    # PURE VTK METHODS, NO MORE Qt AFTER THIS LINE #
+    ################################################
 
     def display_volume(self, name=None, disp=True):
         self.clear_scene()
@@ -524,10 +549,6 @@ class VtkViewer(QtGui.QWidget):
                 colorFunc.AddRGBPoint(cell_id, *color)
 
                 alphaChannelFunc.AddPoint(cell_id, alpha)
-
-    def resizeEvent(self, *args, **kwargs):
-        self.render()
-        return QtGui.QWidget.resizeEvent(self, *args, **kwargs)
 
     def setInteractor(self, interactor, **kwargs):
         self.iren.SetInteractorStyle(interactor)
