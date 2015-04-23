@@ -487,6 +487,8 @@ class VtkViewer(QtGui.QWidget):
         elif orientation == 3:
             actor.SetDisplayExtent(0, xMax, 0, yMax, position, position)
 
+        self.render()
+
     def cell_color(self, name, cell_id):
         colorFunc = self.volume_property[name][
             'vtkVolumeProperty'].GetRGBTransferFunction()
