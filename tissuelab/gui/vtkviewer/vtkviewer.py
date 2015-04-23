@@ -62,7 +62,7 @@ attribute_definition['polydata']['polydata_colormap'] = dict(
 attribute_definition['polydata']['polydata_alpha'] = dict(value=1.0, interface=IFloat, alias=u"Alpha (Polydata)")
 attribute_definition['polydata']['intensity_range'] = dict(value=(0, 255), interface=IIntRange, alias="Intensity Range")
 attribute_definition['polydata']['position'] = dict(value=(0.0, 0.0, 0.0), interface=ITuple, alias=u"Position")
-attribute_definition['polydata']['polydata'] = dict(value=True, interface=IBool, alias=u"Display Polydata")
+attribute_definition['polydata']['display_polydata'] = dict(value=True, interface=IBool, alias=u"Display Polydata")
 
 
 colormaps = load_colormaps()

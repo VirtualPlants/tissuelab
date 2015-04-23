@@ -268,7 +268,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
             alpha = attribute_value(world_object, dtype, 'polydata_alpha')
             colormap = attribute_value(world_object, dtype, 'polydata_colormap')
             i_range = attribute_value(world_object, dtype, 'intensity_range')
-            if attribute['name'] == 'polydata':
+            if attribute['name'] == 'display_polydata':
                 self.display_polydata(name=world_object.name, disp=attribute['value'])
             elif attribute['name'] == 'polydata_colormap':
                 self.set_polydata_lookuptable(world_object.name, colormap=attribute['value'], alpha=alpha,
@@ -297,7 +297,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         super(VtkWorldViewer, self).add_polydata(world_object.name, polydata, **kwargs)
 
         world_object.silent = False
-        setdefault(world_object, dtype, 'polydata', **kwargs)
+        setdefault(world_object, dtype, 'display_polydata', **kwargs)
 
     def set_polydata_property(self, name, property=None, **kwargs):
         cmap = kwargs.get('colormap', 'grey')
