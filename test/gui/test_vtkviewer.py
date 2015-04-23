@@ -42,6 +42,40 @@ def demo_actor():
 
     return actor
 
+def demo_polydata_cube():
+    
+    def mkVtkIdList(it):
+        vil = vtk.vtkIdList()
+        for i in it:
+            vil.InsertNextId(int(i))
+        return vil
+ 
+    x = [(0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (1.0, 1.0, 0.0), (0.0, 1.0, 0.0),
+         (0.0, 0.0, 1.0), (1.0, 0.0 ,1.0), (1.0, 1.0, 1.0), (0.0, 1.0, 1.0)]
+ 
+    pts = [(0,1,2,3), (4,5,6,7), (0,1,5,4),
+           (1,2,6,5), (2,3,7,6), (3,0,4,7)]
+ 
+    # We'll create the building blocks of polydata including data attributes.
+    cube    = vtk.vtkPolyData()
+    points  = vtk.vtkPoints()
+    polys   = vtk.vtkCellArray()
+    scalars = vtk.vtkFloatArray()
+ 
+    # Load the point, cell, and data attributes.
+    for i in range(8):
+        points.InsertPoint(i, x[i])
+    for i in range(6):
+        polys.InsertNextCell( mkVtkIdList(pts[i]) )
+    for i in range(8):
+        scalars.InsertTuple1(i,i)
+ 
+    # We now assign the pieces to the vtkPolyData.
+    cube.SetPoints(points)
+    cube.SetPolys(polys)
+    cube.GetPointData().SetScalars(scalars)
+
+    return cube
 
 def demo_matrix_xyz():
     dtype = np.uint16
@@ -84,6 +118,10 @@ class TestCase(QtTestCase, unittest.TestCase):
     def test_actor(self):
         actor = demo_actor()
         self.widget.add_actor("actor", actor)
+
+    def test_polydata(self):
+        cube = demo_polydata_cube()
+        self.widget.add_polydata("cube", cube, colormap='glasbey', alpha=0.5)
 
     def test_outline(self):
         matrix = demo_matrix_xyz()

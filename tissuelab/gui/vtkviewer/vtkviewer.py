@@ -33,7 +33,7 @@ from openalea.oalab.plugins.interface import IIntRange, IColormap
 
 from tissuelab.gui.vtkviewer.qvtkrenderwindowinteractor import QVTKRenderWindowInteractor
 from tissuelab.gui.vtkviewer.colormap_def import load_colormaps
-from tissuelab.gui.vtkviewer.vtk_utils import matrix_to_image_reader, define_lookuptable
+from tissuelab.gui.vtkviewer.vtk_utils import matrix_to_image_reader, define_lookuptable, get_polydata_cell_data
 
 
 def expand(widget):
@@ -60,8 +60,9 @@ attribute_definition['polydata'] = {}
 attribute_definition['polydata']['polydata_colormap'] = dict(
     value=dict(name='grey', color_points=dict([(0, (0, 0, 0)), (1, (1, 1, 1))])), interface=IColormap, alias="Colormap")
 attribute_definition['polydata']['polydata_alpha'] = dict(value=1.0, interface=IFloat, alias=u"Alpha (Polydata)")
+attribute_definition['polydata']['intensity_range'] = dict(value=(0, 255), interface=IIntRange, alias="Intensity Range")
 attribute_definition['polydata']['position'] = dict(value=(0.0, 0.0, 0.0), interface=ITuple, alias=u"Position")
-attribute_definition['polydata']['polydata'] = dict(value=True, interface=IBool, alias=u"Display Polydata")
+attribute_definition['polydata']['display_polydata'] = dict(value=True, interface=IBool, alias=u"Display Polydata")
 
 
 colormaps = load_colormaps()
@@ -282,6 +283,51 @@ class VtkViewer(QtGui.QWidget):
         self.actor[name] = actor
         self.property[name] = dict(disp=True)
 
+    def add_polydata(self, name, polydata, **kwargs):
+        dtype = 'polydata'
+        position = tuple(default_value(dtype, 'position', **kwargs))
+        alpha = default_value(dtype, ['polydata_alpha', 'alpha'], **kwargs)
+        cmap = default_value(dtype, ['polydata_colormap', 'colormap'], **kwargs)
+        irange = default_value(dtype, 'intensity_range', **kwargs)
+
+        mapper = vtk.vtkPolyDataMapper()
+        if vtk.VTK_MAJOR_VERSION <= 5:
+            mapper.SetInput(polydata)
+        else:
+            mapper.SetInputData(polydata)
+
+        polydata_actor = vtk.vtkActor()
+        polydata_actor.SetMapper(mapper)
+        polydata_actor.GetProperty().SetPointSize(1)
+
+        if position is not None:
+            polydata_actor.SetOrigin(position[0], position[1], position[2])
+            # imgactor.SetPosition(-(nx - 1) / 2., -(ny - 1) / 2., -(nz - 1) / 2.)
+            polydata_actor.SetPosition(-position[0], -position[1], -position[2])
+
+        self.add_actor('%s_polydata' % (name), polydata_actor)
+
+        if isinstance(cmap, str):
+            cmap = dict(name=cmap, color_points=self.colormaps[cmap]._color_points)
+        
+        cell_data = get_polydata_cell_data(self.actor[name + '_polydata'].GetMapper().GetInput())
+        if irange == attribute_definition[dtype]['intensity_range']:
+            irange = (cell_data.min(), cell_data.max())
+
+        self.set_polydata_lookuptable(name, colormap=cmap, alpha=alpha, intensity_range=irange)
+
+    def set_polydata_lookuptable(self, name, colormap, **kwargs):
+
+        irange = kwargs.pop('intensity_range', None)
+
+        cell_data = get_polydata_cell_data(self.actor[name + '_polydata'].GetMapper().GetInput())
+        lut = define_lookuptable(cell_data,colormap_points=colormap['color_points'],colormap_name=colormap['name'],intensity_range=irange)
+
+        self.actor[name + '_polydata'].GetMapper().SetLookupTable(lut)
+
+        alpha = kwargs.get('alpha', self.actor[name + '_polydata'].GetProperty().GetOpacity())
+        self.actor[name + '_polydata'].GetProperty().SetOpacity(alpha)
+
     def add_outline(self, name, data_matrix, **kwargs):
         self.reader[name] = reader = matrix_to_image_reader(name, data_matrix, np.uint16, 1)
         nx, ny, nz = data_matrix.shape
@@ -464,7 +510,7 @@ class VtkViewer(QtGui.QWidget):
         lut = define_lookuptable(self.matrix[name],
                                  colormap_points=colormap['color_points'],
                                  colormap_name=colormap['name'],
-                                 i_min=irange[0], i_max=irange[1])
+                                 intensity_range=irange)
         if 'sh_id' in kwargs:
             lut.AddRGBPoint(kwargs['sh_id'], *kwargs.get('shade_color', (0., 0., 0.)))
         self.volume_property[name]['vtkVolumeProperty'].SetColor(lut)
