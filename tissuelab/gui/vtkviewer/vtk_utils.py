@@ -30,32 +30,62 @@ import vtk
 import numpy as np
 
 
-def define_lookuptable(image, colormap_points, colormap_name, i_min=None, i_max=None):
+def define_lookuptable(data, colormap_points, colormap_name, intensity_range=None):
+    if intensity_range is None:
+        i_min = i_max = None
+    else:
+        i_min, i_max = intensity_range
+
     if i_min is None:
-        # i_min = image.min()
-        i_min = np.percentile(image, 5)
+        i_min = np.percentile(data, 5)
     if i_max is None:
-        # i_max = image.max()
-        i_max = np.percentile(image, 95)
-    # lut = vtk.vtkLookupTable()
+        i_max = np.percentile(data, 95)
     lut = vtk.vtkColorTransferFunction()
-    # lut.DiscretizeOn()
 
     if colormap_name == 'glasbey':
         if i_max < 255:
             for i in xrange(256):
                 lut.AddRGBPoint(i, * colormap_points.values()[int(i)])
         else:
-            for i in np.unique(image):
+            for i in np.unique(data):
                 lut.AddRGBPoint(i, *colormap_points.values()[int(i) % 256])
     else:
         for value in colormap_points.keys():
             lut.AddRGBPoint(
                 (1.0 - value) * i_min + value * i_max, *colormap_points[value])
-
-    # lut.Build()
     return lut
 
+def get_polydata_cell_data(polydata):
+    """
+    TODO: use a dict to match vtk array types to np types 
+    (or existing vtk/np function?)
+    """
+
+    if polydata.GetCellData().GetNumberOfComponents() > 0:
+        if isinstance(polydata.GetCellData().GetArray(0), vtk.vtkIntArray):
+            cell_data = np.frombuffer(polydata.GetCellData().GetArray(0),np.uint16)
+        if isinstance(polydata.GetCellData().GetArray(0), vtk.vtkLongArray):
+            cell_data = np.frombuffer(polydata.GetCellData().GetArray(0),np.uint32)
+        elif isinstance(polydata.GetCellData().GetArray(0), vtk.vtkFloatArray):
+            cell_data = np.frombuffer(polydata.GetCellData().GetArray(0),np.float32)
+        elif isinstance(polydata.GetCellData().GetArray(0), vtk.vtkDoubleArray):
+            cell_data = np.frombuffer(polydata.GetCellData().GetArray(0),np.float64)
+        else:
+            cell_data = np.arange(1)
+    elif polydata.GetPointData().GetNumberOfComponents() > 0:
+        if isinstance(polydata.GetPointData().GetArray(0), vtk.vtkIntArray):
+            cell_data = np.frombuffer(polydata.GetPointData().GetArray(0),np.uint16)
+        elif isinstance(polydata.GetPointData().GetArray(0), vtk.vtkLongArray):
+            cell_data = np.frombuffer(polydata.GetPointData().GetArray(0),np.uint32)
+        elif isinstance(polydata.GetPointData().GetArray(0), vtk.vtkFloatArray):
+            cell_data = np.frombuffer(polydata.GetPointData().GetArray(0),np.float32)
+        elif isinstance(polydata.GetPointData().GetArray(0), vtk.vtkDoubleArray):
+            cell_data = np.frombuffer(polydata.GetPointData().GetArray(0),np.float64)
+        else:
+            cell_data = np.arange(1)
+    else:
+        cell_data = np.arange(1)
+    return cell_data
 
 def matrix_to_image_reader(name, data_matrix, datatype=np.uint16, decimate=1):
     nx, ny, nz = data_matrix.shape

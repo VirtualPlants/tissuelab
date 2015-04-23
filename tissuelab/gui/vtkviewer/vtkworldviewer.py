@@ -29,7 +29,7 @@ from openalea.oalab.world import World
 from openalea.vpltk.qt import QtGui
 
 
-from tissuelab.gui.vtkviewer.vtk_utils import define_lookuptable
+from tissuelab.gui.vtkviewer.vtk_utils import define_lookuptable, get_polydata_cell_data
 from tissuelab.gui.vtkviewer.vtkviewer import VtkViewer, attribute_args, attribute_definition, colormaps
 
 
@@ -118,8 +118,15 @@ def _colormap(world_object, attr_name, cmap, **kwargs):
 
 def _irange(world_object, attr_name, irange, **kwargs):
     if irange is None:
-        imin = kwargs.get('i_min', world_object.data.min())
-        imax = kwargs.get('i_max', world_object.data.max())
+        try:
+            object_min = world_object.data.min()
+            object_max = world_object.data.max()
+        except AttributeError:
+            return None
+
+        imin = kwargs.get('i_min', object_min)
+        imax = kwargs.get('i_max', object_max)
+
         world_object.kwargs.pop('i_min', None)
         world_object.kwargs.pop('i_max', None)
         return (imin, imax)
@@ -260,101 +267,37 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
             dtype = 'polydata'
             alpha = attribute_value(world_object, dtype, 'polydata_alpha')
             colormap = attribute_value(world_object, dtype, 'polydata_colormap')
+            i_range = attribute_value(world_object, dtype, 'intensity_range')
             if attribute['name'] == 'polydata':
                 self.display_polydata(name=world_object.name, disp=attribute['value'])
             elif attribute['name'] == 'polydata_colormap':
-                self.set_polydata_lookuptable(world_object.name, colormap=attribute['value'], alpha=alpha)
+                self.set_polydata_lookuptable(world_object.name, colormap=attribute['value'], alpha=alpha,
+                    i_min=i_range[0],
+                    i_max=i_range[1])
             elif attribute['name'] == 'polydata_alpha':
-                self.set_polydata_lookuptable(world_object.name, colormap=colormap, alpha=attribute['value'])
+                self.set_polydata_lookuptable(world_object.name, colormap=colormap, alpha=attribute['value'],
+                    i_min=i_range[0],
+                    i_max=i_range[1])
+            elif attribute['name'] == 'intensity_range':
+                self.set_polydata_lookuptable(world_object.name, colormap=colormap, alpha=alpha,
+                    i_min=attribute['value'][0],
+                    i_max=attribute['value'][1])
 
     def add_polydata(self, world_object, polydata, **kwargs):
-        name = world_object.name
+        world_object.silent = True
+
         dtype = 'polydata'
-        mapper = vtk.vtkPolyDataMapper()
-        if vtk.VTK_MAJOR_VERSION <= 5:
-            mapper.SetInput(polydata)
-        else:
-            mapper.SetInputData(polydata)
 
-        polydata_actor = vtk.vtkActor()
-        polydata_actor.SetMapper(mapper)
-        polydata_actor.GetProperty().SetPointSize(1)
+        setdefault(world_object, dtype, 'colormap', 'polydata_colormap', conv=_colormap, **kwargs)
+        setdefault(world_object, dtype, 'alpha', 'polydata_alpha', **kwargs)
+        setdefault(world_object, dtype, 'intensity_range', conv=_irange, **kwargs)
+        setdefault(world_object, dtype, 'position', conv=_tuple, **kwargs)
 
-        position = tuple(kwargs.pop('position', attribute_value(world_object, dtype, 'position')))
-        if position is not None:
-            polydata_actor.SetOrigin(position[0], position[1], position[2])
-            # imgactor.SetPosition(-(nx - 1) / 2., -(ny - 1) / 2., -(nz - 1) / 2.)
-            polydata_actor.SetPosition(-position[0], -position[1], -position[2])
+        kwargs = world_kwargs(world_object)
+        super(VtkWorldViewer, self).add_polydata(world_object.name, polydata, **kwargs)
 
-        self.add_actor('%s_polydata' % (name), polydata_actor)
-
-        # if (polydata.GetCellData().GetNumberOfComponents() > 0) or (polydata.GetPointData().GetNumberOfComponents() > 0):
-        #     cmap = kwargs.get('colormap', 'glasbey')
-        # else:
-        cmap = kwargs.pop('colormap', attribute_value(world_object, dtype, 'polydata_colormap'))
-        if isinstance(cmap, str):
-            cmap = dict(name=cmap, color_points=self.colormaps[cmap]._color_points)
-        alpha = kwargs.pop('alpha', attribute_value(world_object, dtype, 'polydata_alpha'))
-
-        self.set_polydata_lookuptable(name, colormap=cmap, alpha=alpha)
-
-        world_object.set_attribute(**attribute_args(dtype, 'polydata_colormap', cmap))
-        world_object.set_attribute(**attribute_args(dtype, 'polydata_alpha', alpha))
-        world_object.set_attribute(**attribute_args(dtype, 'position', position))
-
-        display_polydata = kwargs.pop('polydata', attribute_value(world_object, dtype, 'polydata'))
-        world_object.set_attribute(**attribute_args(dtype, 'polydata', display_polydata))
-
-    def set_polydata_lookuptable(self, name, colormap, **kwargs):
-
-        if self.actor[name + '_polydata'].GetMapper().GetInput().GetCellData().GetNumberOfComponents() > 0:
-            if isinstance(
-                    self.actor[name + '_polydata'].GetMapper().GetInput().GetCellData().GetArray(0), vtk.vtkLongArray):
-                cell_data = np.frombuffer(
-                    self.actor[
-                        name +
-                        '_polydata'].GetMapper().GetInput().GetCellData().GetArray(0),
-                    np.uint32)
-            elif isinstance(self.actor[name + '_polydata'].GetMapper().GetInput().GetCellData().GetArray(0), vtk.vtkDoubleArray):
-                cell_data = np.frombuffer(
-                    self.actor[
-                        name +
-                        '_polydata'].GetMapper().GetInput().GetCellData().GetArray(0),
-                    np.float64)
-            lut = define_lookuptable(
-                cell_data,
-                colormap_points=colormap['color_points'],
-                colormap_name=colormap['name'])
-        elif self.actor[name + '_polydata'].GetMapper().GetInput().GetPointData().GetNumberOfComponents() > 0:
-            if isinstance(
-                    self.actor[name + '_polydata'].GetMapper().GetInput().GetPointData().GetArray(0), vtk.vtkLongArray):
-                cell_data = np.frombuffer(
-                    self.actor[
-                        name +
-                        '_polydata'].GetMapper().GetInput().GetPointData().GetArray(0),
-                    np.uint32)
-            if isinstance(
-                    self.actor[name + '_polydata'].GetMapper().GetInput().GetPointData().GetArray(0), vtk.vtkDoubleArray):
-                cell_data = np.frombuffer(
-                    self.actor[
-                        name +
-                        '_polydata'].GetMapper().GetInput().GetPointData().GetArray(0),
-                    np.float64)
-            lut = define_lookuptable(
-                cell_data,
-                colormap_points=colormap['color_points'],
-                colormap_name=colormap['name'])
-        else:
-            lut = define_lookuptable(
-                np.arange(1),
-                colormap_points=colormap['color_points'],
-                colormap_name=colormap['name'],
-                i_min=0,
-                i_max=1)
-        self.actor[name + '_polydata'].GetMapper().SetLookupTable(lut)
-
-        alpha = kwargs.get('alpha', self.actor[name + '_polydata'].GetProperty().GetOpacity())
-        self.actor[name + '_polydata'].GetProperty().SetOpacity(alpha)
+        world_object.silent = False
+        setdefault(world_object, dtype, 'polydata', **kwargs)
 
     def set_polydata_property(self, name, property=None, **kwargs):
         cmap = kwargs.get('colormap', 'grey')
