@@ -79,18 +79,25 @@ def setdefault(world_object, dtype, attr_name, obj_attr_name=None, conv=None, **
         value = world_object.get(attr_name, None)
 
     # If a conversion has been defined, apply it
+    attribute = None
     if conv:
-        value = conv(world_object, obj_attr_name, value, **kwargs)
+        attribute = conv(world_object, obj_attr_name, value, **kwargs)
+
+    if attribute is None:
+        attribute = dict(value=value)
+
+    value = attribute['value']
 
     # If value is still None after conversion, use viewer's default
     if value is None:
         for attr_name in attr_names:
             if attr_name in attribute_definition[dtype]:
                 value = attribute_definition[dtype][attr_name]['value']
+                attribute['value'] = value
                 break
 
     # Set as attribute
-    world_object.set_attribute(**attribute_args(dtype, obj_attr_name, value))
+    world_object.set_attribute(**attribute_args(dtype, obj_attr_name, **attribute))
 
     # And clear from kwargs
     world_object.kwargs.pop(obj_attr_name, None)
@@ -106,14 +113,14 @@ def world_kwargs(world_object):
 
 def _tuple(world_object, attr_name, value, **kwargs):
     if value is not None:
-        return tuple(value)
+        return dict(value=tuple(value))
 
 
 def _colormap(world_object, attr_name, cmap, **kwargs):
     if isinstance(cmap, str):
-        return dict(name=cmap, color_points=colormaps[cmap]._color_points)
-    else:
-        return cmap
+        cmap = dict(name=cmap, color_points=colormaps[cmap]._color_points)
+
+    return dict(value=cmap)
 
 
 def _irange(world_object, attr_name, irange, **kwargs):
@@ -129,18 +136,22 @@ def _irange(world_object, attr_name, irange, **kwargs):
 
         world_object.kwargs.pop('i_min', None)
         world_object.kwargs.pop('i_max', None)
-        return (imin, imax)
-    else:
-        return irange
+        irange = (imin, imax)
+
+        constraints = dict(min=object_min, max=object_max)
+
+    return dict(value=irange, constraints=constraints)
 
 
 def _plane_position(world_object, attr_name, position, **kwargs):
+    lst = list('xyz')
+    i = lst.index(attr_name[0])
     if position is None:
-        lst = list('xyz')
-        i = attr_name[0]
-        return (world_object.data.shape[lst.index(i)] - 1) / 2
-    else:
-        return position
+        position = (world_object.data.shape[i] - 1) / 2
+
+    constraints = dict(min=0, max=world_object.data.shape[i] - 1)
+
+    return dict(value=position, constraints=constraints)
 
 
 class VtkWorldViewer(VtkViewer, AbstractListener):
@@ -272,16 +283,16 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                 self.display_polydata(name=world_object.name, disp=attribute['value'])
             elif attribute['name'] == 'polydata_colormap':
                 self.set_polydata_lookuptable(world_object.name, colormap=attribute['value'], alpha=alpha,
-                    i_min=i_range[0],
-                    i_max=i_range[1])
+                                              i_min=i_range[0],
+                                              i_max=i_range[1])
             elif attribute['name'] == 'polydata_alpha':
                 self.set_polydata_lookuptable(world_object.name, colormap=colormap, alpha=attribute['value'],
-                    i_min=i_range[0],
-                    i_max=i_range[1])
+                                              i_min=i_range[0],
+                                              i_max=i_range[1])
             elif attribute['name'] == 'intensity_range':
                 self.set_polydata_lookuptable(world_object.name, colormap=colormap, alpha=alpha,
-                    i_min=attribute['value'][0],
-                    i_max=attribute['value'][1])
+                                              i_min=attribute['value'][0],
+                                              i_max=attribute['value'][1])
 
     def add_polydata(self, world_object, polydata, **kwargs):
         world_object.silent = True

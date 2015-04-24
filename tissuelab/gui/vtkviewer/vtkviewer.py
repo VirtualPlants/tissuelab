@@ -40,16 +40,23 @@ def expand(widget):
     p = QtGui.QSizePolicy
     widget.setSizePolicy(p(p.MinimumExpanding, p.MinimumExpanding))
 
+# Define constraints
+cst_proba = dict(step=0.1, min=0, max=1)
+cst_alphamap = dict(enum=['constant', 'linear'])
+
 attribute_definition = {}
 attribute_definition['matrix'] = {}
 attribute_definition['matrix']['matrix_colormap'] = dict(
     value=dict(name='grey', color_points=dict([(0, (0, 0, 0)), (1, (1, 1, 1))])), interface=IColormap, alias="Colormap")
-attribute_definition['matrix']['volume_alpha'] = dict(value=1.0, interface=IFloat, alias=u"Alpha (Volume)")
-attribute_definition['matrix']['alphamap'] = dict(value='linear', interface=IEnumStr, alias="Alpha Map")
+attribute_definition['matrix']['volume_alpha'] = dict(value=1.0, interface=IFloat, constraints=cst_proba,
+                                                      alias=u"Alpha (Volume)")
+attribute_definition['matrix']['alphamap'] = dict(value='linear', interface=IEnumStr, constraints=cst_alphamap,
+                                                  alias="Alpha Map")
 attribute_definition['matrix']['bg_id'] = dict(value=1, interface=IInt, alias="Background Intensity")
 attribute_definition['matrix']['intensity_range'] = dict(value=(0, 255), interface=IIntRange, alias="Intensity Range")
 attribute_definition['matrix']['volume'] = dict(value=True, interface=IBool, alias="Display Volume")
-attribute_definition['matrix']['cut_planes_alpha'] = dict(value=1.0, interface=IFloat, alias=u"Alpha (Cut planes)")
+attribute_definition['matrix']['cut_planes_alpha'] = dict(value=1.0, interface=IFloat, constraints=cst_proba,
+                                                          alias=u"Alpha (Cut planes)")
 attribute_definition['matrix']['resolution'] = dict(value=(1.0, 1.0, 1.0), interface=ITuple, alias=u"Resolution")
 attribute_definition['matrix']['position'] = dict(value=(0.0, 0.0, 0.0), interface=ITuple, alias=u"Position")
 for axis in ['x', 'y', 'z']:
@@ -73,11 +80,16 @@ def attribute_meta(dtype, attr_name):
                 alias=attribute_definition[dtype][attr_name]['alias'])
 
 
-def attribute_args(dtype, attr_name, value=None):
+def attribute_args(dtype, attr_name, value=None, constraints=None):
+    """
+    Return an attribute {'value':..., 'name':...}
+    """
     attribute = copy.deepcopy(attribute_definition[dtype][attr_name])
     attribute['name'] = attr_name
     if value is not None:
         attribute['value'] = value
+    if constraints is not None:
+        attribute['constraints'] = constraints
     return attribute
 
 
@@ -309,7 +321,7 @@ class VtkViewer(QtGui.QWidget):
 
         if isinstance(cmap, str):
             cmap = dict(name=cmap, color_points=self.colormaps[cmap]._color_points)
-        
+
         cell_data = get_polydata_cell_data(self.actor[name + '_polydata'].GetMapper().GetInput())
         if irange == attribute_definition[dtype]['intensity_range']:
             irange = (cell_data.min(), cell_data.max())
@@ -321,7 +333,7 @@ class VtkViewer(QtGui.QWidget):
         irange = kwargs.pop('intensity_range', None)
 
         cell_data = get_polydata_cell_data(self.actor[name + '_polydata'].GetMapper().GetInput())
-        lut = define_lookuptable(cell_data,colormap_points=colormap['color_points'],colormap_name=colormap['name'],intensity_range=irange)
+        lut = define_lookuptable(cell_data, colormap_points=colormap['color_points'], colormap_name=colormap['name'], intensity_range=irange)
 
         self.actor[name + '_polydata'].GetMapper().SetLookupTable(lut)
 
