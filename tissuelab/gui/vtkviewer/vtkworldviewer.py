@@ -170,7 +170,6 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
 
     def notify(self, sender, event=None):
         signal, data = event
-        print "VtkViewer < ", signal, "!"
         if signal == 'world_sync':
             self.set_world(data)
         elif signal == 'world_object_changed':
@@ -188,6 +187,8 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                 object_data = world_object.transform()
             elif hasattr(world_object, "_repr_vtk_"):
                 object_data = world_object._repr_vtk_()
+            elif hasattr(world_object.data, "_repr_vtk_"):
+                object_data = world_object.data._repr_vtk_()
             else:
                 object_data = world_object.data
 
@@ -210,6 +211,8 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
             object_data = world_object.transform()
         elif hasattr(world_object, "_repr_vtk_"):
             object_data = world_object._repr_vtk_()
+        elif hasattr(world_object.data, "_repr_vtk_"):
+            object_data = world_object.data._repr_vtk_()
         else:
             object_data = world_object.data
         self.object_repr[object_name] = object_data
@@ -224,75 +227,76 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
 
     def update_world_object(self, world, world_object, attribute):
         object_name = world_object.name
-        object_data = self.object_repr[object_name]
-        if isinstance(object_data, np.ndarray):
-            dtype = 'matrix'
-            colormap = attribute_value(world_object, dtype, 'matrix_colormap')
-            alpha = attribute_value(world_object, dtype, 'volume_alpha')
-            alphamap = attribute_value(world_object, dtype, 'alphamap')
-            bg_id = attribute_value(world_object, dtype, 'bg_id')
-            irange = attribute_value(world_object, dtype, 'intensity_range')
-            if attribute['name'] == 'volume':
-                self.display_volume(name=world_object.name, disp=attribute['value'])
-            elif attribute['name'] == 'matrix_colormap':
-                self.set_matrix_lookuptable(
-                    world_object.name,
-                    colormap=attribute['value'],
-                    intensity_range=irange
-                )
-            elif attribute['name'] == 'alphamap':
-                self.set_volume_alpha(
-                    world_object.name,
-                    alpha=alpha,
-                    alphamap=attribute['value'],
-                    intensity_range=irange,
-                    bg_id=bg_id)
-            elif attribute['name'] == 'volume_alpha':
-                self.set_volume_alpha(
-                    world_object.name,
-                    alpha=attribute['value'],
-                    alphamap=alphamap,
-                    intensity_range=irange,
-                    bg_id=bg_id)
-            elif attribute['name'] == 'intensity_range':
-                self.set_matrix_lookuptable(
-                    world_object.name,
-                    colormap=colormap,
-                    intensity_range=attribute['value']
-                )
-                self.set_volume_alpha(
-                    world_object.name,
-                    alpha=alpha,
-                    alphamap=alphamap,
-                    intensity_range=attribute['value'],
-                    bg_id=bg_id)
-            elif attribute['name'] == 'cut_planes':
-                self.display_cut_planes(name=world_object.name, disp=attribute['value'])
-            elif attribute['name'] == 'cut_planes_alpha':
-                self.set_cut_planes_alpha(world_object.name, alpha=attribute['value'])
-            else:
-                for i, axis in enumerate(['x', 'y', 'z']):
-                    if attribute['name'] == axis + '_plane_position':
-                        self.move_cut_plane(name=world_object.name, position=attribute['value'], orientation=i + 1)
-        elif isinstance(object_data, vtk.vtkPolyData):
-            dtype = 'polydata'
-            alpha = attribute_value(world_object, dtype, 'polydata_alpha')
-            colormap = attribute_value(world_object, dtype, 'polydata_colormap')
-            i_range = attribute_value(world_object, dtype, 'intensity_range')
-            if attribute['name'] == 'display_polydata':
-                self.display_polydata(name=world_object.name, disp=attribute['value'])
-            elif attribute['name'] == 'polydata_colormap':
-                self.set_polydata_lookuptable(world_object.name, colormap=attribute['value'], alpha=alpha,
-                                              i_min=i_range[0],
-                                              i_max=i_range[1])
-            elif attribute['name'] == 'polydata_alpha':
-                self.set_polydata_lookuptable(world_object.name, colormap=colormap, alpha=attribute['value'],
-                                              i_min=i_range[0],
-                                              i_max=i_range[1])
-            elif attribute['name'] == 'intensity_range':
-                self.set_polydata_lookuptable(world_object.name, colormap=colormap, alpha=alpha,
-                                              i_min=attribute['value'][0],
-                                              i_max=attribute['value'][1])
+        if self.object_repr.has_key(object_name):
+            object_data = self.object_repr[object_name]
+            if isinstance(object_data, np.ndarray):
+                dtype = 'matrix'
+                colormap = attribute_value(world_object, dtype, 'matrix_colormap')
+                alpha = attribute_value(world_object, dtype, 'volume_alpha')
+                alphamap = attribute_value(world_object, dtype, 'alphamap')
+                bg_id = attribute_value(world_object, dtype, 'bg_id')
+                irange = attribute_value(world_object, dtype, 'intensity_range')
+                if attribute['name'] == 'volume':
+                    self.display_volume(name=world_object.name, disp=attribute['value'])
+                elif attribute['name'] == 'matrix_colormap':
+                    self.set_matrix_lookuptable(
+                        world_object.name,
+                        colormap=attribute['value'],
+                        intensity_range=irange
+                    )
+                elif attribute['name'] == 'alphamap':
+                    self.set_volume_alpha(
+                        world_object.name,
+                        alpha=alpha,
+                        alphamap=attribute['value'],
+                        intensity_range=irange,
+                        bg_id=bg_id)
+                elif attribute['name'] == 'volume_alpha':
+                    self.set_volume_alpha(
+                        world_object.name,
+                        alpha=attribute['value'],
+                        alphamap=alphamap,
+                        intensity_range=irange,
+                        bg_id=bg_id)
+                elif attribute['name'] == 'intensity_range':
+                    self.set_matrix_lookuptable(
+                        world_object.name,
+                        colormap=colormap,
+                        intensity_range=attribute['value']
+                    )
+                    self.set_volume_alpha(
+                        world_object.name,
+                        alpha=alpha,
+                        alphamap=alphamap,
+                        intensity_range=attribute['value'],
+                        bg_id=bg_id)
+                elif attribute['name'] == 'cut_planes':
+                    self.display_cut_planes(name=world_object.name, disp=attribute['value'])
+                elif attribute['name'] == 'cut_planes_alpha':
+                    self.set_cut_planes_alpha(world_object.name, alpha=attribute['value'])
+                else:
+                    for i, axis in enumerate(['x', 'y', 'z']):
+                        if attribute['name'] == axis + '_plane_position':
+                            self.move_cut_plane(name=world_object.name, position=attribute['value'], orientation=i + 1)
+            elif isinstance(object_data, vtk.vtkPolyData):
+                dtype = 'polydata'
+                alpha = attribute_value(world_object, dtype, 'polydata_alpha')
+                colormap = attribute_value(world_object, dtype, 'polydata_colormap')
+                i_range = attribute_value(world_object, dtype, 'intensity_range')
+                if attribute['name'] == 'display_polydata':
+                    self.display_polydata(name=world_object.name, disp=attribute['value'])
+                elif attribute['name'] == 'polydata_colormap':
+                    self.set_polydata_lookuptable(world_object.name, colormap=attribute['value'], alpha=alpha,
+                        i_min=i_range[0],
+                        i_max=i_range[1])
+                elif attribute['name'] == 'polydata_alpha':
+                    self.set_polydata_lookuptable(world_object.name, colormap=colormap, alpha=attribute['value'],
+                        i_min=i_range[0],
+                        i_max=i_range[1])
+                elif attribute['name'] == 'intensity_range':
+                    self.set_polydata_lookuptable(world_object.name, colormap=colormap, alpha=alpha,
+                        i_min=attribute['value'][0],
+                        i_max=attribute['value'][1])
 
     def add_polydata(self, world_object, polydata, **kwargs):
         world_object.silent = True
