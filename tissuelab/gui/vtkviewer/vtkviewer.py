@@ -52,7 +52,7 @@ attribute_definition['matrix']['volume_alpha'] = dict(value=1.0, interface=IFloa
                                                       alias=u"Alpha (Volume)")
 attribute_definition['matrix']['alphamap'] = dict(value='linear', interface=IEnumStr, constraints=cst_alphamap,
                                                   alias="Alpha Map")
-attribute_definition['matrix']['bg_id'] = dict(value=1, interface=IInt, alias="Background Intensity")
+attribute_definition['matrix']['bg_id'] = dict(value=1, interface=IInt, alias="Background Id")
 attribute_definition['matrix']['intensity_range'] = dict(value=(0, 255), interface=IIntRange, alias="Intensity Range")
 attribute_definition['matrix']['volume'] = dict(value=True, interface=IBool, alias="Display Volume")
 attribute_definition['matrix']['cut_planes_alpha'] = dict(value=1.0, interface=IFloat, constraints=cst_proba,
@@ -66,7 +66,7 @@ attribute_definition['matrix']['cut_planes'] = dict(value=False, interface=IBool
 attribute_definition['polydata'] = {}
 attribute_definition['polydata']['polydata_colormap'] = dict(
     value=dict(name='grey', color_points=dict([(0, (0, 0, 0)), (1, (1, 1, 1))])), interface=IColormap, alias="Colormap")
-attribute_definition['polydata']['polydata_alpha'] = dict(value=1.0, interface=IFloat, constraints=cst_proba, 
+attribute_definition['polydata']['polydata_alpha'] = dict(value=1.0, interface=IFloat, constraints=cst_proba,
                                                           alias=u"Alpha (Polydata)")
 attribute_definition['polydata']['intensity_range'] = dict(value=(0, 255), interface=IIntRange, alias="Intensity Range")
 attribute_definition['polydata']['position'] = dict(value=(0.0, 0.0, 0.0), interface=ITuple, alias=u"Position")

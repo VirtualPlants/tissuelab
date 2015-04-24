@@ -29,7 +29,7 @@ from openalea.oalab.world import World
 from openalea.vpltk.qt import QtGui
 
 
-from tissuelab.gui.vtkviewer.vtk_utils import define_lookuptable, get_polydata_cell_data
+from tissuelab.gui.vtkviewer.vtk_utils import define_lookuptable
 from tissuelab.gui.vtkviewer.vtkviewer import VtkViewer, attribute_args, attribute_definition, colormaps
 
 
@@ -154,6 +154,12 @@ def _plane_position(world_object, attr_name, position, **kwargs):
     return dict(value=position, constraints=constraints)
 
 
+def _bg_id(world_object, attr_name, identifiant, **kwargs):
+    attribute = _irange(world_object, attr_name, identifiant)
+    attribute['value'] = 1
+    return attribute
+
+
 class VtkWorldViewer(VtkViewer, AbstractListener):
 
     """
@@ -273,6 +279,14 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                 elif attribute['name'] == 'cut_planes':
                     self.display_cut_planes(name=world_object.name, disp=attribute['value'])
                 elif attribute['name'] == 'cut_planes_alpha':
+                    self.set_cut_planes_alpha(world_object.name, alpha=attribute['value'])
+                elif attribute['name'] == 'bg_id':
+                    self.set_volume_alpha(
+                        world_object.name,
+                        alpha=alpha,
+                        alphamap=alphamap,
+                        intensity_range=irange,
+                        bg_id=bg_id)
                     self.set_cut_planes_alpha(world_object.name, alpha=attribute['value'])
                 else:
                     for i, axis in enumerate(['x', 'y', 'z']):
@@ -418,7 +432,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         setdefault(world_object, dtype, 'intensity_range', conv=_irange, **kwargs)
         setdefault(world_object, dtype, 'position', conv=_tuple, **kwargs)
         setdefault(world_object, dtype, 'resolution', conv=_tuple, **kwargs)
-        setdefault(world_object, dtype, 'bg_id', **kwargs)
+        setdefault(world_object, dtype, 'bg_id', conv=_bg_id, **kwargs)
 
         kwargs = world_kwargs(world_object)
         super(VtkWorldViewer, self).add_matrix_as_volume(world_object.name, data_matrix,
