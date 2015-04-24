@@ -124,20 +124,20 @@ def _colormap(world_object, attr_name, cmap, **kwargs):
 
 
 def _irange(world_object, attr_name, irange, **kwargs):
-    if irange is None:
-        try:
-            object_min = world_object.data.min()
-            object_max = world_object.data.max()
-        except AttributeError:
-            return None
-
-        imin = kwargs.get('i_min', object_min)
-        imax = kwargs.get('i_max', object_max)
-
-        world_object.kwargs.pop('i_min', None)
-        world_object.kwargs.pop('i_max', None)
-        irange = (imin, imax)
-
+    try:
+        object_min = world_object.data.min()
+        object_max = world_object.data.max()
+    except AttributeError:
+        if irange is None:
+            i_min = kwargs.get('i_min', None)
+            i_max = kwargs.get('i_max', None)
+            irange = (i_min, i_max) if (i_min is not None) and (i_max is not None) else None
+        constraints = None
+    else:
+        if irange is None:
+            i_min = kwargs.get('i_min', object_min)
+            i_max = kwargs.get('i_max', object_max)
+            irange = (i_min, i_max)
         constraints = dict(min=object_min, max=object_max)
 
     return dict(value=irange, constraints=constraints)
@@ -282,21 +282,18 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                 dtype = 'polydata'
                 alpha = attribute_value(world_object, dtype, 'polydata_alpha')
                 colormap = attribute_value(world_object, dtype, 'polydata_colormap')
-                i_range = attribute_value(world_object, dtype, 'intensity_range')
+                irange = attribute_value(world_object, dtype, 'intensity_range')
                 if attribute['name'] == 'display_polydata':
                     self.display_polydata(name=world_object.name, disp=attribute['value'])
                 elif attribute['name'] == 'polydata_colormap':
                     self.set_polydata_lookuptable(world_object.name, colormap=attribute['value'], alpha=alpha,
-                        i_min=i_range[0],
-                        i_max=i_range[1])
+                        intensity_range=irange)
                 elif attribute['name'] == 'polydata_alpha':
                     self.set_polydata_lookuptable(world_object.name, colormap=colormap, alpha=attribute['value'],
-                        i_min=i_range[0],
-                        i_max=i_range[1])
+                        intensity_range=irange)
                 elif attribute['name'] == 'intensity_range':
                     self.set_polydata_lookuptable(world_object.name, colormap=colormap, alpha=alpha,
-                        i_min=attribute['value'][0],
-                        i_max=attribute['value'][1])
+                        intensity_range=attribute['value'])
 
     def add_polydata(self, world_object, polydata, **kwargs):
         world_object.silent = True
