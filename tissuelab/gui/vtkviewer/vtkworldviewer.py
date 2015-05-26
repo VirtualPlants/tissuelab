@@ -173,6 +173,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
 
         self.world = World()
         self.world.register_listener(self)
+        self.setAcceptDrops(True)
 
     def notify(self, sender, event=None):
         signal, data = event
@@ -438,3 +439,46 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         super(VtkWorldViewer, self).add_matrix_as_volume(world_object.name, data_matrix,
                                                          datatype=np.uint16, decimate=1,
                                                          **kwargs)
+
+    def dragEnterEvent(self, event):
+        for fmt in ['text/uri-list', 'openalealab/data']:
+            if event.mimeData().hasFormat(fmt):
+                event.acceptProposedAction()
+                return
+
+        return QtGui.QWidget.dragEnterEvent(self, event)
+
+    def dragMoveEvent(self, event):
+        for fmt in ['text/uri-list', 'openalealab/data']:
+            if event.mimeData().hasFormat(fmt):
+                event.acceptProposedAction()
+                return
+
+        event.ignore()
+
+    def dropEvent(self, event):
+        source = event.mimeData()
+        if source.hasFormat('text/uri-list'):
+            from openalea.image.serial.basics import imread
+            from openalea.core.path import path
+            url = unicode(source.data('text/uri-list'))
+            if url.startswith("file://"):
+                path = path(url[len('file://'):])
+                data = imread(path)
+                self.world.add(data, name=path.namebase)
+                event.acceptProposedAction()
+                self.auto_focus()
+            else:
+                return QtGui.QWidget.dropEvent(self, event)
+
+        elif source.hasFormat('openalealab/data'):
+            from openalea.core.service.mimetype import decode
+            data = decode('openalealab/data', source.data('openalealab/data'))
+            from openalea.image.serial.basics import imread
+            matrix = imread(data.path)
+            self.world.add(matrix, name=data.path.namebase)
+            self.auto_focus()
+            event.acceptProposedAction()
+
+        else:
+            return QtGui.QWidget.dropEvent(self, event)
