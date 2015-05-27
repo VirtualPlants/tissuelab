@@ -462,11 +462,11 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
             from openalea.image.serial.basics import imread
             from openalea.core.path import path
             for url in source.urls():
-                _path = url.toLocalFile()
-                if _path and _path.startswith("file://"):
-                    _path = path(_path[len('file://'):])
-                    data = imread(_path)
-                    self.world.add(data, name=_path.namebase)
+                local_file = url.toLocalFile()
+                local_file = path(local_file)
+                if local_file.exists():
+                    data = imread(local_file)
+                    self.world.add(data, name=local_file.namebase)
                     event.acceptProposedAction()
                     self.auto_focus()
                 else:
