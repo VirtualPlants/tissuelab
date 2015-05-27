@@ -461,15 +461,16 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         if source.hasFormat('text/uri-list'):
             from openalea.image.serial.basics import imread
             from openalea.core.path import path
-            url = unicode(source.data('text/uri-list'))
-            if url.startswith("file://"):
-                path = path(url[len('file://'):])
-                data = imread(path)
-                self.world.add(data, name=path.namebase)
-                event.acceptProposedAction()
-                self.auto_focus()
-            else:
-                return QtGui.QWidget.dropEvent(self, event)
+            for url in source.urls():
+                _path = url.toLocalFile()
+                if _path and _path.startswith("file://"):
+                    _path = path(_path[len('file://'):])
+                    data = imread(_path)
+                    self.world.add(data, name=_path.namebase)
+                    event.acceptProposedAction()
+                    self.auto_focus()
+                else:
+                    return QtGui.QWidget.dropEvent(self, event)
 
         elif source.hasFormat('openalealab/data'):
             from openalea.core.service.mimetype import decode
