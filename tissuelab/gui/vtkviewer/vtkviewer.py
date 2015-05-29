@@ -164,6 +164,7 @@ class VtkViewer(QtGui.QWidget):
         expand(self.vtkWidget)
 
         self.ren = vtk.vtkRenderer()  # vtk renderer
+	self.ren.SetBackground(1, 1, 1)
         self.vtkWidget.GetRenderWindow().AddRenderer(self.ren)
         self.iren = self.vtkWidget.GetRenderWindow().GetInteractor()
 
