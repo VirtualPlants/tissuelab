@@ -143,15 +143,15 @@ def _irange(world_object, attr_name, irange, **kwargs):
     return dict(value=irange, constraints=constraints)
 
 
-def _plane_position(world_object, attr_name, position, **kwargs):
+def _plane_position(world_object, attr_name, plane_position, **kwargs):
     lst = list('xyz')
     i = lst.index(attr_name[0])
-    if position is None:
-        position = (world_object.data.shape[i] - 1) / 2
+    if plane_position is None:
+        plane_position = (world_object.data.shape[i] - 1) / 2
 
     constraints = dict(min=0, max=world_object.data.shape[i] - 1)
 
-    return dict(value=position, constraints=constraints)
+    return dict(value=plane_position, constraints=constraints)
 
 
 def _bg_id(world_object, attr_name, identifiant, **kwargs):
@@ -190,21 +190,22 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
     def set_world(self, world):
         self.clear()
         for obj_name, world_object in world.items():
-            if hasattr(world_object, "transform"):
-                object_data = world_object.transform()
-            elif hasattr(world_object, "_repr_vtk_"):
-                object_data = world_object._repr_vtk_()
-            elif hasattr(world_object.data, "_repr_vtk_"):
-                object_data = world_object.data._repr_vtk_()
-            else:
-                object_data = world_object.data
+            self.set_world_object(world, world_object)
+            # if hasattr(world_object, "transform"):
+            #     object_data = world_object.transform()
+            # elif hasattr(world_object, "_repr_vtk_"):
+            #     object_data = world_object._repr_vtk_()
+            # elif hasattr(world_object.data, "_repr_vtk_"):
+            #     object_data = world_object.data._repr_vtk_()
+            # else:
+            #     object_data = world_object.data
 
-            if isinstance(object_data, np.ndarray):
-                self.add_matrix(world_object, object_data, datatype=object_data.dtype, **world_object.kwargs)
-            elif isinstance(object_data, vtk.vtkPolyData):
-                self.add_polydata(world_object, object_data, **world_object.kwargs)
-            elif isinstance(object_data, vtk.vtkActor):
-                self.add_actor(obj_name, object_data, **world_object.kwargs)
+            # if isinstance(object_data, np.ndarray):
+            #     self.add_matrix(world_object, object_data, datatype=object_data.dtype, **world_object.kwargs)
+            # elif isinstance(object_data, vtk.vtkPolyData):
+            #     self.add_polydata(world_object, object_data, **world_object.kwargs)
+            # elif isinstance(object_data, vtk.vtkActor):
+            #     self.add_actor(obj_name, object_data, **world_object.kwargs)
         self.compute()
 
     def set_world_object(self, world, world_object):
@@ -298,14 +299,16 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                 alpha = attribute_value(world_object, dtype, 'polydata_alpha')
                 colormap = attribute_value(world_object, dtype, 'polydata_colormap')
                 irange = attribute_value(world_object, dtype, 'intensity_range')
+                linewidth = attribute_value(world_object, dtype, 'linewidth')
                 if attribute['name'] == 'display_polydata':
                     self.display_polydata(name=world_object.name, disp=attribute['value'])
+                elif attribute['name'] == 'linewidth':
+                    self.set_polydata_linewidth(world_object.name, linewidth=attribute['value'])
                 elif attribute['name'] == 'polydata_colormap':
                     self.set_polydata_lookuptable(world_object.name, colormap=attribute['value'], alpha=alpha,
                         intensity_range=irange)
                 elif attribute['name'] == 'polydata_alpha':
-                    self.set_polydata_lookuptable(world_object.name, colormap=colormap, alpha=attribute['value'],
-                        intensity_range=irange)
+                    self.set_polydata_alpha(world_object.name, alpha=attribute['value'])
                 elif attribute['name'] == 'intensity_range':
                     self.set_polydata_lookuptable(world_object.name, colormap=colormap, alpha=alpha,
                         intensity_range=attribute['value'])
@@ -319,6 +322,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         setdefault(world_object, dtype, 'alpha', 'polydata_alpha', **kwargs)
         setdefault(world_object, dtype, 'intensity_range', conv=_irange, **kwargs)
         setdefault(world_object, dtype, 'position', conv=_tuple, **kwargs)
+        setdefault(world_object, dtype, 'linewidth', **kwargs)
 
         kwargs = world_kwargs(world_object)
         super(VtkWorldViewer, self).add_polydata(world_object.name, polydata, **kwargs)
@@ -437,8 +441,10 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
 
         kwargs = world_kwargs(world_object)
         super(VtkWorldViewer, self).add_matrix_as_volume(world_object.name, data_matrix,
-                                                         datatype=np.uint16, decimate=1,
+                                                         datatype=datatype, decimate=1,
                                                          **kwargs)
+
+    
 
     def dragEnterEvent(self, event):
         for fmt in ['text/uri-list', 'openalealab/data']:

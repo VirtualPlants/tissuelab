@@ -43,6 +43,7 @@ def expand(widget):
 # Define constraints
 cst_proba = dict(step=0.1, min=0, max=1)
 cst_alphamap = dict(enum=['constant', 'linear'])
+cst_width = dict(min=0, max=10)
 
 attribute_definition = {}
 attribute_definition['matrix'] = {}
@@ -69,6 +70,7 @@ attribute_definition['polydata']['polydata_colormap'] = dict(
 attribute_definition['polydata']['polydata_alpha'] = dict(value=1.0, interface=IFloat, constraints=cst_proba,
                                                           alias=u"Alpha (Polydata)")
 attribute_definition['polydata']['intensity_range'] = dict(value=(0, 255), interface=IIntRange, alias="Intensity Range")
+attribute_definition['polydata']['linewidth'] = dict(value=1, interface=IInt, alias="Linewidth", constraints=cst_width)
 attribute_definition['polydata']['position'] = dict(value=(0.0, 0.0, 0.0), interface=ITuple, alias=u"Position")
 attribute_definition['polydata']['display_polydata'] = dict(value=True, interface=IBool, alias=u"Display Polydata")
 
@@ -255,8 +257,9 @@ class VtkViewer(QtGui.QWidget):
         self.vtkdata = {}
 
     def save_screenshot(self, filename):
-        mimetype = mimetypes.guess_type(filename)
+        mimetype = mimetypes.guess_type(filename)[0]
         if mimetype not in image_writers:
+            raise TypeError("No vtk writer found for type "+str(mimetype))
             return
         self.render()
         screenshooter = vtk.vtkWindowToImageFilter()
@@ -302,6 +305,7 @@ class VtkViewer(QtGui.QWidget):
         alpha = default_value(dtype, ['polydata_alpha', 'alpha'], **kwargs)
         cmap = default_value(dtype, ['polydata_colormap', 'colormap'], **kwargs)
         irange = default_value(dtype, 'intensity_range', **kwargs)
+        linewidth = default_value(dtype, 'linewidth', **kwargs)
 
         mapper = vtk.vtkPolyDataMapper()
         if vtk.VTK_MAJOR_VERSION <= 5:
@@ -328,6 +332,8 @@ class VtkViewer(QtGui.QWidget):
             irange = (cell_data.min(), cell_data.max())
 
         self.set_polydata_lookuptable(name, colormap=cmap, alpha=alpha, intensity_range=irange)
+        self.set_polydata_alpha(name, alpha=alpha)
+        self.set_polydata_linewidth(name, linewidth=linewidth)
 
     def set_polydata_lookuptable(self, name, colormap, **kwargs):
 
@@ -335,11 +341,15 @@ class VtkViewer(QtGui.QWidget):
 
         cell_data = get_polydata_cell_data(self.actor[name + '_polydata'].GetMapper().GetInput())
         lut = define_lookuptable(cell_data, colormap_points=colormap['color_points'], colormap_name=colormap['name'], intensity_range=irange)
-
         self.actor[name + '_polydata'].GetMapper().SetLookupTable(lut)
 
+    def set_polydata_alpha(self, name, **kwargs):
         alpha = kwargs.get('alpha', self.actor[name + '_polydata'].GetProperty().GetOpacity())
         self.actor[name + '_polydata'].GetProperty().SetOpacity(alpha)
+
+    def set_polydata_linewidth(self, name, **kwargs):
+        linewidth = kwargs.get('linewidth', 1)
+        self.actor[name + '_polydata'].GetProperty().SetLineWidth(linewidth)
 
     def add_outline(self, name, data_matrix, **kwargs):
         self.reader[name] = reader = matrix_to_image_reader(name, data_matrix, np.uint16, 1)
