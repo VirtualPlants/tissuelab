@@ -444,7 +444,63 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                                                          datatype=datatype, decimate=1,
                                                          **kwargs)
 
-    
+    def add_blending(self, world_object_1, data_matrix_1, world_object_2, data_matrix_2, **kwargs):
+        from vtk_utils import blend_funct
+
+        dtype = 'matrix'
+
+        name_1 = world_object_1.name
+        name_2 = world_object_2.name
+
+        kwargs_1 = world_kwargs(world_object_1)
+        kwargs_2 = world_kwargs(world_object_2)
+
+        reader_1 = self.reader[name_1] 
+        reader_2 = self.reader[name_2] 
+
+        resolution = attribute_value(world_object_1, dtype, 'resolution', **kwargs)
+        position = attribute_value(world_object_1, dtype, 'position', **kwargs)
+        
+        nx, ny, nz = data_matrix_1.shape
+        xMax = nx - 1
+        yMax = ny - 1
+        zMax = nz - 1
+
+        for orientation in [1, 2, 3]:
+            # blend_actor, blend = blend_funct(data_matrix_1, reader_1, lut_1, reader_2, lut_2, orientation)
+
+            colors_1 = self.vtkdata['%s_cut_plane_colors_%d' % (name_1, orientation)]
+            colors_2 = self.vtkdata['%s_cut_plane_colors_%d' % (name_2, orientation)]
+
+            blend = vtk.vtkImageBlend()
+            blend.AddInputConnection(colors_1.GetOutputPort())
+            blend.AddInputConnection(colors_2.GetOutputPort())
+
+            blend.SetOpacity(0, 0.5)
+            blend.SetOpacity(1, 0.5)
+
+            blend_actor = vtk.vtkImageActor()
+            blend_actor.SetInput(blend.GetOutput())
+            if orientation == 1:
+                blend_actor.SetDisplayExtent(
+                    np.round(xMax / 2), np.round(xMax / 2), 0, yMax, 0, zMax)
+            elif orientation == 2:
+                blend_actor.SetDisplayExtent(
+                    0, xMax, np.round(yMax / 2), np.round(yMax / 2), 0, zMax)
+            elif orientation == 3:
+                blend_actor.SetDisplayExtent(
+                    0, xMax, 0, yMax, np.round(zMax / 2), np.round(zMax / 2))
+
+            blend_actor.SetScale(resolution[0], resolution[1], resolution[2])
+
+            if position is not None:
+                blend_actor.SetOrigin(position[0], position[1], position[2])
+                blend_actor.SetPosition(-position[0], -position[1], -position[2])
+
+            self.add_actor('%s_%s_blend_%d' % (name_1, name_2, orientation), blend_actor)
+
+
+
 
     def dragEnterEvent(self, event):
         for fmt in ['text/uri-list', 'openalealab/data']:
