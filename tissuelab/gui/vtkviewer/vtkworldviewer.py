@@ -33,6 +33,16 @@ from tissuelab.gui.vtkviewer.vtk_utils import define_lookuptable
 from tissuelab.gui.vtkviewer.vtkviewer import VtkViewer, attribute_args, attribute_definition, colormaps
 
 
+class ImageBlending(object):
+
+    def __init__(self, world_objects):
+        self.world_objects = world_objects
+        self.data_matrices = [world_object.data for world_object in world_objects]
+
+        self.shape = world_objects[0].data.shape
+        self.resolution = world_objects[0].data.resolution
+
+
 def expand(widget):
     p = QtGui.QSizePolicy
     widget.setSizePolicy(p(p.MinimumExpanding, p.MinimumExpanding))
@@ -229,13 +239,15 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
             self.add_matrix(world_object, object_data, datatype=object_data.dtype, **world_object.kwargs)
         elif isinstance(object_data, vtk.vtkPolyData):
             self.add_polydata(world_object, object_data, **world_object.kwargs)
+        elif isinstance(object_data, ImageBlending):
+            self.add_blending(world_object, object_data, **world_object.kwargs)
         elif isinstance(object_data, vtk.vtkActor):
             self.add_actor(object_name, object_data, **world_object.kwargs)
         self.compute()
 
     def update_world_object(self, world, world_object, attribute):
         object_name = world_object.name
-        if self.object_repr.has_key(object_name):
+        if object_name in self.object_repr:
             object_data = self.object_repr[object_name]
             if isinstance(object_data, np.ndarray):
                 dtype = 'matrix'
@@ -306,12 +318,23 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                     self.set_polydata_linewidth(world_object.name, linewidth=attribute['value'])
                 elif attribute['name'] == 'polydata_colormap':
                     self.set_polydata_lookuptable(world_object.name, colormap=attribute['value'], alpha=alpha,
-                        intensity_range=irange)
+                                                  intensity_range=irange)
                 elif attribute['name'] == 'polydata_alpha':
                     self.set_polydata_alpha(world_object.name, alpha=attribute['value'])
                 elif attribute['name'] == 'intensity_range':
                     self.set_polydata_lookuptable(world_object.name, colormap=colormap, alpha=alpha,
-                        intensity_range=attribute['value'])
+                                                  intensity_range=attribute['value'])
+            elif isinstance(object_data, ImageBlending):
+                if attribute['name'] == 'blending_factor':
+                    self.set_blending_factor(world_object.name, blending_factor=attribute['value'])
+                elif attribute['name'] == 'cut_planes_alpha':
+                    self.set_cut_planes_alpha(world_object.name, alpha=attribute['value'])
+                elif attribute['name'] == 'cut_planes':
+                    self.display_cut_planes(name=world_object.name, disp=attribute['value'])
+                else:
+                    for i, axis in enumerate(['x', 'y', 'z']):
+                        if attribute['name'] == axis + '_plane_position':
+                            self.move_cut_plane(name=world_object.name, position=attribute['value'], orientation=i + 1)
 
     def add_polydata(self, world_object, polydata, **kwargs):
         world_object.silent = True
@@ -444,63 +467,35 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                                                          datatype=datatype, decimate=1,
                                                          **kwargs)
 
-    def add_blending(self, world_object_1, data_matrix_1, world_object_2, data_matrix_2, **kwargs):
+    def add_blending(self, world_object, image_blending, **kwargs):
         from vtk_utils import blend_funct
 
+        # dtype = 'blending'
         dtype = 'matrix'
 
-        name_1 = world_object_1.name
-        name_2 = world_object_2.name
+        blended_objects = image_blending.world_objects
+        data_matrices = image_blending.data_matrices
 
-        kwargs_1 = world_kwargs(world_object_1)
-        kwargs_2 = world_kwargs(world_object_2)
+        names = [obj.name for obj in blended_objects]
 
-        reader_1 = self.reader[name_1] 
-        reader_2 = self.reader[name_2] 
+        world_object.silent = True
 
-        resolution = attribute_value(world_object_1, dtype, 'resolution', **kwargs)
-        position = attribute_value(world_object_1, dtype, 'position', **kwargs)
-        
-        nx, ny, nz = data_matrix_1.shape
-        xMax = nx - 1
-        yMax = ny - 1
-        zMax = nz - 1
+        setdefault(world_object, dtype, 'blending_factor', **kwargs)
+        setdefault(world_object, dtype, 'alpha', 'cut_planes_alpha', **kwargs)
 
-        for orientation in [1, 2, 3]:
-            # blend_actor, blend = blend_funct(data_matrix_1, reader_1, lut_1, reader_2, lut_2, orientation)
+        kwargs = world_kwargs(blended_objects[0])
+        setdefault(world_object, dtype, 'position', conv=_tuple, **kwargs)
+        setdefault(world_object, dtype, 'resolution', conv=_tuple, **kwargs)
 
-            colors_1 = self.vtkdata['%s_cut_plane_colors_%d' % (name_1, orientation)]
-            colors_2 = self.vtkdata['%s_cut_plane_colors_%d' % (name_2, orientation)]
+        for axis in ['x', 'y', 'z']:
+            attr_name = axis + '_plane_position'
+            setdefault(world_object, dtype, attr_name, conv=_plane_position, **kwargs)
 
-            blend = vtk.vtkImageBlend()
-            blend.AddInputConnection(colors_1.GetOutputPort())
-            blend.AddInputConnection(colors_2.GetOutputPort())
+        kwargs = world_kwargs(world_object)
+        super(VtkWorldViewer, self).add_blending(world_object.name, names, data_matrices, **kwargs)
+        world_object.silent = False
 
-            blend.SetOpacity(0, 0.5)
-            blend.SetOpacity(1, 0.5)
-
-            blend_actor = vtk.vtkImageActor()
-            blend_actor.SetInput(blend.GetOutput())
-            if orientation == 1:
-                blend_actor.SetDisplayExtent(
-                    np.round(xMax / 2), np.round(xMax / 2), 0, yMax, 0, zMax)
-            elif orientation == 2:
-                blend_actor.SetDisplayExtent(
-                    0, xMax, np.round(yMax / 2), np.round(yMax / 2), 0, zMax)
-            elif orientation == 3:
-                blend_actor.SetDisplayExtent(
-                    0, xMax, 0, yMax, np.round(zMax / 2), np.round(zMax / 2))
-
-            blend_actor.SetScale(resolution[0], resolution[1], resolution[2])
-
-            if position is not None:
-                blend_actor.SetOrigin(position[0], position[1], position[2])
-                blend_actor.SetPosition(-position[0], -position[1], -position[2])
-
-            self.add_actor('%s_%s_blend_%d' % (name_1, name_2, orientation), blend_actor)
-
-
-
+        setdefault(world_object, dtype, 'cut_planes', **kwargs)
 
     def dragEnterEvent(self, event):
         for fmt in ['text/uri-list', 'openalealab/data']:
