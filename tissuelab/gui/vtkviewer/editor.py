@@ -740,11 +740,21 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
             else:
                 self.selectedPoint = -1
         elif self.mode == 1:
-            # TODO : quand les polydata se deplacent, on recupere plus le bon label,
-            # faire avec isinside de selectedtreshold
-            self.selectedLabel = self.matrix[int(coord[0])][int(coord[1])][int(coord[2])]
-            if self.selectedLabel in self.deletedLabel or self.selectedLabel == self.label or self.selectedLabel not in self.polyList:
-                self.selectedLabel = -1
+            for label,poly in self.polyList.items():
+                points = vtk.vtkPoints()
+                points.InsertNextPoint(coord)
+                polypoint = vtk.vtkPolyData()
+                polypoint.SetPoints(points)
+                
+                selectEnclosed = vtk.vtkSelectEnclosedPoints()
+                selectEnclosed.SetInput(polypoint)
+                selectEnclosed.SetSurface(poly)
+                selectEnclosed.Update()
+                if selectEnclosed.IsInside(0) :
+                    self.selectedLabel = label
+                    break
+                else :
+                    self.selectedLabel = -1
             print self.selectedLabel
             self.refresh()
 
