@@ -276,7 +276,8 @@ class ViewerEditor(QtGui.QWidget):
 
     def set_label(self, lab):
         """
-
+        compute the contour of the cell identify by label
+        compute the neighboors and their contour
         """
         self.label = lab
         self.interactor.label = lab
@@ -312,6 +313,10 @@ class ViewerEditor(QtGui.QWidget):
         self.interactor.propagation = value
 
     def switch_to_x_plan(self):
+        """
+        method to reoriente the camera to face the yz plane
+        actualise the orientation and position of the interactor
+        """
         if (self.interactor.orientation == 2):
             self.interactor.GetCurrentRenderer().GetActiveCamera().Azimuth(90)
             self.interactor.GetCurrentRenderer().GetActiveCamera().SetViewUp(0, 0, 1)
@@ -325,6 +330,10 @@ class ViewerEditor(QtGui.QWidget):
         self.interactor.refresh()
 
     def switch_to_y_plan(self):
+        """
+        method to reoriente the camera to face the xz plane
+        actualise the orientation and position of the interactor
+        """
         if (self.interactor.orientation == 2):
             self.interactor.GetCurrentRenderer().GetActiveCamera().SetViewUp(1, 0, 0)
             self.interactor.GetCurrentRenderer().GetActiveCamera().Azimuth(90)
@@ -338,6 +347,10 @@ class ViewerEditor(QtGui.QWidget):
         self.interactor.refresh()
 
     def switch_to_z_plan(self):
+        """
+        method to reoriente the camera to face the xy plane
+        actualise the orientation and position of the interactor
+        """
         if (self.interactor.orientation == 0):
             self.interactor.GetCurrentRenderer().GetActiveCamera().SetViewUp(1, 0, 0)
             #self.interactor.GetCurrentRenderer().GetActiveCamera().Azimuth(-90)
@@ -401,6 +414,10 @@ def voxelize(input_image, polydata, polyList):
 
 
 def voisinage(matrix, contour, label):
+    """
+    take as input a segmented matrix, a polydata and a label
+    return a list of id corresponding to the neighboors of the polydata in the matrix
+    """
     labels = list()
     for i in xrange(contour.GetNumberOfPoints()):
         coord = np.zeros(3)
@@ -423,6 +440,10 @@ def voisinage(matrix, contour, label):
 
 
 def cutplane(poly, orientation, position):
+    """
+    take as input a polydata, an axis (orientation) and the position along the axis (position)
+    return the intersection of the polydata and the plane
+    """
     origine = np.zeros(3)
     origine[orientation] = position
     normal = np.zeros(3)
@@ -439,6 +460,9 @@ def cutplane(poly, orientation, position):
 
 
 def get_contours(matrix, label):
+    """
+    take as input a segmented matrix and an id and return the contour of the polydata associated
+    """
     reader = matrix_to_image_reader('la', matrix, matrix.dtype)
     return compute_points(reader.GetOutput(), label)
 
@@ -454,6 +478,9 @@ def compute_points(matrix, label):
 
 
 def get_contours2(matrix, label):
+    """
+    take as input a segmented matrix and a list of ids and return the contour of the polydata associated
+    """
     reader = matrix_to_image_reader('la', matrix, matrix.dtype)
     return compute_points2(reader.GetOutput(), label)
 
@@ -470,6 +497,9 @@ def compute_points2(matrix, label):
 
 
 def compute_image(matrix):
+    """
+    take a matrix in input and return the vtkImageActor associated
+    """
     reader = matrix_to_image_reader('la', matrix, matrix.dtype)
     box = reader.GetDataExtent()
     lut = define_LUT(matrix)
@@ -500,6 +530,9 @@ def isnotInList(p, l):
 
 
 def is_shared_point(p1, poly1, poly2):
+    """
+    check if a point is shared by a other polydata, if yes, return its id in the second polydata
+    """
     coord = np.zeros(3)
     poly1.GetPoint(p1, coord)
     p2 = poly2.FindPoint(coord)
@@ -512,11 +545,17 @@ def is_shared_point(p1, poly1, poly2):
 
 
 def distance(p1, p2):
+    """
+    simple function that calculate the distance between two points
+    """
     dist = sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2 + (p1[2] - p2[2]) ** 2)
     return dist
 
 
 def intersection(box, boxx):
+    """
+    simple function to determine if two bounding box intersect each other
+    """
     x = box[0] < boxx[1] and boxx[0] < box[1]
     y = box[2] < boxx[3] and boxx[2] < box[3]
     z = box[4] < boxx[5] and boxx[4] < box[5]
@@ -524,6 +563,9 @@ def intersection(box, boxx):
 
 
 def delete_shared_borders_mieux(poly1, poly2):
+    """
+    better function to remove the shared bounderies between two polydata
+    """
     for i in xrange(poly2.GetNumberOfCells()):
         idPoints = vtk.vtkIdList()
         poly2.GetCellPoints(i, idPoints)
@@ -552,6 +594,9 @@ def delete_shared_borders_mieux(poly1, poly2):
 
 
 def delete_shared_borders_pas_top(poly1, poly2):
+    """
+    first function to remove the shared bounderies between two polydata
+    """
     frontFusion = [i for i in xrange(poly2.GetNumberOfPoints()) if is_shared_point(i, poly2, poly1) != -1]
     frontConsid = [is_shared_point(i, poly2, poly1) for i in frontFusion]
 
@@ -589,12 +634,20 @@ def delete_shared_borders_pas_top(poly1, poly2):
 
 
 def is_poly_in_plan(poly, orientation, position):
+    """
+    simple function to determine if a plane intersect a polydata
+    """
     box = np.zeros(6)
     poly.GetBounds(box)
     return box[orientation * 2] < position and box[orientation * 2 + 1] > position
 
 
 class SelectCell (vtk.vtkInteractorStyleTrackballCamera):
+
+    """
+    class of interactor use to retrieve label of a cell in a cut_plane of a segmented matrix
+    param : data : the segmented matrix
+    """
 
     def __init__(self, parent=None):
         self.AddObserver("MiddleButtonPressEvent", self.MiddleButtonPressEvent)
@@ -632,6 +685,12 @@ class SelectCell (vtk.vtkInteractorStyleTrackballCamera):
 
 class InteractorEditor(vtk.vtkInteractorStyle):
 
+    """
+    generic class of interactor to move points of a polydata on a plane
+    param : poly : the polydata to edit
+            plane : the plane limiting the deplacement
+    """
+
     def __init__(self, parent=None):
         self.AddObserver("LeftButtonPressEvent", self.LeftButtonPressEvent)
         self.AddObserver("LeftButtonReleaseEvent", self.LeftButtonReleaseEvent)
@@ -652,6 +711,16 @@ class InteractorEditor(vtk.vtkInteractorStyle):
 
 
 class InteractorEditor2D (vtk.vtkInteractorStyle):
+
+    """
+    class of interactor used to move points of a polydata and to repercut the change to the polydatas adjacents
+    move are in 3D but representation of the polydatas are in 2D
+    param : consideredCell : polydata of the studied cell
+            label : id of the studied cell
+            polyList : dict for all neighboor : dict[label_neigh] = polydata_neigh
+            background : imageactor of the intensity matrix
+            matrix : matrix of the segmented image
+    """
 
     def __init__(self, parent=None):
         self.AddObserver("LeftButtonPressEvent", self.LeftButtonPressEvent)
@@ -678,6 +747,9 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         self.deletedLabel = list()
 
     def refresh(self):
+        """
+        method to refresh the renderer after a change
+        """
         self.GetCurrentRenderer().RemoveAllViewProps()
         self.refresh_poly()
         self.refresh_background()
@@ -686,6 +758,9 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         self.GetCurrentRenderer().GetRenderWindow().Render()
 
     def refresh_poly(self):
+        """
+        compute the poly that's on the plane and add the actor of their cutplane to the renderer
+        """
         self.polyInPlan = [
             lab for lab,
             poly in self.polyList.items(
@@ -715,6 +790,9 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         self.GetCurrentRenderer().AddActor(considact)
 
     def refresh_background(self):
+        """
+        compute the new extent of the background
+        """
         bounds = np.zeros(6)
         self.GetCurrentRenderer().ComputeVisiblePropBounds(bounds)
         for lim in bounds:
@@ -726,6 +804,12 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         self.GetCurrentRenderer().AddActor(self.background)
 
     def LeftButtonPressEvent(self, obj, event):
+        """
+        event triggered by pressing the left button of the mouse
+        retrieve the coordinates of the cursor in the scene
+        if mode is on move (=0) the interactor find the point cliqued
+        elif mode is on select(=1) the interactor find the label of the cell cliqued
+        """
         pos = self.GetInteractor().GetEventPosition()
         self.GetInteractor().GetPicker().Pick(pos[0], pos[1], 0, self.GetCurrentRenderer())
         points = self.GetInteractor().GetPicker().GetPickedPositions()
@@ -740,20 +824,20 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
             else:
                 self.selectedPoint = -1
         elif self.mode == 1:
-            for label,poly in self.polyList.items():
+            for label, poly in self.polyList.items():
                 points = vtk.vtkPoints()
                 points.InsertNextPoint(coord)
                 polypoint = vtk.vtkPolyData()
                 polypoint.SetPoints(points)
-                
+
                 selectEnclosed = vtk.vtkSelectEnclosedPoints()
                 selectEnclosed.SetInput(polypoint)
                 selectEnclosed.SetSurface(poly)
                 selectEnclosed.Update()
-                if selectEnclosed.IsInside(0) :
+                if selectEnclosed.IsInside(0):
                     self.selectedLabel = label
                     break
-                else :
+                else:
                     self.selectedLabel = -1
             print self.selectedLabel
             self.refresh()
@@ -761,6 +845,13 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
     # TODO : trouver une meilleure formule de deplacement que la proportionnalite
 
     def LeftButtonReleaseEvent(self, obj, event):
+        """
+        event triggered by the left button mouse released
+        if mode is on move (=0) :
+            the interactor retrieved the position of the cursor and move the selectedPoint to this location
+            move all the point in a self.propagation radius depending of a proportionality equation in fonction of the distance
+        elif nothing
+        """
         if self.mode == 0:
             if (self.selectedPoint != -1):
                 pos = self.GetInteractor().GetEventPosition()
@@ -819,6 +910,11 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
                 self.GetCurrentRenderer().GetRenderWindow().Render()
 
     def fusion_consid_select_cells(self):
+        """
+        append the consideredCell and the selectedLabel one together,
+        remove the bounderies between them,
+        and add the selectedLabel's neighboords to the polyList
+        """
         if self.mode == 1 and self.selectedLabel != -1 and self.selectedLabel not in self.deletedLabel:
             fusionPoly = self.polyList[self.selectedLabel]
             delete_shared_borders_mieux(self.consideredCell, fusionPoly)
