@@ -25,6 +25,7 @@ from openalea.vpltk.qt import QtGui
 from openalea.core.service.ipython import interpreter as get_interpreter
 
 from tissuelab.gui.vtkviewer.vtkworldviewer import VtkWorldViewer
+from openalea.oalab.service.drag_and_drop import add_drop_callback
 
 from tissuelab.gui.vtkviewer.vtk_viewer_select_mode import VtkviewerSelectMode
 from tissuelab.gui.vtkviewer.editor import SelectCellInteractorStyle
@@ -53,6 +54,8 @@ class TissueViewer(QtGui.QWidget):
 
         self._create_actions()
         self._create_connections()
+
+        add_drop_callback(self, 'IImage', self.drop_image)
 
     def _create_actions(self):
         self.action_auto_focus = QtGui.QAction(
@@ -131,3 +134,7 @@ class TissueViewer(QtGui.QWidget):
         filename, filters = getsavefilename(self, "Image filename", filters=filters)
         if filename:
             self.vtk.save_screenshot(filename)
+
+    def drop_image(self, spatial_image, **kwds):
+        self.vtk.world.add(spatial_image, name=kwds.pop('name', None))
+        self.vtk.auto_focus()
