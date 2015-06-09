@@ -61,7 +61,7 @@ class TissueLab(DefaultLab):
                  }},
             6: {'widget':
                 {'applets': [
-                    {'name': u'VtkControlPanel'},
+                    {'name': u'WorldControl'},
                     {'name': u'ControlManager'},
                     {'name': u'World'},
                     {'name': u'PkgManagerWidget'}],
@@ -77,7 +77,7 @@ class TissueLab(DefaultLab):
                     'properties': {'position': 2, 'title': '<b>2D</b> Viewers'}
                 }},
             10: {'widget':
-                 {'applets': [{'name': u'VtkViewer'}],
+                 {'applets': [{'name': u'TissueViewer'}],
                   'properties': {'position': 2, 'title': '<b>3D</b> Viewer'}}},
             11: {'widget':
                  {'applets': [
