@@ -33,6 +33,16 @@ from tissuelab.gui.vtkviewer.vtk_utils import define_lookuptable
 from tissuelab.gui.vtkviewer.vtkviewer import VtkViewer, attribute_args, attribute_definition, colormaps
 
 
+class ImageBlending(object):
+
+    def __init__(self, world_objects):
+        self.world_objects = world_objects
+        self.data_matrices = [world_object.data for world_object in world_objects]
+
+        self.shape = world_objects[0].data.shape
+        self.resolution = world_objects[0].data.resolution
+
+
 def expand(widget):
     p = QtGui.QSizePolicy
     widget.setSizePolicy(p(p.MinimumExpanding, p.MinimumExpanding))
@@ -143,15 +153,15 @@ def _irange(world_object, attr_name, irange, **kwargs):
     return dict(value=irange, constraints=constraints)
 
 
-def _plane_position(world_object, attr_name, position, **kwargs):
+def _plane_position(world_object, attr_name, plane_position, **kwargs):
     lst = list('xyz')
     i = lst.index(attr_name[0])
-    if position is None:
-        position = (world_object.data.shape[i] - 1) / 2
+    if plane_position is None:
+        plane_position = (world_object.data.shape[i] - 1) / 2
 
     constraints = dict(min=0, max=world_object.data.shape[i] - 1)
 
-    return dict(value=position, constraints=constraints)
+    return dict(value=plane_position, constraints=constraints)
 
 
 def _bg_id(world_object, attr_name, identifiant, **kwargs):
@@ -190,21 +200,22 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
     def set_world(self, world):
         self.clear()
         for obj_name, world_object in world.items():
-            if hasattr(world_object, "transform"):
-                object_data = world_object.transform()
-            elif hasattr(world_object, "_repr_vtk_"):
-                object_data = world_object._repr_vtk_()
-            elif hasattr(world_object.data, "_repr_vtk_"):
-                object_data = world_object.data._repr_vtk_()
-            else:
-                object_data = world_object.data
+            self.set_world_object(world, world_object)
+            # if hasattr(world_object, "transform"):
+            #     object_data = world_object.transform()
+            # elif hasattr(world_object, "_repr_vtk_"):
+            #     object_data = world_object._repr_vtk_()
+            # elif hasattr(world_object.data, "_repr_vtk_"):
+            #     object_data = world_object.data._repr_vtk_()
+            # else:
+            #     object_data = world_object.data
 
-            if isinstance(object_data, np.ndarray):
-                self.add_matrix(world_object, object_data, datatype=object_data.dtype, **world_object.kwargs)
-            elif isinstance(object_data, vtk.vtkPolyData):
-                self.add_polydata(world_object, object_data, **world_object.kwargs)
-            elif isinstance(object_data, vtk.vtkActor):
-                self.add_actor(obj_name, object_data, **world_object.kwargs)
+            # if isinstance(object_data, np.ndarray):
+            #     self.add_matrix(world_object, object_data, datatype=object_data.dtype, **world_object.kwargs)
+            # elif isinstance(object_data, vtk.vtkPolyData):
+            #     self.add_polydata(world_object, object_data, **world_object.kwargs)
+            # elif isinstance(object_data, vtk.vtkActor):
+            #     self.add_actor(obj_name, object_data, **world_object.kwargs)
         self.compute()
 
     def set_world_object(self, world, world_object):
@@ -228,13 +239,15 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
             self.add_matrix(world_object, object_data, datatype=object_data.dtype, **world_object.kwargs)
         elif isinstance(object_data, vtk.vtkPolyData):
             self.add_polydata(world_object, object_data, **world_object.kwargs)
+        elif isinstance(object_data, ImageBlending):
+            self.add_blending(world_object, object_data, **world_object.kwargs)
         elif isinstance(object_data, vtk.vtkActor):
             self.add_actor(object_name, object_data, **world_object.kwargs)
         self.compute()
 
     def update_world_object(self, world, world_object, attribute):
         object_name = world_object.name
-        if self.object_repr.has_key(object_name):
+        if object_name in self.object_repr:
             object_data = self.object_repr[object_name]
             if isinstance(object_data, np.ndarray):
                 dtype = 'matrix'
@@ -298,17 +311,30 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                 alpha = attribute_value(world_object, dtype, 'polydata_alpha')
                 colormap = attribute_value(world_object, dtype, 'polydata_colormap')
                 irange = attribute_value(world_object, dtype, 'intensity_range')
+                linewidth = attribute_value(world_object, dtype, 'linewidth')
                 if attribute['name'] == 'display_polydata':
                     self.display_polydata(name=world_object.name, disp=attribute['value'])
+                elif attribute['name'] == 'linewidth':
+                    self.set_polydata_linewidth(world_object.name, linewidth=attribute['value'])
                 elif attribute['name'] == 'polydata_colormap':
                     self.set_polydata_lookuptable(world_object.name, colormap=attribute['value'], alpha=alpha,
-                        intensity_range=irange)
+                                                  intensity_range=irange)
                 elif attribute['name'] == 'polydata_alpha':
-                    self.set_polydata_lookuptable(world_object.name, colormap=colormap, alpha=attribute['value'],
-                        intensity_range=irange)
+                    self.set_polydata_alpha(world_object.name, alpha=attribute['value'])
                 elif attribute['name'] == 'intensity_range':
                     self.set_polydata_lookuptable(world_object.name, colormap=colormap, alpha=alpha,
-                        intensity_range=attribute['value'])
+                                                  intensity_range=attribute['value'])
+            elif isinstance(object_data, ImageBlending):
+                if attribute['name'] == 'blending_factor':
+                    self.set_blending_factor(world_object.name, blending_factor=attribute['value'])
+                elif attribute['name'] == 'cut_planes_alpha':
+                    self.set_cut_planes_alpha(world_object.name, alpha=attribute['value'])
+                elif attribute['name'] == 'cut_planes':
+                    self.display_cut_planes(name=world_object.name, disp=attribute['value'])
+                else:
+                    for i, axis in enumerate(['x', 'y', 'z']):
+                        if attribute['name'] == axis + '_plane_position':
+                            self.move_cut_plane(name=world_object.name, position=attribute['value'], orientation=i + 1)
 
     def add_polydata(self, world_object, polydata, **kwargs):
         world_object.silent = True
@@ -319,6 +345,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         setdefault(world_object, dtype, 'alpha', 'polydata_alpha', **kwargs)
         setdefault(world_object, dtype, 'intensity_range', conv=_irange, **kwargs)
         setdefault(world_object, dtype, 'position', conv=_tuple, **kwargs)
+        setdefault(world_object, dtype, 'linewidth', **kwargs)
 
         kwargs = world_kwargs(world_object)
         super(VtkWorldViewer, self).add_polydata(world_object.name, polydata, **kwargs)
@@ -437,8 +464,38 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
 
         kwargs = world_kwargs(world_object)
         super(VtkWorldViewer, self).add_matrix_as_volume(world_object.name, data_matrix,
-                                                         datatype=np.uint16, decimate=1,
+                                                         datatype=datatype, decimate=1,
                                                          **kwargs)
+
+    def add_blending(self, world_object, image_blending, **kwargs):
+        from vtk_utils import blend_funct
+
+        # dtype = 'blending'
+        dtype = 'matrix'
+
+        blended_objects = image_blending.world_objects
+        data_matrices = image_blending.data_matrices
+
+        names = [obj.name for obj in blended_objects]
+
+        world_object.silent = True
+
+        setdefault(world_object, dtype, 'blending_factor', **kwargs)
+        setdefault(world_object, dtype, 'alpha', 'cut_planes_alpha', **kwargs)
+
+        kwargs = world_kwargs(blended_objects[0])
+        setdefault(world_object, dtype, 'position', conv=_tuple, **kwargs)
+        setdefault(world_object, dtype, 'resolution', conv=_tuple, **kwargs)
+
+        for axis in ['x', 'y', 'z']:
+            attr_name = axis + '_plane_position'
+            setdefault(world_object, dtype, attr_name, conv=_plane_position, **kwargs)
+
+        kwargs = world_kwargs(world_object)
+        super(VtkWorldViewer, self).add_blending(world_object.name, names, data_matrices, **kwargs)
+        world_object.silent = False
+
+        setdefault(world_object, dtype, 'cut_planes', **kwargs)
 
     def dragEnterEvent(self, event):
         for fmt in ['text/uri-list', 'openalealab/data']:

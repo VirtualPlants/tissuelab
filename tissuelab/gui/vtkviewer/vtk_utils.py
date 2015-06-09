@@ -103,7 +103,6 @@ def matrix_to_image_reader(name, data_matrix, datatype=np.uint16, decimate=1):
 
     return reader
 
-
 def blend_funct(data_matrix, data1, lookuptable1, data2, lookuptable2, orientation):
     nx, ny, nz = data_matrix.shape
     xMax = nx - 1

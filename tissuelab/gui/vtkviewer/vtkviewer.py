@@ -43,6 +43,7 @@ def expand(widget):
 # Define constraints
 cst_proba = dict(step=0.1, min=0, max=1)
 cst_alphamap = dict(enum=['constant', 'linear'])
+cst_width = dict(min=0, max=10)
 
 attribute_definition = {}
 attribute_definition['matrix'] = {}
@@ -57,6 +58,8 @@ attribute_definition['matrix']['intensity_range'] = dict(value=(0, 255), interfa
 attribute_definition['matrix']['volume'] = dict(value=True, interface=IBool, alias="Display Volume")
 attribute_definition['matrix']['cut_planes_alpha'] = dict(value=1.0, interface=IFloat, constraints=cst_proba,
                                                           alias=u"Alpha (Cut planes)")
+attribute_definition['matrix']['blending_factor'] = dict(value=0.5, interface=IFloat, constraints=cst_proba,
+                                                         alias=u"Blending factor")
 attribute_definition['matrix']['resolution'] = dict(value=(1.0, 1.0, 1.0), interface=ITuple, alias=u"Resolution")
 attribute_definition['matrix']['position'] = dict(value=(0.0, 0.0, 0.0), interface=ITuple, alias=u"Position")
 for axis in ['x', 'y', 'z']:
@@ -68,7 +71,13 @@ attribute_definition['polydata']['polydata_colormap'] = dict(
     value=dict(name='grey', color_points=dict([(0, (0, 0, 0)), (1, (1, 1, 1))])), interface=IColormap, alias="Colormap")
 attribute_definition['polydata']['polydata_alpha'] = dict(value=1.0, interface=IFloat, constraints=cst_proba,
                                                           alias=u"Alpha (Polydata)")
-attribute_definition['polydata']['intensity_range'] = dict(value=(0, 255), interface=IIntRange, alias="Intensity Range")
+attribute_definition['polydata']['intensity_range'] = dict(
+    value=(
+        0,
+        255),
+    interface=IIntRange,
+    alias="Intensity Range")
+attribute_definition['polydata']['linewidth'] = dict(value=1, interface=IInt, alias="Linewidth", constraints=cst_width)
 attribute_definition['polydata']['position'] = dict(value=(0.0, 0.0, 0.0), interface=ITuple, alias=u"Position")
 attribute_definition['polydata']['display_polydata'] = dict(value=True, interface=IBool, alias=u"Display Polydata")
 
@@ -179,6 +188,7 @@ class VtkViewer(QtGui.QWidget):
         self.actor = {}
         self.property = {}
         self.vtkdata = {}
+        self.blend = {}
 
     def resizeEvent(self, *args, **kwargs):
         self.render()
@@ -255,8 +265,9 @@ class VtkViewer(QtGui.QWidget):
         self.vtkdata = {}
 
     def save_screenshot(self, filename):
-        mimetype = mimetypes.guess_type(filename)
+        mimetype = mimetypes.guess_type(filename)[0]
         if mimetype not in image_writers:
+            raise TypeError("No vtk writer found for type " + str(mimetype))
             return
         self.render()
         screenshooter = vtk.vtkWindowToImageFilter()
@@ -302,6 +313,7 @@ class VtkViewer(QtGui.QWidget):
         alpha = default_value(dtype, ['polydata_alpha', 'alpha'], **kwargs)
         cmap = default_value(dtype, ['polydata_colormap', 'colormap'], **kwargs)
         irange = default_value(dtype, 'intensity_range', **kwargs)
+        linewidth = default_value(dtype, 'linewidth', **kwargs)
 
         mapper = vtk.vtkPolyDataMapper()
         if vtk.VTK_MAJOR_VERSION <= 5:
@@ -328,18 +340,28 @@ class VtkViewer(QtGui.QWidget):
             irange = (cell_data.min(), cell_data.max())
 
         self.set_polydata_lookuptable(name, colormap=cmap, alpha=alpha, intensity_range=irange)
+        self.set_polydata_alpha(name, alpha=alpha)
+        self.set_polydata_linewidth(name, linewidth=linewidth)
 
     def set_polydata_lookuptable(self, name, colormap, **kwargs):
 
         irange = kwargs.pop('intensity_range', None)
 
         cell_data = get_polydata_cell_data(self.actor[name + '_polydata'].GetMapper().GetInput())
-        lut = define_lookuptable(cell_data, colormap_points=colormap['color_points'], colormap_name=colormap['name'], intensity_range=irange)
-
+        lut = define_lookuptable(
+            cell_data,
+            colormap_points=colormap['color_points'],
+            colormap_name=colormap['name'],
+            intensity_range=irange)
         self.actor[name + '_polydata'].GetMapper().SetLookupTable(lut)
 
+    def set_polydata_alpha(self, name, **kwargs):
         alpha = kwargs.get('alpha', self.actor[name + '_polydata'].GetProperty().GetOpacity())
         self.actor[name + '_polydata'].GetProperty().SetOpacity(alpha)
+
+    def set_polydata_linewidth(self, name, **kwargs):
+        linewidth = kwargs.get('linewidth', 1)
+        self.actor[name + '_polydata'].GetProperty().SetLineWidth(linewidth)
 
     def add_outline(self, name, data_matrix, **kwargs):
         self.reader[name] = reader = matrix_to_image_reader(name, data_matrix, np.uint16, 1)
@@ -477,6 +499,61 @@ class VtkViewer(QtGui.QWidget):
         self.set_matrix_lookuptable(name, cmap, intensity_range=irange, cut_planes=False)
         self.set_volume_alpha(name, alpha, alphamap, intensity_range=irange, bg_id=bg_id)
 
+    def add_blending(self, name, object_names, data_matrices, **kwargs):
+        dtype = 'matrix'
+
+        self.matrix[name] = data_matrices[0]
+
+        resolution = default_value(dtype, 'resolution', **kwargs)
+        position = default_value(dtype, 'position', **kwargs)
+
+        readers = {}
+        colors = {}
+
+        nx, ny, nz = data_matrices[0].shape
+        xMax = nx - 1
+        yMax = ny - 1
+        zMax = nz - 1
+
+        blend = vtk.vtkImageBlend()
+
+        blending_factor = default_value(dtype, 'blending_factor', **kwargs)
+
+        for i, object_name in enumerate(object_names):
+            blend.AddInputConnection(self.vtkdata[object_name + '_cut_plane_colors_1'].GetOutputPort())
+            if i == 0:
+                blend.SetOpacity(i, 1)
+            else:
+                blend.SetOpacity(i, blending_factor)
+            # blend.SetOpacity(i, i + (1-2*i)*blending_factor)
+            # blend.SetOpacity(i, 0.8)
+        blend.SetBlendModeToNormal()
+
+        self.blend[name] = blend
+
+        for orientation in [1, 2, 3]:
+            # blend_actor, blend = blend_funct(data_matrix_1, reader_1, lut_1, reader_2, lut_2, orientation)
+
+            blend_actor = vtk.vtkImageActor()
+            blend_actor.SetInput(blend.GetOutput())
+            if orientation == 1:
+                blend_actor.SetDisplayExtent(
+                    np.round(xMax / 2), np.round(xMax / 2), 0, yMax, 0, zMax)
+            elif orientation == 2:
+                blend_actor.SetDisplayExtent(
+                    0, xMax, np.round(yMax / 2), np.round(yMax / 2), 0, zMax)
+            elif orientation == 3:
+                blend_actor.SetDisplayExtent(
+                    0, xMax, 0, yMax, np.round(zMax / 2), np.round(zMax / 2))
+
+            blend_actor.SetScale(resolution[0], resolution[1], resolution[2])
+
+            if position is not None:
+                blend_actor.SetOrigin(position[0], position[1], position[2])
+                blend_actor.SetPosition(-position[0], -position[1], -position[2])
+
+            self.add_actor('%s_cut_plane_%d' % (name, orientation), blend_actor)
+
     def set_cut_planes_alpha(self, name, alpha):
         alpha = default_value('matrix', 'cut_planes_alpha', cut_planes_alpha=alpha)
         for orientation in [1, 2, 3]:
@@ -558,6 +635,38 @@ class VtkViewer(QtGui.QWidget):
             actor.SetDisplayExtent(0, xMax, 0, yMax, position, position)
 
         self.render()
+
+    def set_blending_factor(self, name, blending_factor):
+
+        blending_factor = default_value('matrix', 'blending_factor', blending_factor=blending_factor)
+
+        blend = self.blend[name]
+        for i in xrange(blend.GetTotalNumberOfInputConnections()):
+            # blend.SetOpacity(i, i + (1-2*i)*blending_factor)
+            if i == 0:
+                blend.SetOpacity(i, 1)
+            else:
+                blend.SetOpacity(i, blending_factor)
+
+        # for orientation in [1, 2, 3]:
+            # blend_actor, blend = blend_funct(data_matrix_1, reader_1, lut_1, reader_2, lut_2, orientation)
+            # actor = self.actor['%s_cut_plane_%d' % (name, orientation)]
+            # actor.SetInput(blend.GetOutput())
+            # if orientation == 1:
+            #     blend_actor.SetDisplayExtent(
+            #         np.round(xMax / 2), np.round(xMax / 2), 0, yMax, 0, zMax)
+            # elif orientation == 2:
+            #     blend_actor.SetDisplayExtent(
+            #         0, xMax, np.round(yMax / 2), np.round(yMax / 2), 0, zMax)
+            # elif orientation == 3:
+            #     blend_actor.SetDisplayExtent(
+            #         0, xMax, 0, yMax, np.round(zMax / 2), np.round(zMax / 2))
+
+            # blend_actor.SetScale(resolution[0], resolution[1], resolution[2])
+
+            # if position is not None:
+            #     blend_actor.SetOrigin(position[0], position[1], position[2])
+            #     blend_actor.SetPosition(-position[0], -position[1], -position[2])
 
     def cell_color(self, name, cell_id):
         colorFunc = self.volume_property[name][
