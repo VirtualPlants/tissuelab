@@ -529,6 +529,7 @@ class VtkViewer(QtGui.QWidget):
             # blend.SetOpacity(i, i + (1-2*i)*blending_factor)
             # blend.SetOpacity(i, 0.8)
         blend.SetBlendModeToNormal()
+        blend.Update()
 
         self.blend[name] = blend
 
@@ -648,6 +649,11 @@ class VtkViewer(QtGui.QWidget):
                 blend.SetOpacity(i, 1)
             else:
                 blend.SetOpacity(i, blending_factor)
+        blend.Update()
+
+        for orientation in [1, 2, 3]:
+            self.actor[name + "_cut_plane_" + str(orientation)].SetInput(blend.GetOutput())
+            self.actor[name + "_cut_plane_" + str(orientation)].Update()
 
         # for orientation in [1, 2, 3]:
             # blend_actor, blend = blend_funct(data_matrix_1, reader_1, lut_1, reader_2, lut_2, orientation)

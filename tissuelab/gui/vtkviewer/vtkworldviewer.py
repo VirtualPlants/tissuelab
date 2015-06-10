@@ -483,16 +483,16 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         setdefault(world_object, dtype, 'blending_factor', **kwargs)
         setdefault(world_object, dtype, 'alpha', 'cut_planes_alpha', **kwargs)
 
-        kwargs = world_kwargs(blended_objects[0])
-        setdefault(world_object, dtype, 'position', conv=_tuple, **kwargs)
-        setdefault(world_object, dtype, 'resolution', conv=_tuple, **kwargs)
+        obj_kwargs = world_kwargs(blended_objects[0])
+        setdefault(world_object, dtype, 'position', conv=_tuple, **obj_kwargs)
+        setdefault(world_object, dtype, 'resolution', conv=_tuple, **obj_kwargs)
 
         for axis in ['x', 'y', 'z']:
             attr_name = axis + '_plane_position'
-            setdefault(world_object, dtype, attr_name, conv=_plane_position, **kwargs)
+            setdefault(world_object, dtype, attr_name, conv=_plane_position, **obj_kwargs)
 
-        kwargs = world_kwargs(world_object)
-        super(VtkWorldViewer, self).add_blending(world_object.name, names, data_matrices, **kwargs)
+        obj_kwargs = world_kwargs(world_object)
+        super(VtkWorldViewer, self).add_blending(world_object.name, names, data_matrices, **obj_kwargs)
         world_object.silent = False
 
         setdefault(world_object, dtype, 'cut_planes', **kwargs)
