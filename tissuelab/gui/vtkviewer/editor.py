@@ -41,8 +41,8 @@ class EditorWindow(QtGui.QWidget):
     It contains a widget with control panel and a vtk viewer and link them together
     """
 
-    def __init__(self):
-        QtGui.QWidget.__init__(self)
+    def __init__(self, parent=None):
+        QtGui.QWidget.__init__(self, parent)
 
         layout = QtGui.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -637,7 +637,7 @@ def is_poly_in_plan(poly, orientation, position):
     return box[orientation * 2] < position and box[orientation * 2 + 1] > position
 
 
-class SelectCell (vtk.vtkInteractorStyleTrackballCamera):
+class SelectCellInteractorStyle (vtk.vtkInteractorStyleTrackballCamera):
 
     """
     class of interactor use to retrieve label of a cell in a cut_plane of a segmented matrix
@@ -656,6 +656,15 @@ class SelectCell (vtk.vtkInteractorStyleTrackballCamera):
         self.pointsActor.GetProperty().SetOpacity(1)
         self.pointsActor.GetProperty().SetColor(0.8, 0, 0.4)
 
+        self._ignored_labels = [0, 1]
+        self._selected_label = None
+
+    def ignore_labels(self, labels):
+        self._ignored_labels = labels
+
+    def selected_label(self):
+        return self._selected_label
+
     def MiddleButtonPressEvent(self, obj, event):
         pos = self.GetInteractor().GetEventPosition()
         self.GetInteractor().GetPicker().Pick(pos[0], pos[1], 0, self.GetCurrentRenderer())
@@ -663,8 +672,9 @@ class SelectCell (vtk.vtkInteractorStyleTrackballCamera):
         coord = points.GetPoint(0)
         if (self.GetInteractor().GetPicker().GetPointId() != -1):
             label = self.data[int(coord[0])][int(coord[1])][int(coord[2])]
-            print label
-            if (label > 1):
+            self._selected_label = label
+            # Background case
+            if label not in self._ignored_labels:
                 reader = matrix_to_image_reader('la', self.data, self.data.dtype)
                 dat = reader.GetOutput()
                 self.pointsData.ShallowCopy(compute_points(dat, label))

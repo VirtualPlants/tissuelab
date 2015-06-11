@@ -2,13 +2,25 @@ from tissuelab.gui.vtkviewer.designer._vtk_viewer_select_mode import Ui_vtk_view
 from tissuelab.gui.vtkviewer.vtkworldviewer import ImageBlending
 from openalea.vpltk.qt import QtGui, QtCore
 from openalea.core.observer import AbstractListener
+
 from openalea.oalab.world import World
 import numpy as np
 
 
 class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractListener):
 
+    """
+    Get Selector Data:
+        - matrix_from_name(name) -> matrix (ndarray)
+        - matrix_name(num) -> matrix name (str)
+
+    Convenience Method:
+        - matrix(num) -> matrix (ndarray)
+    """
+
     launch_popup = QtCore.Signal(np.ndarray, np.ndarray, int)
+    mode_changed = QtCore.Signal(int)
+    matrix_changed = QtCore.Signal(int, np.ndarray)
 
     def __init__(self):
         QtGui.QWidget.__init__(self)
@@ -18,6 +30,8 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
 
         self.world = World()
         self.world.register_listener(self)
+
+        self.action_launch_button.setEnabled(False)
 
         self.action_launch_button.hide()
         self.image1_label.hide()
@@ -35,10 +49,11 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
 
         self.cb_interactor_choice.currentIndexChanged.connect(self.select_mode)
         self.action_launch_button.pressed.connect(self.button_pressed_launch_popup)
+        self.image1_cb.currentIndexChanged.connect(self.matrix1_changed)
+        self.image2_cb.currentIndexChanged.connect(self.matrix2_changed)
 
     def select_mode(self, index):
         #TODO : changer en cherchant les enfants.
-
         self.selected_mode_index = index
 
         if index == 1:
@@ -89,13 +104,20 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
             self.image2_label.hide()
             self.image2_cb.hide()
             self.action_launch_button.hide()
+        self.mode_changed.emit(index)
+
+    def matrix1_changed(self, index):
+        self.matrix_changed.emit(0, self.matrix_from_name(self.image1_cb.itemText(index)))
+
+    def matrix2_changed(self, index):
+        self.matrix_changed.emit(1, self.matrix_from_name(self.image2_cb.itemText(index)))
 
     def button_pressed_launch_popup(self):
         if self.selected_mode_index == 1:
             name_segmented_matrix = self.image1_cb.currentText()
             name_intensity_matrix = self.image2_cb.currentText()
-            segmented_matrix = self.GetMatrixFromName(name_segmented_matrix)
-            intensity_matrix = self.GetMatrixFromName(name_intensity_matrix)
+            segmented_matrix = self.matrix_from_name(name_segmented_matrix)
+            intensity_matrix = self.matrix_from_name(name_intensity_matrix)
             label = get_label()
             self.launch_popup.emit(intensity_matrix, segmented_matrix, label)
         elif self.selected_mode_index == 2:
@@ -135,6 +157,9 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
             """elif new['name'] != old['name'] :
                 self.update_world_object_name(old, new)"""
 
+        if self.image1_cb.count():
+            self.action_launch_button.setEnabled(True)
+
     def set_world(self, world):
         self.clear()
         for obj_name, world_object in world.items():
@@ -155,11 +180,22 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
         for i in xrange(self.image2_cb.count()):
             self.image2_cb.removeItem(0)
 
-    def GetMatrixFromName(self, matrix_name):
+    def matrix_from_name(self, matrix_name):
         for obj_name, world_object in self.world.items():
             if obj_name == matrix_name:
                 object_data = world_object.data
                 return object_data
+
+    def matrix_name(self, num):
+        if num == 0:
+            return self.image1_cb.currentText()
+        elif num == 1:
+            return self.image2_cb.currentText()
+        else:
+            raise ValueError("No matrix for num=%d" % num)
+
+    def matrix(self, num):
+        return self.matrix_from_name(self.matrix_name(num))
 
 
 def get_label():
