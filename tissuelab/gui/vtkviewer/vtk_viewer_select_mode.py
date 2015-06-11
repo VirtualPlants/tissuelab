@@ -1,4 +1,5 @@
-from tissuelab.gui.vtkviewer.designer._vtk_viewer_select_mode import Ui_vtk_viewer_select_mode
+from tissuelab.gui.vtkviewer.designer._vtk_viewer_select_mode_2 import Ui_vtk_viewer_select_mode, _translate
+from tissuelab.gui.vtkviewer.vtkworldviewer import ImageBlending
 from openalea.vpltk.qt import QtGui, QtCore
 from openalea.core.observer import AbstractListener
 from openalea.oalab.world import World
@@ -18,43 +19,72 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
         self.world = World()
         self.world.register_listener(self)
 
-        self.edit_launch_button.hide()
-        self.txt_segmented.hide()
-        self.txt_intensity.hide()
-        self.cb_segmented.hide()
-        self.cb_intensity.hide()
+        self.action_launch_button.hide()
+        self.image1_label.hide()
+        self.image2_label.hide()
+        self.image1_cb.hide()
+        self.image2_cb.hide()
+
+        self.selected_mode_index = 0
         
-        self.list_interactor_choice = ['visualisation','edition']
+        self.list_interactor_choice = ['visualisation','edition','blending']
         for choice in self.list_interactor_choice:
             self.cb_interactor_choice.addItem(choice)
         #self.cb_interactor_choice.addItem('visualisation')
         #self.cb_interactor_choice.addItem('edition')
 
         self.cb_interactor_choice.currentIndexChanged.connect(self.select_mode)
-        self.edit_launch_button.pressed.connect(self.button_pressed_launch_popup)
+        self.action_launch_button.pressed.connect(self.button_pressed_launch_popup)
 
     def select_mode(self, index):
         #TODO : changer en cherchant les enfants.
+
+        self.selected_mode_index = index
+
         if index == 1:
-            self.edit_launch_button.show()
-            self.txt_segmented.show()
-            self.txt_intensity.show()
-            self.cb_segmented.show()
-            self.cb_intensity.show()
+            self.action_launch_button.setToolTip(_translate("vtk_viewer_select_mode", "Start the selected cell edition", None))
+            self.action_launch_button.setText(_translate("vtk_viewer_select_mode", "Edit Cell", None))
+            self.action_launch_button.show()
+            self.image1_label.setToolTip(_translate("vtk_viewer_select_mode", "choose your segmented matrix", None))
+            self.image1_label.setText(_translate("vtk_viewer_select_mode", "<html><head/><body><p>Segmented</p></body></html>", None))
+            self.image1_label.show()
+            self.image1_cb.show()
+            self.image2_label.setToolTip(_translate("vtk_viewer_select_mode", "choose your intensity matrix", None))
+            self.image2_label.setText(_translate("vtk_viewer_select_mode", "<html><head/><body><p>Intensity</p></body></html>", None))
+            self.image2_label.show()
+            self.image2_cb.show()
+        elif index == 2:
+            self.action_launch_button.setToolTip(_translate("vtk_viewer_select_mode", "Blend the two selected images", None))
+            self.action_launch_button.setText(_translate("vtk_viewer_select_mode", "Blend Images", None))
+            self.action_launch_button.show()
+            self.image1_label.setToolTip(_translate("vtk_viewer_select_mode", "choose your first image matrix", None))
+            self.image1_label.setText(_translate("vtk_viewer_select_mode", "<html><head/><body><p>Image 1</p></body></html>", None))
+            self.image1_label.show()
+            self.image1_cb.show()
+            self.image2_label.setToolTip(_translate("vtk_viewer_select_mode", "choose your second image matrix", None))
+            self.image2_label.setText(_translate("vtk_viewer_select_mode", "<html><head/><body><p>Image 2</p></body></html>", None))
+            self.image2_label.show()
+            self.image2_cb.show()
         else:
-            self.edit_launch_button.hide()
-            self.txt_segmented.hide()
-            self.txt_intensity.hide()
-            self.cb_segmented.hide()
-            self.cb_intensity.hide()
+            self.image1_label.hide()
+            self.image1_cb.hide()
+            self.image2_label.hide()
+            self.image2_cb.hide()
+            self.action_launch_button.hide()
 
     def button_pressed_launch_popup(self):
-        name_segmented_matrix = self.cb_segmented.currentText()
-        name_intensity_matrix = self.cb_intensity.currentText()
-        segmented_matrix = self.GetMatrixFromName(name_segmented_matrix)
-        intensity_matrix = self.GetMatrixFromName(name_intensity_matrix)
-        label = get_label()
-        self.launch_popup.emit(intensity_matrix, segmented_matrix, label)
+        if self.selected_mode_index == 1:
+            name_segmented_matrix = self.image1_cb.currentText()
+            name_intensity_matrix = self.image2_cb.currentText()
+            segmented_matrix = self.GetMatrixFromName(name_segmented_matrix)
+            intensity_matrix = self.GetMatrixFromName(name_intensity_matrix)
+            label = get_label()
+            self.launch_popup.emit(intensity_matrix, segmented_matrix, label)
+        elif self.selected_mode_index == 2:
+            name1 = str(self.image1_cb.currentText())
+            name2 = str(self.image2_cb.currentText())
+            blending = ImageBlending([self.world[name1],self.world[name2]])
+            self.world.add(blending,name1+"_"+name2+"_blending")
 
     def notify(self, sender, event=None):
         signal, data = event
@@ -65,18 +95,18 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
         elif signal == 'world_object_changed':
             world, old, new = data
             if old is None:
-                self.cb_segmented.addItem(new.name)
-                self.cb_intensity.addItem(new.name)
+                self.image1_cb.addItem(new.name)
+                self.image2_cb.addItem(new.name)
             elif isinstance(old.data, np.ndarray):
                 if not isinstance(new.data, np.ndarray):
-                    index = self.cb_segmented.findText(old.name)
-                    self.cb_segmented.removeItem(index)
-                    index = self.cb_intensity.findText(old.name)
-                    self.cb_intensity.removeItem(index)
+                    index = self.image1_cb.findText(old.name)
+                    self.image1_cb.removeItem(index)
+                    index = self.image2_cb.findText(old.name)
+                    self.image2_cb.removeItem(index)
             elif isinstance(new.data, np.ndarray):
                 if not isinstance(old.data, np.ndarray):
-                    self.cb_segmented.addItem(new.name)
-                    self.cb_intensity.addItem(new.name)
+                    self.image1_cb.addItem(new.name)
+                    self.image2_cb.addItem(new.name)
         elif signal == 'world_object_item_changed':
             world, obj, item, old, new = data
             obj_data = obj.data
@@ -92,20 +122,20 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
         for obj_name, world_object in world.items():
             object_data = world_object.data
             if isinstance(object_data, np.ndarray):
-                self.cb_segmented.addItem(obj_name)
-                self.cb_intensity.addItem(obj_name)
+                self.image1_cb.addItem(obj_name)
+                self.image2_cb.addItem(obj_name)
 
     def update_world_object_name(self, old, new):
-        index = self.cb_segmented.findText(old.name)
-        self.cb_segmented.setItemText(index, new.name)
-        index = self.cb_intensity.findText(old.name)
-        self.cb_intensity.setItemText(index, new.name)
+        index = self.image1_cb.findText(old.name)
+        self.image1_cb.setItemText(index, new.name)
+        index = self.image2_cb.findText(old.name)
+        self.image2_cb.setItemText(index, new.name)
 
     def clear(self):
-        for i in xrange(self.cb_segmented.count()):
-            self.cb_segmented.removeItem(0)
-        for i in xrange(self.cb_intensity.count()):
-            self.cb_intensity.removeItem(0)
+        for i in xrange(self.image1_cb.count()):
+            self.image1_cb.removeItem(0)
+        for i in xrange(self.image2_cb.count()):
+            self.image2_cb.removeItem(0)
 
     def GetMatrixFromName(self, matrix_name):
         for obj_name, world_object in self.world.items():
@@ -124,8 +154,13 @@ if __name__ == "__main__":
     from openalea.image.spatial_image import SpatialImage
     from openalea.image.serial.all import imread
     from tissuelab.gui.vtkviewer.editor import *
-    matseg = imread('/home/julien/.openalea/projects/temp/data/nonero.inr')
-    matint = imread('/home/julien/.openalea/projects/temp/data/0hrs_plant_1-acylYFP.inr')
+    
+    matint = imread('/Users/gcerutti/Developpement/openalea/vplants_branches/meshing/share/nuclei_images/olli01_lti6b_150421_sam01_t000/olli01_lti6b_150421_sam01_t000_seg_hmin_2.inr.gz')    
+    matseg = imread('/Users/gcerutti/Developpement/openalea/vplants_branches/meshing/share/nuclei_images/olli01_lti6b_150421_sam01_t000/olli01_lti6b_150421_sam01_t000_PIN.inr.gz')
+
+
+    #matseg = imread('/home/julien/.openalea/projects/temp/data/nonero.inr')
+    #matint = imread('/home/julien/.openalea/projects/temp/data/0hrs_plant_1-acylYFP.inr')
     #poly = get_contours(matseg,1256)
 
     world = World()

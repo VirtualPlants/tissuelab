@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>286</width>
-    <height>62</height>
+    <width>306</width>
+    <height>66</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -45,7 +45,7 @@
       <enum>QLayout::SetDefaultConstraint</enum>
      </property>
      <item row="2" column="2">
-      <widget class="QLabel" name="txt_segmented">
+      <widget class="QLabel" name="image1_label">
        <property name="toolTip">
         <string>choose your segmented matrix</string>
        </property>
@@ -61,7 +61,7 @@
       </widget>
      </item>
      <item row="1" column="2">
-      <widget class="QLabel" name="txt_intensity">
+      <widget class="QLabel" name="image2_label">
        <property name="toolTip">
         <string>choose your intensity matrix</string>
        </property>
@@ -74,10 +74,10 @@
       </widget>
      </item>
      <item row="1" column="3">
-      <widget class="QComboBox" name="cb_intensity"/>
+      <widget class="QComboBox" name="image2_cb"/>
      </item>
      <item row="2" column="3">
-      <widget class="QComboBox" name="cb_segmented">
+      <widget class="QComboBox" name="image1_cb">
        <property name="layoutDirection">
         <enum>Qt::LeftToRight</enum>
        </property>
@@ -86,7 +86,7 @@
     </layout>
    </item>
    <item row="1" column="0">
-    <widget class="QPushButton" name="edit_launch_button">
+    <widget class="QPushButton" name="action_launch_button">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
        <horstretch>0</horstretch>
