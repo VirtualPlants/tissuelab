@@ -23,16 +23,19 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
         self.txt_intensity.hide()
         self.cb_segmented.hide()
         self.cb_intensity.hide()
-
-        self.cb_interactor_choice.addItem('visualisation')
-        self.cb_interactor_choice.addItem('edition')
+        
+        self.list_interactor_choice = ['visualisation','edition']
+        for choice in self.list_interactor_choice:
+            self.cb_interactor_choice.addItem(choice)
+        #self.cb_interactor_choice.addItem('visualisation')
+        #self.cb_interactor_choice.addItem('edition')
 
         self.cb_interactor_choice.currentIndexChanged.connect(self.select_mode)
         self.edit_launch_button.pressed.connect(self.button_pressed_launch_popup)
 
     def select_mode(self, index):
         #TODO : changer en cherchant les enfants.
-        if self.cb_interactor_choice.itemText(index) == 'edition':
+        if index == 1:
             self.edit_launch_button.show()
             self.txt_segmented.show()
             self.txt_intensity.show()
