@@ -1,4 +1,4 @@
-from tissuelab.gui.vtkviewer.designer._vtk_viewer_select_mode_2 import Ui_vtk_viewer_select_mode, _translate
+from tissuelab.gui.vtkviewer.designer._vtk_viewer_select_mode import Ui_vtk_viewer_select_mode, _translate
 from tissuelab.gui.vtkviewer.vtkworldviewer import ImageBlending
 from openalea.vpltk.qt import QtGui, QtCore
 from openalea.core.observer import AbstractListener
@@ -26,8 +26,8 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
         self.image2_cb.hide()
 
         self.selected_mode_index = 0
-        
-        self.list_interactor_choice = ['visualisation','edition','blending']
+
+        self.list_interactor_choice = ['visualisation', 'edition', 'blending']
         for choice in self.list_interactor_choice:
             self.cb_interactor_choice.addItem(choice)
         #self.cb_interactor_choice.addItem('visualisation')
@@ -42,27 +42,45 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
         self.selected_mode_index = index
 
         if index == 1:
-            self.action_launch_button.setToolTip(_translate("vtk_viewer_select_mode", "Start the selected cell edition", None))
+            self.action_launch_button.setToolTip(
+                _translate("vtk_viewer_select_mode",
+                           "Start the selected cell edition",
+                           None))
             self.action_launch_button.setText(_translate("vtk_viewer_select_mode", "Edit Cell", None))
             self.action_launch_button.show()
             self.image1_label.setToolTip(_translate("vtk_viewer_select_mode", "choose your segmented matrix", None))
-            self.image1_label.setText(_translate("vtk_viewer_select_mode", "<html><head/><body><p>Segmented</p></body></html>", None))
+            self.image1_label.setText(
+                _translate("vtk_viewer_select_mode",
+                           "<html><head/><body><p>Segmented</p></body></html>",
+                           None))
             self.image1_label.show()
             self.image1_cb.show()
             self.image2_label.setToolTip(_translate("vtk_viewer_select_mode", "choose your intensity matrix", None))
-            self.image2_label.setText(_translate("vtk_viewer_select_mode", "<html><head/><body><p>Intensity</p></body></html>", None))
+            self.image2_label.setText(
+                _translate("vtk_viewer_select_mode",
+                           "<html><head/><body><p>Intensity</p></body></html>",
+                           None))
             self.image2_label.show()
             self.image2_cb.show()
         elif index == 2:
-            self.action_launch_button.setToolTip(_translate("vtk_viewer_select_mode", "Blend the two selected images", None))
+            self.action_launch_button.setToolTip(
+                _translate("vtk_viewer_select_mode",
+                           "Blend the two selected images",
+                           None))
             self.action_launch_button.setText(_translate("vtk_viewer_select_mode", "Blend Images", None))
             self.action_launch_button.show()
             self.image1_label.setToolTip(_translate("vtk_viewer_select_mode", "choose your first image matrix", None))
-            self.image1_label.setText(_translate("vtk_viewer_select_mode", "<html><head/><body><p>Image 1</p></body></html>", None))
+            self.image1_label.setText(
+                _translate("vtk_viewer_select_mode",
+                           "<html><head/><body><p>Image 1</p></body></html>",
+                           None))
             self.image1_label.show()
             self.image1_cb.show()
             self.image2_label.setToolTip(_translate("vtk_viewer_select_mode", "choose your second image matrix", None))
-            self.image2_label.setText(_translate("vtk_viewer_select_mode", "<html><head/><body><p>Image 2</p></body></html>", None))
+            self.image2_label.setText(
+                _translate("vtk_viewer_select_mode",
+                           "<html><head/><body><p>Image 2</p></body></html>",
+                           None))
             self.image2_label.show()
             self.image2_cb.show()
         else:
@@ -83,8 +101,8 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
         elif self.selected_mode_index == 2:
             name1 = str(self.image1_cb.currentText())
             name2 = str(self.image2_cb.currentText())
-            blending = ImageBlending([self.world[name1],self.world[name2]])
-            self.world.add(blending,name1+"_"+name2+"_blending")
+            blending = ImageBlending([self.world[name1], self.world[name2]])
+            self.world.add(blending, name1 + "_" + name2 + "_blending")
 
     def notify(self, sender, event=None):
         signal, data = event
@@ -154,13 +172,13 @@ if __name__ == "__main__":
     from openalea.image.spatial_image import SpatialImage
     from openalea.image.serial.all import imread
     from tissuelab.gui.vtkviewer.editor import *
-    
-    matint = imread('/Users/gcerutti/Developpement/openalea/vplants_branches/meshing/share/nuclei_images/olli01_lti6b_150421_sam01_t000/olli01_lti6b_150421_sam01_t000_seg_hmin_2.inr.gz')    
-    matseg = imread('/Users/gcerutti/Developpement/openalea/vplants_branches/meshing/share/nuclei_images/olli01_lti6b_150421_sam01_t000/olli01_lti6b_150421_sam01_t000_PIN.inr.gz')
 
+    #matint = imread('/Users/gcerutti/Developpement/openalea/vplants_branches/meshing/share/nuclei_images/olli01_lti6b_150421_sam01_t000/olli01_lti6b_150421_sam01_t000_seg_hmin_2.inr.gz')
+    # matseg =
+    # imread('/Users/gcerutti/Developpement/openalea/vplants_branches/meshing/share/nuclei_images/olli01_lti6b_150421_sam01_t000/olli01_lti6b_150421_sam01_t000_PIN.inr.gz')
 
-    #matseg = imread('/home/julien/.openalea/projects/temp/data/nonero.inr')
-    #matint = imread('/home/julien/.openalea/projects/temp/data/0hrs_plant_1-acylYFP.inr')
+    matseg = imread('/home/julien/.openalea/projects/temp/data/nonero.inr')
+    matint = imread('/home/julien/.openalea/projects/temp/data/0hrs_plant_1-acylYFP.inr')
     #poly = get_contours(matseg,1256)
 
     world = World()

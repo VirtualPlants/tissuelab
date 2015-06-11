@@ -284,8 +284,7 @@ class ViewerEditor(QtGui.QWidget):
         reader = matrix_to_image_reader('la', self.segmented_matrix, self.segmented_matrix.dtype)
         mat = reader.GetOutput()
         cellule = compute_points(mat, lab)
-        box = np.zeros(6)
-        cellule.GetBounds(box)
+        box = cellule.GetBounds()
         plan = [int((box[i * 2] + box[i * 2 + 1]) / 2) for i in xrange(3)]
         labels = voisinage(self.segmented_matrix, cellule, lab)
         self.interactor.consideredCell = cellule
@@ -420,8 +419,7 @@ def voisinage(matrix, contour, label):
     """
     labels = list()
     for i in xrange(contour.GetNumberOfPoints()):
-        coord = np.zeros(3)
-        contour.GetPoint(i, coord)
+        coord = contour.GetPoint(i)
         xmin = int(coord[0] - 1)
         xmax = int(coord[0] + 1)
         ymin = int(coord[1] - 1)
@@ -533,11 +531,9 @@ def is_shared_point(p1, poly1, poly2):
     """
     check if a point is shared by a other polydata, if yes, return its id in the second polydata
     """
-    coord = np.zeros(3)
-    poly1.GetPoint(p1, coord)
+    coord = poly1.GetPoint(p1)
     p2 = poly2.FindPoint(coord)
-    coord2 = np.zeros(3)
-    poly2.GetPoint(p2, coord2)
+    coord2 = poly2.GetPoint(p2)
     if distance(coord, coord2) == 0:
         return p2
     else:
@@ -637,8 +633,7 @@ def is_poly_in_plan(poly, orientation, position):
     """
     simple function to determine if a plane intersect a polydata
     """
-    box = np.zeros(6)
-    poly.GetBounds(box)
+    box = poly.GetBounds()
     return box[orientation * 2] < position and box[orientation * 2 + 1] > position
 
 
@@ -651,7 +646,6 @@ class SelectCell (vtk.vtkInteractorStyleTrackballCamera):
 
     def __init__(self, parent=None):
         self.AddObserver("MiddleButtonPressEvent", self.MiddleButtonPressEvent)
-        self.selectedPoint1 = -1
         self.data = np.arange(1)
         self.pointsData = vtk.vtkPolyData()
         self.pointsMapper = vtk.vtkDataSetMapper()
@@ -666,10 +660,8 @@ class SelectCell (vtk.vtkInteractorStyleTrackballCamera):
         pos = self.GetInteractor().GetEventPosition()
         self.GetInteractor().GetPicker().Pick(pos[0], pos[1], 0, self.GetCurrentRenderer())
         points = self.GetInteractor().GetPicker().GetPickedPositions()
-        coord = np.zeros(3)
-        points.GetPoint(0, coord)
+        coord = points.GetPoint(0)
         if (self.GetInteractor().GetPicker().GetPointId() != -1):
-            self.selectedPoint1 = self.GetInteractor().GetPicker().GetPointId()
             label = self.data[int(coord[0])][int(coord[1])][int(coord[2])]
             print label
             if (label > 1):
@@ -679,8 +671,6 @@ class SelectCell (vtk.vtkInteractorStyleTrackballCamera):
                 self.GetCurrentRenderer().AddActor(self.pointsActor)
                 self.GetCurrentRenderer().Render()
                 self.GetCurrentRenderer().GetRenderWindow().Render()
-        else:
-            self.selectedPoint1 = -1
 
 
 class InteractorEditor(vtk.vtkInteractorStyle):
@@ -694,20 +684,49 @@ class InteractorEditor(vtk.vtkInteractorStyle):
     def __init__(self, parent=None):
         self.AddObserver("LeftButtonPressEvent", self.LeftButtonPressEvent)
         self.AddObserver("LeftButtonReleaseEvent", self.LeftButtonReleaseEvent)
+        self.selectedPoint = -1
+        self.plane = None
+        self.poly = None
 
-    def set_polydata(self, poly):
-        self.poly = poly
-
-    def set_plane(self, plane):
+    def set_plane(self, plan):
         if self.plane is not None:
             self.GetInteractor().GetPicker().DeletePickList(self.plane)
-        self.plane = plane
-        self.GetInteractor().GetPicker().AddPickList(plane)
+        self.plane = plan
+        self.GetInteractor().GetPicker().AddPickList(plan)
 
     def LeftButtonPressEvent(self, obj, event):
         pos = self.GetInteractor().GetEventPosition()
         self.GetInteractor().GetPicker().Pick(pos[0], pos[1], 0, self.GetCurrentRenderer())
         points = self.GetInteractor().GetPicker().GetPickedPositions()
+        if points.GetNumberOfPoints() > 0:
+            coord = np.zeros(3)
+            points.GetPoint(0, coord)
+            fp = self.poly.FindPoint(coord)
+            co = np.zeros(3)
+            self.poly.GetPoint(fp, co)
+            if self.distance(co, coord) <= 1:
+                self.selectedPoint = fp
+                print fp
+            else:
+                self.selectedPoint = -1
+
+    def LeftButtonReleaseEvent(self, obj, event):
+        if self.selectedPoint != -1:
+            pos = self.GetInteractor().GetEventPosition()
+            self.GetInteractor().GetPicker().Pick(pos[0], pos[1], 0, self.GetCurrentRenderer())
+            points = self.GetInteractor().GetPicker().GetPickedPositions()
+            if points.GetNumberOfPoints() > 0:
+                coord = np.zeros(3)
+                points.GetPoint(0, coord)
+                self.poly.GetPoints().SetPoint(self.selectedPoint, coord)
+                self.poly.Modified()
+                self.GetCurrentRenderer().ResetCamera()
+                self.GetCurrentRenderer().Render()
+                self.GetCurrentRenderer().GetRenderWindow().Render()
+
+    def distance(self, p1, p2):
+        dist = sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2 + (p1[2] - p2[2]) ** 2)
+        return dist
 
 
 class InteractorEditor2D (vtk.vtkInteractorStyle):
@@ -813,12 +832,10 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         pos = self.GetInteractor().GetEventPosition()
         self.GetInteractor().GetPicker().Pick(pos[0], pos[1], 0, self.GetCurrentRenderer())
         points = self.GetInteractor().GetPicker().GetPickedPositions()
-        coord = np.zeros(3)
-        points.GetPoint(0, coord)
+        coord = points.GetPoint(0)
         if self.mode == 0:
             fp = self.consideredCell.FindPoint(coord)
-            co = np.zeros(3)
-            self.consideredCell.GetPoint(fp, co)
+            co = self.consideredCell.GetPoint(fp)
             if distance(co, coord) <= 1:
                 self.selectedPoint = fp
             else:
@@ -857,8 +874,7 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
                 pos = self.GetInteractor().GetEventPosition()
                 self.GetInteractor().GetPicker().Pick(pos[0], pos[1], 0, self.GetCurrentRenderer())
                 pw = self.GetInteractor().GetPicker().GetPickPosition()
-                oldcoord = np.zeros(3)
-                self.consideredCell.GetPoint(self.selectedPoint, oldcoord)
+                oldcoord = self.consideredCell.GetPoint(self.selectedPoint)
 
                 newcoord = np.zeros(3)
                 newcoord[self.x] = pw[self.x]
@@ -878,19 +894,18 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
 
                 for i in xrange(self.consideredCell.GetNumberOfPoints()):
                     if selectEnclosed.IsInside(i):
-                        coord = np.zeros(3)
-                        self.consideredCell.GetPoint(i, coord)
+                        coord = self.consideredCell.GetPoint(i)
                         dist = distance(oldcoord, coord)
-                        coord[self.x] = coord[self.x] - (transx - transx * dist / self.propagation)
-                        coord[self.y] = coord[self.y] - (transy - transy * dist / self.propagation)
-                        self.consideredCell.GetPoints().SetPoint(i, coord)
+                        new_coord = np.zeros(3)
+                        new_coord[self.x] = coord[self.x] - (transx - transx * dist / self.propagation)
+                        new_coord[self.y] = coord[self.y] - (transy - transy * dist / self.propagation)
+                        new_coord[self.orientation] = coord[self.orientation]
+                        self.consideredCell.GetPoints().SetPoint(i, new_coord)
                         self.consideredCell.Modified()
 
                 for poly in self.polyList.values():
-                    box = np.zeros(6)
-                    poly.GetBounds(box)
-                    boxx = np.zeros(6)
-                    sphere.GetOutput().GetBounds(boxx)
+                    box = poly.GetBounds()
+                    boxx = sphere.GetOutput().GetBounds()
                     if intersection(box, boxx):
                         selectEnclosed = vtk.vtkSelectEnclosedPoints()
                         selectEnclosed.SetInput(poly)
@@ -898,12 +913,13 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
                         selectEnclosed.Update()
                         for i in xrange(poly.GetNumberOfPoints()):
                             if selectEnclosed.IsInside(i):
-                                coord = np.zeros(3)
-                                poly.GetPoint(i, coord)
+                                coord = poly.GetPoint(i)
                                 dist = distance(oldcoord, coord)
-                                coord[self.x] = coord[self.x] - (transx - transx * dist / self.propagation)
-                                coord[self.y] = coord[self.y] - (transy - transy * dist / self.propagation)
-                                poly.GetPoints().SetPoint(i, coord)
+                                newcoord = np.zeros(3)
+                                new_coord[self.x] = coord[self.x] - (transx - transx * dist / self.propagation)
+                                new_coord[self.y] = coord[self.y] - (transy - transy * dist / self.propagation)
+                                new_coord[self.orientation] = coord[self.orientation]
+                                poly.GetPoints().SetPoint(i, new_coord)
                                 poly.Modified()
                 self.refresh()
                 self.GetCurrentRenderer().Render()
