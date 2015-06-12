@@ -335,6 +335,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                     for i, axis in enumerate(['x', 'y', 'z']):
                         if attribute['name'] == axis + '_plane_position':
                             self.move_cut_plane(name=world_object.name, position=attribute['value'], orientation=i + 1)
+        self.render()
 
     def add_polydata(self, world_object, polydata, **kwargs):
         world_object.silent = True
