@@ -672,7 +672,6 @@ class SelectCellInteractorStyle (vtk.vtkInteractorStyleTrackballCamera):
         coord = points.GetPoint(0)
         if (self.GetInteractor().GetPicker().GetPointId() != -1):
             label = self.data[int(coord[0])][int(coord[1])][int(coord[2])]
-            self._selected_label = label
             # Background case
             if label not in self._ignored_labels:
                 reader = matrix_to_image_reader('la', self.data, self.data.dtype)
@@ -681,6 +680,8 @@ class SelectCellInteractorStyle (vtk.vtkInteractorStyleTrackballCamera):
                 self.GetCurrentRenderer().AddActor(self.pointsActor)
                 self.GetCurrentRenderer().Render()
                 self.GetCurrentRenderer().GetRenderWindow().Render()
+                self._selected_label = label
+                self.InvokeEvent("LabelSelectedEvent")
 
 
 class InteractorEditor(vtk.vtkInteractorStyle):

@@ -40,6 +40,7 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
         self.image2_cb.hide()
 
         self.selected_mode_index = 0
+        self._label = None
 
         self.list_interactor_choice = ['visualisation', 'edition', 'blending']
         for choice in self.list_interactor_choice:
@@ -56,7 +57,7 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
         #TODO : changer en cherchant les enfants.
         self.selected_mode_index = index
 
-        if index == 1:
+        if index == 1: # Edtion
             self.action_launch_button.setToolTip(
                 _translate("vtk_viewer_select_mode",
                            "Start the selected cell edition",
@@ -77,7 +78,7 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
                            None))
             self.image2_label.show()
             self.image2_cb.show()
-        elif index == 2:
+        elif index == 2: # Blending
             self.action_launch_button.setToolTip(
                 _translate("vtk_viewer_select_mode",
                            "Blend the two selected images",
@@ -98,13 +99,27 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
                            None))
             self.image2_label.show()
             self.image2_cb.show()
-        else:
+        else: # Default (Visualisation)
             self.image1_label.hide()
             self.image1_cb.hide()
             self.image2_label.hide()
             self.image2_cb.hide()
             self.action_launch_button.hide()
+        self.enable_button()
         self.mode_changed.emit(index)
+
+    def enable_button(self):
+        if self.image1_cb.count() == 0:
+            self.action_launch_button.setEnabled(False)
+            return
+
+        if self.selected_mode_index == 1:
+            if self.get_label() is None:
+                self.action_launch_button.setEnabled(False)
+            else:
+                self.action_launch_button.setEnabled(True)
+        else:
+            self.action_launch_button.setEnabled(True)
 
     def matrix1_changed(self, index):
         self.matrix_changed.emit(0, self.matrix_from_name(self.image1_cb.itemText(index)))
@@ -118,7 +133,7 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
             name_intensity_matrix = self.image2_cb.currentText()
             segmented_matrix = self.matrix_from_name(name_segmented_matrix)
             intensity_matrix = self.matrix_from_name(name_intensity_matrix)
-            label = get_label()
+            label = self.get_label()
             self.launch_popup.emit(intensity_matrix, segmented_matrix, label)
         elif self.selected_mode_index == 2:
             name1 = str(self.image1_cb.currentText())
@@ -157,8 +172,7 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
             """elif new['name'] != old['name'] :
                 self.update_world_object_name(old, new)"""
 
-        if self.image1_cb.count():
-            self.action_launch_button.setEnabled(True)
+        self.enable_button()
 
     def set_world(self, world):
         self.clear()
@@ -179,6 +193,13 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
             self.image1_cb.removeItem(0)
         for i in xrange(self.image2_cb.count()):
             self.image2_cb.removeItem(0)
+
+    def set_label(self, label):
+        self._label = label
+        self.enable_button()
+
+    def get_label(self):
+        return self._label
 
     def matrix_from_name(self, matrix_name):
         for obj_name, world_object in self.world.items():

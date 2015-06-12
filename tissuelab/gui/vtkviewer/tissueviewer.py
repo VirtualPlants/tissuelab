@@ -80,6 +80,9 @@ class TissueViewer(QtGui.QWidget):
         if self._mode == self.MODE_EDITION and num == 0:
             self.vtk.interactor_style.data = matrix
 
+    def label_selected(self, obj, event):
+        self.mode_selector.set_label(self.vtk.interactor_style.selected_label())
+
     def change_mode(self, mode=MODE_VISUALISATION):
         self._mode = mode
         if mode == self.MODE_VISUALISATION:
@@ -88,6 +91,7 @@ class TissueViewer(QtGui.QWidget):
             interactor_style = SelectCellInteractorStyle()
             interactor_style.data = self.mode_selector.matrix(0)
             self.vtk.set_interactor_style(interactor_style)
+            interactor_style.AddObserver("LabelSelectedEvent", self.label_selected)
         elif mode == self.MODE_BLENDING:
             self.vtk.set_interactor_style()
         else:
@@ -97,7 +101,7 @@ class TissueViewer(QtGui.QWidget):
         if self._editor is None:
             from tissuelab.gui.vtkviewer.editor import EditorWindow
             self._editor = EditorWindow()
-        self._editor.set_data(matrix1, matrix2, 2)
+        self._editor.set_data(matrix1, matrix2, label)
         self._editor.show()
 
     def save_screenshot(self):
