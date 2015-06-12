@@ -146,6 +146,8 @@ class VtkViewer(QtGui.QWidget):
         For end-user features, please have a look to TissueViewer class.
     """
 
+    DEFAULT_INTERACTOR_STYLE = vtk.vtkInteractorStyleTrackballCamera
+
     def __init__(self):
         QtGui.QWidget.__init__(self)
 
@@ -164,9 +166,12 @@ class VtkViewer(QtGui.QWidget):
         expand(self.vtkWidget)
 
         self.ren = vtk.vtkRenderer()  # vtk renderer
-	self.ren.SetBackground(1, 1, 1)
+        self.ren.SetBackground(1, 1, 1)
         self.vtkWidget.GetRenderWindow().AddRenderer(self.ren)
         self.iren = self.vtkWidget.GetRenderWindow().GetInteractor()
+
+        self.default_interactor_style = self.DEFAULT_INTERACTOR_STYLE()
+        self.set_interactor_style(self.default_interactor_style)
 
         #rajout picker
         self.picker = vtk.vtkPointPicker()
@@ -738,6 +743,9 @@ class VtkViewer(QtGui.QWidget):
 
                 alphaChannelFunc.AddPoint(cell_id, alpha)
 
-    def setInteractor(self, interactor, **kwargs):
-        self.iren.SetInteractorStyle(interactor)
-        interactor.SetCurrentRenderer(self.ren)
+    def set_interactor_style(self, interactor_style=None, **kwargs):
+        if interactor_style is None:
+            interactor_style = self.default_interactor_style
+        self.interactor_style = interactor_style
+        self.iren.SetInteractorStyle(interactor_style)
+        interactor_style.SetCurrentRenderer(self.ren)
