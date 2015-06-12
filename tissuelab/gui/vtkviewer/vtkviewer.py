@@ -299,6 +299,81 @@ class VtkViewer(QtGui.QWidget):
         self.iren.Start()
         self.render()
 
+    def remove_matrix(self, name):
+        for key in self.volume.keys():
+            if key == name:
+                self.ren.RemoveVolume(self.volume[key])
+                del self.volume[key]
+        for key in self.actor.keys():
+            for orientation in [1,2,3]:
+                if key == name+"_cut_plane_"+str(orientation):
+                    self.ren.RemoveActor(self.actor[key])
+                    del self.actor[key]
+        for key in self.matrix.keys():
+            if key == name:
+                del self.matrix[key]
+        for key in self.reader.keys():
+            if key == name:
+                del self.reader[key]
+        for key in self.volume_property.keys():
+            if key == name:
+                del self.volume_property[key]
+        for key in self.property.keys():
+            for orientation in [1,2,3]:
+                if key == name+"_cut_plane_"+str(orientation):
+                    del self.property[key]
+        for key in self.vtkdata.keys():
+            for orientation in [1,2,3]:
+                if key == name+"_cut_plane_colors_"+str(orientation):
+                    del self.vtkdata[key]
+        for key in self.object_repr.keys():
+            if key == name:
+                del self.object_repr[key]
+
+    def remove_polydata(self, name):
+        for key in self.actor.keys():
+            if key == name+"_polydata":
+                self.ren.RemoveActor(self.actor[key])
+                del self.actor[key]
+        for key in self.property.keys():
+            if key == name+"_polydata":
+                del self.property[key]
+        for key in self.object_repr.keys():
+            if key == name:
+                del self.object_repr[key]
+
+    def remove_blending(self,name):
+        for key in self.actor.keys():
+            for orientation in [1,2,3]:
+                if key == name+"_cut_plane_"+str(orientation):
+                    self.ren.RemoveActor(self.actor[key])
+                    del self.actor[key]
+        for key in self.matrix.keys():
+            if key == name:
+                del self.matrix[key]
+        for key in self.blend.keys():
+            if key == name:
+                del self.blend[key]
+        for key in self.property.keys():
+            for orientation in [1,2,3]:
+                if key == name+"_cut_plane_"+str(orientation):
+                    del self.property[key]
+        for key in self.object_repr.keys():
+            if key == name:
+                del self.object_repr[key]
+
+    def remove_actor(self, name):
+        for key in self.actor.keys():
+            if key == name:
+                self.ren.RemoveActor(self.actor[key])
+                del self.actor[key]
+        for key in self.property.keys():
+            if key == name:
+                del self.property[key]
+        for key in self.object_repr.keys():
+            if key == name:
+                del self.object_repr[key]
+
     def auto_focus(self):
         self.ren.ResetCamera()
 

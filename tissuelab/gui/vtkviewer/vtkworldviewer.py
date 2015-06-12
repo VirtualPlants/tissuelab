@@ -189,6 +189,9 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         signal, data = event
         if signal == 'world_sync':
             self.set_world(data)
+        elif signal == 'world_object_removed':
+            world, old = data
+            self.remove_world_object(world, old)
         elif signal == 'world_object_changed':
             world, old, new = data
             self.set_world_object(world, new)
@@ -244,6 +247,24 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         elif isinstance(object_data, vtk.vtkActor):
             self.add_actor(object_name, object_data, **world_object.kwargs)
         self.compute()
+
+    def remove_world_object(self, world, world_object):
+        """
+        Remove a world object from the viewer's scene
+        """
+        object_name = world_object.name
+        if object_name in self.object_repr:
+            object_data = self.object_repr[object_name]
+        if isinstance(object_data, np.ndarray):
+            self.remove_matrix(object_name)
+        elif isinstance(object_data, vtk.vtkPolyData):
+            self.remove_polydata(object_name)
+        elif isinstance(object_data, ImageBlending):
+            self.remove_blending(object_name)
+        elif isinstance(object_data, vtk.vtkActor):
+            self.remove_actor(object_name)
+        self.compute()
+
 
     def update_world_object(self, world, world_object, attribute):
         object_name = world_object.name
