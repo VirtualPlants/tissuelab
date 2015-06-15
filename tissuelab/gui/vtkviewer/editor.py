@@ -187,6 +187,7 @@ class EditorWindow(QtGui.QWidget):
         a method to connect the button 'fusion' to the 'fusion algo' of the interactor
         """
         self.viewer.fusion_consid_select_cells()
+        self.set_slider_spinbox()
 
     def set_propagation(self, value):
         """
@@ -309,7 +310,7 @@ class ViewerEditor(QtGui.QWidget):
         self.interactor.refresh()
 
     def fusion_consid_select_cells(self):
-        self.interactor.fusion_consid_select_cells()
+        self.box = self.interactor.fusion_consid_select_cells()
 
     def set_propagation(self, value):
         self.interactor.propagation = value
@@ -845,32 +846,33 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         pos = self.GetInteractor().GetEventPosition()
         self.GetInteractor().GetPicker().Pick(pos[0], pos[1], 0, self.GetCurrentRenderer())
         points = self.GetInteractor().GetPicker().GetPickedPositions()
-        coord = points.GetPoint(0)
-        if self.mode == 0:
-            fp = self.consideredCell.FindPoint(coord)
-            co = self.consideredCell.GetPoint(fp)
-            if distance(co, coord) <= 1:
-                self.selectedPoint = fp
-            else:
-                self.selectedPoint = -1
-        elif self.mode == 1:
-            for label, poly in self.polyList.items():
-                points = vtk.vtkPoints()
-                points.InsertNextPoint(coord)
-                polypoint = vtk.vtkPolyData()
-                polypoint.SetPoints(points)
-
-                selectEnclosed = vtk.vtkSelectEnclosedPoints()
-                selectEnclosed.SetInput(polypoint)
-                selectEnclosed.SetSurface(poly)
-                selectEnclosed.Update()
-                if selectEnclosed.IsInside(0):
-                    self.selectedLabel = label
-                    break
+        if points.GetNumberOfPoints() > 0:
+            coord = points.GetPoint(0)
+            if self.mode == 0:
+                fp = self.consideredCell.FindPoint(coord)
+                co = self.consideredCell.GetPoint(fp)
+                if distance(co, coord) <= 1:
+                    self.selectedPoint = fp
                 else:
-                    self.selectedLabel = -1
-            print self.selectedLabel
-            self.refresh()
+                    self.selectedPoint = -1
+            elif self.mode == 1:
+                for label, poly in self.polyList.items():
+                    points = vtk.vtkPoints()
+                    points.InsertNextPoint(coord)
+                    polypoint = vtk.vtkPolyData()
+                    polypoint.SetPoints(points)
+
+                    selectEnclosed = vtk.vtkSelectEnclosedPoints()
+                    selectEnclosed.SetInput(polypoint)
+                    selectEnclosed.SetSurface(poly)
+                    selectEnclosed.Update()
+                    if selectEnclosed.IsInside(0):
+                        self.selectedLabel = label
+                        break
+                    else:
+                        self.selectedLabel = -1
+                print self.selectedLabel
+                self.refresh()
 
     # TODO : trouver une meilleure formule de deplacement que la proportionnalite
 
@@ -974,6 +976,10 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
             self.deletedLabel.append(self.selectedLabel)
             self.selectedLabel = -1
             self.refresh()
+            box = np.zeros(6)
+            self.consideredCell.GetBounds(box)
+            print box
+            return box
 
 
 if __name__ == "__main__":
