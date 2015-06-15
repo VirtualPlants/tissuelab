@@ -243,6 +243,8 @@ class ViewerEditor(QtGui.QWidget):
         self.picker.PickFromListOn()
         self.picker.InitializePickList()
         self.iren.SetPicker(self.picker)
+        
+        self.background_list = [0,1]
 
         self.interactor = InteractorEditor2D()
         self.iren.SetInteractorStyle(self.interactor)
@@ -286,10 +288,11 @@ class ViewerEditor(QtGui.QWidget):
         cellule = compute_points(mat, lab)
         box = cellule.GetBounds()
         plan = [int((box[i * 2] + box[i * 2 + 1]) / 2) for i in xrange(3)]
-        labels = voisinage(self.segmented_matrix, cellule, lab)
+        labels = voisinage(self.segmented_matrix, cellule, lab, self.background_list)
         self.interactor.consideredCell = cellule
         self.plan = plan
         self.interactor.position = plan[2]
+        self.interactor.background_list = self.background_list
         self.box = box
         self.interactor.polyList.clear()
         self.interactor.polyList = {labs: compute_points(mat, labs) for labs in labels}
@@ -412,7 +415,7 @@ def voxelize(input_image, polydata, polyList):
     return imgstenc
 
 
-def voisinage(matrix, contour, label):
+def voisinage(matrix, contour, label, background_list):
     """
     take as input a segmented matrix, a polydata and a label
     return a list of id corresponding to the neighboors of the polydata in the matrix
@@ -432,8 +435,11 @@ def voisinage(matrix, contour, label):
         voisins = [(xmin, y, z), (x, ymin, z), (x, y, zmin), (xmax, y, z), (x, ymax, z), (x, y, zmax)]
         for voisin in voisins:
             lab = matrix[voisin[0], voisin[1], voisin[2]]
-            if lab != label and lab != 0 and lab != 0 and not lab in labels:
+            if lab != label and not lab in labels:
                 labels.append(lab)
+        for bck in background_list:
+            if bck in labels:
+                labels.remove(bck)
     return labels
 
 
@@ -758,6 +764,7 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         self.background = vtk.vtkImageActor()
         self.polyInPlan = list()
         self.matrix = []
+        self.background_list = list()
 
         self.x = 0
         self.y = 1
@@ -940,7 +947,7 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         if self.mode == 1 and self.selectedLabel != -1 and self.selectedLabel not in self.deletedLabel:
             fusionPoly = self.polyList[self.selectedLabel]
             delete_shared_borders_mieux(self.consideredCell, fusionPoly)
-            labels = voisinage(self.matrix, fusionPoly, self.selectedLabel)
+            labels = voisinage(self.matrix, fusionPoly, self.selectedLabel, self.background_list)
             if self.label in labels:
                 labels.remove(self.label)
             for delLab in self.deletedLabel:
