@@ -1,4 +1,5 @@
 from tissuelab.gui.vtkviewer.designer._vtk_viewer_select_mode import Ui_vtk_viewer_select_mode, _translate
+from tissuelab.gui.vtkviewer.editor import get_contours
 from tissuelab.gui.vtkviewer.vtkworldviewer import ImageBlending
 from openalea.vpltk.qt import QtGui, QtCore
 from openalea.core.observer import AbstractListener
@@ -45,8 +46,6 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
         self.list_interactor_choice = ['visualisation', 'edition', 'blending']
         for choice in self.list_interactor_choice:
             self.cb_interactor_choice.addItem(choice)
-        #self.cb_interactor_choice.addItem('visualisation')
-        #self.cb_interactor_choice.addItem('edition')
 
         self.cb_interactor_choice.currentIndexChanged.connect(self.select_mode)
         self.action_launch_button.pressed.connect(self.button_pressed_launch_popup)
@@ -54,7 +53,6 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
         self.image2_cb.currentIndexChanged.connect(self.matrix2_changed)
 
     def select_mode(self, index):
-        #TODO : changer en cherchant les enfants.
         self.selected_mode_index = index
 
         if index == 1: # Edtion
@@ -150,8 +148,9 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
         elif signal == 'world_object_changed':
             world, old, new = data
             if old is None:
-                self.image1_cb.addItem(new.name)
-                self.image2_cb.addItem(new.name)
+                if isinstance(new.data, np.ndarray):
+                    self.image1_cb.addItem(new.name)
+                    self.image2_cb.addItem(new.name)
             elif isinstance(old.data, np.ndarray):
                 if not isinstance(new.data, np.ndarray):
                     index = self.image1_cb.findText(old.name)
@@ -168,10 +167,16 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
             if item == 'name':
                 if isinstance(obj_data, np.ndarray):
                     self.update_world_object_name(old, new)
+        elif signal == 'world_object_removed':
+            world, old = data
+            if isinstance(old.data, np.ndarray):
+                index = self.image1_cb.findText(old.name)
+                self.image1_cb.removeItem(index)
+                index = self.image2_cb.findText(old.name)
+                self.image2_cb.removeItem(index)
 
             """elif new['name'] != old['name'] :
                 self.update_world_object_name(old, new)"""
-
         self.enable_button()
 
     def set_world(self, world):
@@ -195,7 +200,14 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
             self.image2_cb.removeItem(0)
 
     def set_label(self, label):
+        if self._label is not None:
+            name = str(self._label)
+            self.world.remove("cell_" + name)
         self._label = label
+        contour = get_contours(self.matrix(0),self._label)
+        name2 = str(self._label)
+        self.world.add(contour,name ="cell_" + name2,colormap='glasbey')
+        
         self.enable_button()
 
     def get_label(self):
