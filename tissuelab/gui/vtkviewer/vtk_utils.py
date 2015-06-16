@@ -136,3 +136,49 @@ def blend_funct(data_matrix, data1, lookuptable1, data2, lookuptable2, orientati
     imgactor.SetPosition(-(nx - 1) / 2., -(ny - 1) / 2., -(nz - 1) / 2.)
 
     return imgactor, blend
+
+def vtk_sub_polydata(vtk_polydata, clipping_function, value=0, inside_out=False):
+    import vtk
+    import numpy as np
+    
+    sub_polydata = vtk.vtkPolyData() 
+    sub_polydata.DeepCopy(vtk_polydata)
+
+    sub_polydata.GetPolys().InitTraversal()
+    idList = vtk.vtkIdList();
+    for i in xrange(sub_polydata.GetNumberOfPolys()):
+        poly = sub_polydata.GetPolys().GetNextCell(idList)
+        triangle_points = np.array([sub_polydata.GetPoints().GetPoint(idList.GetId(k)) for k in xrange(3)])
+        if (1-2*inside_out)*clipping_function.EvaluateFunction(triangle_points.mean(axis=0)) <= value:
+            sub_polydata.DeleteCell(i)
+    sub_polydata.RemoveDeletedCells()
+    return sub_polydata
+
+def vtk_clipped_polydata(vtk_polydata, clipping_function, value=0, inside_out=False):
+    import vtk
+    
+    cutEdges = vtk.vtkClipPolyData()
+    cutEdges.SetInput(vtk_polydata)
+    cutEdges.SetClipFunction(clipping_function)
+    cutEdges.SetValue(value)
+    if inside_out:
+        cutEdges.InsideOutOn()
+    cutEdges.GenerateClippedOutputOn()
+    #cutEdges.GenerateClipScalarsOn()
+    cutEdges.Update()
+    
+    cut_polydata = vtk.vtkPolyData()
+    cut_polydata.DeepCopy(cutEdges.GetOutput())
+
+    return cut_polydata
+
+def get_polydata_extent(vtk_polydata):
+    import vtk
+    import numpy as np
+    
+    if vtk_polydata.GetNumberOfPoints()>0:
+        polydata_points = np.array([vtk_polydata.GetPoints().GetPoint(p) for p in xrange(vtk_polydata.GetNumberOfPoints())])
+        polydata_extent = np.transpose([polydata_points.min(axis=0),polydata_points.max(axis=0)])
+    else:
+        polydata_extent = np.zeros((3,2),int)
+    return polydata_extent

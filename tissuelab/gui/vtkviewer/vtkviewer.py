@@ -33,7 +33,8 @@ from openalea.oalab.plugins.interface import IIntRange, IColormap
 
 from tissuelab.gui.vtkviewer.qvtkrenderwindowinteractor import QVTKRenderWindowInteractor
 from tissuelab.gui.vtkviewer.colormap_def import load_colormaps
-from tissuelab.gui.vtkviewer.vtk_utils import matrix_to_image_reader, define_lookuptable, get_polydata_cell_data
+from tissuelab.gui.vtkviewer.vtk_utils import matrix_to_image_reader, define_lookuptable, get_polydata_cell_data, get_polydata_extent 
+from tissuelab.gui.vtkviewer.vtk_utils import vtk_clipped_polydata, vtk_sub_polydata
 
 
 def expand(widget):
@@ -44,6 +45,7 @@ def expand(widget):
 cst_proba = dict(step=0.1, min=0, max=1)
 cst_alphamap = dict(enum=['constant', 'linear'])
 cst_width = dict(min=0, max=10)
+cst_percent_range = dict(step=1, min=0, max=100)
 
 attribute_definition = {}
 attribute_definition['matrix'] = {}
@@ -80,6 +82,10 @@ attribute_definition['polydata']['intensity_range'] = dict(
 attribute_definition['polydata']['linewidth'] = dict(value=1, interface=IInt, alias="Linewidth", constraints=cst_width)
 attribute_definition['polydata']['position'] = dict(value=(0.0, 0.0, 0.0), interface=ITuple, alias=u"Position")
 attribute_definition['polydata']['display_polydata'] = dict(value=True, interface=IBool, alias=u"Display Polydata")
+for axis in ['x', 'y', 'z']:
+    alias = u"Move " + axis + " slice"
+    attribute_definition['polydata'][axis + "_slice"] = dict(value=(0, 100), interface=IIntRange, constraints=cst_percent_range, alias=alias)
+attribute_definition['polydata']['preserve_faces'] = dict(value=False, interface=IBool, alias=u"Preserve Faces")
 
 
 colormaps = load_colormaps()
@@ -443,6 +449,65 @@ class VtkViewer(QtGui.QWidget):
     def set_polydata_linewidth(self, name, **kwargs):
         linewidth = kwargs.get('linewidth', 1)
         self.actor[name + '_polydata'].GetProperty().SetLineWidth(linewidth)
+
+    def slice_polydata(self, name, **kwargs):
+        dtype = 'polydata'
+        x_slice = default_value(dtype, 'x_slice', **kwargs)
+        y_slice = default_value(dtype, 'y_slice', **kwargs)
+        z_slice = default_value(dtype, 'z_slice', **kwargs)
+        preserve_faces = default_value(dtype, 'preserve_faces', **kwargs)
+
+        if preserve_faces:
+            slicing_function = vtk_sub_polydata
+        else:
+            slicing_function = vtk_clipped_polydata
+
+        object_polydata = self.object_repr[name]
+
+        polydata_extent = get_polydata_extent(object_polydata)
+
+        plane_coords = np.array([x_slice[0]/100.,0.5,0.5])
+        plane_center = (1-plane_coords)*polydata_extent[:,0] + plane_coords*polydata_extent[:,1]
+        clipping_plane = vtk.vtkPlane()
+        clipping_plane.SetOrigin(plane_center)
+        clipping_plane.SetNormal(1,0,0)
+        self.actor[name + '_polydata'].GetMapper().SetInput(slicing_function(object_polydata,clipping_plane))
+
+        polydata = self.actor[name + '_polydata'].GetMapper().GetInput()
+        plane_coords = np.array([x_slice[1]/100.,0.5,0.5])
+        plane_center = (1-plane_coords)*polydata_extent[:,0] + plane_coords*polydata_extent[:,1]
+        clipping_plane.SetOrigin(plane_center)
+        clipping_plane.SetNormal(1,0,0)
+        self.actor[name + '_polydata'].GetMapper().SetInput(slicing_function(polydata,clipping_plane,inside_out=True))
+
+        polydata = self.actor[name + '_polydata'].GetMapper().GetInput()
+        plane_coords = np.array([0.5,y_slice[0]/100.,0.5])
+        plane_center = (1-plane_coords)*polydata_extent[:,0] + plane_coords*polydata_extent[:,1]
+        clipping_plane.SetOrigin(plane_center)
+        clipping_plane.SetNormal(0,1,0)
+        self.actor[name + '_polydata'].GetMapper().SetInput(slicing_function(polydata,clipping_plane))
+
+        polydata = self.actor[name + '_polydata'].GetMapper().GetInput()
+        plane_coords = np.array([0.5,y_slice[1]/100.,0.5])
+        plane_center = (1-plane_coords)*polydata_extent[:,0] + plane_coords*polydata_extent[:,1]
+        clipping_plane.SetOrigin(plane_center)
+        clipping_plane.SetNormal(0,1,0)
+        self.actor[name + '_polydata'].GetMapper().SetInput(slicing_function(polydata,clipping_plane,inside_out=True))
+
+        polydata = self.actor[name + '_polydata'].GetMapper().GetInput()
+        plane_coords = np.array([0.5,0.5,z_slice[0]/100.])
+        plane_center = (1-plane_coords)*polydata_extent[:,0] + plane_coords*polydata_extent[:,1]
+        clipping_plane.SetOrigin(plane_center)
+        clipping_plane.SetNormal(0,0,1)
+        self.actor[name + '_polydata'].GetMapper().SetInput(slicing_function(polydata,clipping_plane))
+
+        polydata = self.actor[name + '_polydata'].GetMapper().GetInput()
+        plane_coords = np.array([0.5,0.5,z_slice[1]/100.])
+        plane_center = (1-plane_coords)*polydata_extent[:,0] + plane_coords*polydata_extent[:,1]
+        clipping_plane.SetOrigin(plane_center)
+        clipping_plane.SetNormal(0,0,1)
+        self.actor[name + '_polydata'].GetMapper().SetInput(slicing_function(polydata,clipping_plane,inside_out=True))
+        
 
     def add_outline(self, name, data_matrix, **kwargs):
         self.reader[name] = reader = matrix_to_image_reader(name, data_matrix, np.uint16, 1)
