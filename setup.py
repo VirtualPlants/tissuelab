@@ -85,6 +85,10 @@ setup(
     # Declare src and wralea as entry_points (extensions) of your package
     entry_points={
 
+        'gui_scripts': [
+            'pymage = tissuelab.gui.pymage:main',
+        ],
+
         'oalab.applet': [
             'TissueViewer = tissuelab.plugin.applet:TissueViewer',
             'VtkControlPanel = tissuelab.plugin.applet:VtkControlPanel',
