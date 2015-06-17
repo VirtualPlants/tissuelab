@@ -37,19 +37,27 @@ class PymageCommandLineParser(CommandLineParser):
         CommandLineParser.__init__(self, session=session)
         self.parser.add_argument('images', metavar='images', nargs='+',
                                  help='Image to display in lab')
+        self.parser.add_argument('--blend', action="store_true",
+                                 help='Blend images two by two')
 
     def post_launch(self):
         if self.session.gui:
             world = World()
-            viewer = plugin_instance('oalab.applet', 'TissueViewer')
-            #viewer.vtk.set_world(world)
-            #viewer.vtk.refresh()
-            #viewer.show()
 
+            lst = []
             for path in self.args.images:
                 path = Path(path)
                 image = imread(path)
+                lst.append(path.namebase)
                 world.add(image, name=path.namebase)
+
+            if self.args.blend:
+                from tissuelab.gui.vtkviewer.vtkworldviewer import ImageBlending
+                for i in range(len(lst) / 2):
+                    image1 = world[lst[i]]
+                    image2 = world[lst[i + 1]]
+                    blending = ImageBlending([image1, image2])
+                    world.add(blending)
 
 
 class Pymage(MiniLab):
