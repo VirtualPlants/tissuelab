@@ -26,7 +26,6 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
     def __init__(self):
         QtGui.QWidget.__init__(self)
         AbstractListener.__init__(self)
-        #Ui_vtk_viewer_select_mode.__init__(self)
         self.setupUi(self)
 
         self.world = World()
@@ -157,6 +156,11 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
                     self.image1_cb.removeItem(index)
                     index = self.image2_cb.findText(old.name)
                     self.image2_cb.removeItem(index)
+                elif isinstance(new.data, np.ndarray):
+                    if self.matrix_name(0) == old.name:
+                        self.matrix_changed.emit(0, new.data)
+                    elif self.matrix_name(1) == old.name:
+                        self.matrix_changed.emit(1, new.data)
             elif isinstance(new.data, np.ndarray):
                 if not isinstance(old.data, np.ndarray):
                     self.image1_cb.addItem(new.name)
@@ -204,10 +208,10 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
             name = str(self._label)
             self.world.remove("cell_" + name)
         self._label = label
-        contour = get_contours(self.matrix(0),self._label)
+        contour = get_contours(self.matrix(0), self._label)
         name2 = str(self._label)
-        self.world.add(contour,name ="cell_" + name2,colormap='glasbey')
-        
+        self.world.add(contour, name="cell_" + name2, colormap='glasbey')
+
         self.enable_button()
 
     def get_label(self):
@@ -229,11 +233,6 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
 
     def matrix(self, num):
         return self.matrix_from_name(self.matrix_name(num))
-
-
-def get_label():
-    label = 1256
-    return label
 
 if __name__ == "__main__":
     import sys
