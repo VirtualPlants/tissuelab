@@ -45,7 +45,9 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
         self.list_interactor_choice = ['visualisation', 'edition', 'blending']
         for choice in self.list_interactor_choice:
             self.cb_interactor_choice.addItem(choice)
+        self._create_connections()
 
+    def _create_connections(self):
         self.cb_interactor_choice.currentIndexChanged.connect(self.select_mode)
         self.action_launch_button.pressed.connect(self.button_pressed_launch_popup)
         self.image1_cb.currentIndexChanged.connect(self.matrix1_changed)
@@ -119,10 +121,12 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
             self.action_launch_button.setEnabled(True)
 
     def matrix1_changed(self, index):
-        self.matrix_changed.emit(0, self.matrix_from_name(self.image1_cb.itemText(index)))
+        if self.matrix_from_name(self.image1_cb.itemText(index)) is not None:
+            self.matrix_changed.emit(0, self.matrix_from_name(self.image1_cb.itemText(index)))
 
     def matrix2_changed(self, index):
-        self.matrix_changed.emit(1, self.matrix_from_name(self.image2_cb.itemText(index)))
+        if self.matrix_from_name(self.image2_cb.itemText(index)) is not None:
+            self.matrix_changed.emit(1, self.matrix_from_name(self.image2_cb.itemText(index)))
 
     def button_pressed_launch_popup(self):
         if self.selected_mode_index == 1:

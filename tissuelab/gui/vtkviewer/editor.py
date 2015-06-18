@@ -594,6 +594,7 @@ class SelectCellInteractorStyle (vtk.vtkInteractorStyleTrackballCamera):
     class of interactor use to retrieve label of a cell in a cut_plane of a segmented matrix
     param : data : the segmented matrix
     """
+    #TODO : essayer avec une picklist sur les plans de coupes
 
     def __init__(self, parent=None):
         self.AddObserver("MiddleButtonPressEvent", self.MiddleButtonPressEvent)
