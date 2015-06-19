@@ -20,13 +20,22 @@
 import numpy as np
 import vtk
 from math import sqrt
-from openalea.vpltk.qt import QtGui
+from openalea.vpltk.qt import QtGui, QtCore
 from tissuelab.gui.vtkviewer.qvtkrenderwindowinteractor import QVTKRenderWindowInteractor
 from .vtk_utils import matrix_to_image_reader
 from tissuelab.gui.vtkviewer.designer._panel_control_editor import Ui_panel_control_editor
-#from openalea.image.serial.all import imread
+#from openalea.image.serial.all import imsave
 #from openalea.image.spatial_image import SpatialImage
-from time import time
+from vtk import VTK_SIGNED_CHAR
+from vtk import VTK_UNSIGNED_CHAR
+from vtk import VTK_SHORT
+from vtk import VTK_UNSIGNED_SHORT
+from vtk import VTK_INT
+from vtk import VTK_UNSIGNED_INT
+from vtk import VTK_LONG
+from vtk import VTK_UNSIGNED_LONG
+from vtk import VTK_FLOAT
+from vtk import VTK_DOUBLE
 
 
 def expand(widget):
@@ -40,6 +49,8 @@ class EditorWindow(QtGui.QWidget):
     An EditorWindow is a class that defined the popup that open when you edit a cell.
     It contains a widget with control panel and a vtk viewer and link them together
     """
+
+    segmentation_changed = QtCore.Signal(np.ndarray)
 
     def __init__(self, parent=None):
         QtGui.QWidget.__init__(self, parent)
@@ -72,10 +83,12 @@ class EditorWindow(QtGui.QWidget):
         self.control.sb_propagation.setMinimum(1)
         self.control.sb_propagation.setMaximum(40)
         self.control.sb_propagation.setValue(5)
-
         self.control.bp_z.setEnabled(False)
         self.control.bp_move.setEnabled(False)
 
+        self._create_connections()
+
+    def _create_connections(self):
         self.control.bp_plus.pressed.connect(self.move_in_plane_plus)
         self.control.bp_moins.pressed.connect(self.move_in_plane_moins)
         self.control.bp_x.pressed.connect(self.switch_to_x_plan)
@@ -88,6 +101,7 @@ class EditorWindow(QtGui.QWidget):
         self.control.bp_fusion.pressed.connect(self.fusion_consid_select_cells)
         self.control.slider_propagation.valueChanged.connect(self.set_propagation)
         self.control.sb_propagation.valueChanged.connect(self.set_propagation)
+        self.control.bp_save.pressed.connect(self.apply_change_to_segmentation)
 
     def resizeEvent(self, *args, **kwargs):
         return QtGui.QWidget.resizeEvent(self, *args, **kwargs)
@@ -187,6 +201,7 @@ class EditorWindow(QtGui.QWidget):
         a method to connect the button 'fusion' to the 'fusion algo' of the interactor
         """
         self.viewer.fusion_consid_select_cells()
+        self.set_slider_spinbox()
 
     def set_propagation(self, value):
         """
@@ -198,6 +213,13 @@ class EditorWindow(QtGui.QWidget):
             self.control.slider_propagation.setValue(value)
             self.viewer.set_propagation(value)
             self.block_propagation = False
+
+    def apply_change_to_segmentation(self):
+        """
+        a method to connect save button to save fonction of viewer
+        """
+        array = self.viewer.apply_change_to_segmentation()
+        self.segmentation_changed.emit(array)
 
 
 class ControlsEditor(QtGui.QWidget, Ui_panel_control_editor):
@@ -244,6 +266,8 @@ class ViewerEditor(QtGui.QWidget):
         self.picker.InitializePickList()
         self.iren.SetPicker(self.picker)
 
+        self.background_list = [0, 1]
+
         self.interactor = InteractorEditor2D()
         self.iren.SetInteractorStyle(self.interactor)
         self.interactor.SetCurrentRenderer(self.ren)
@@ -286,13 +310,15 @@ class ViewerEditor(QtGui.QWidget):
         cellule = compute_points(mat, lab)
         box = cellule.GetBounds()
         plan = [int((box[i * 2] + box[i * 2 + 1]) / 2) for i in xrange(3)]
-        labels = voisinage(self.segmented_matrix, cellule, lab)
+        labels = voisinage(self.segmented_matrix, cellule, lab, self.background_list)
         self.interactor.consideredCell = cellule
         self.plan = plan
         self.interactor.position = plan[2]
+        self.interactor.background_list = self.background_list
         self.box = box
         self.interactor.polyList.clear()
         self.interactor.polyList = {labs: compute_points(mat, labs) for labs in labels}
+        self.interactor.deletedLabel[:] = []
 
     def set_data(self, intensity_mat, segmented_mat, label):
         self.set_segmented_matrix(segmented_mat)
@@ -306,7 +332,7 @@ class ViewerEditor(QtGui.QWidget):
         self.interactor.refresh()
 
     def fusion_consid_select_cells(self):
-        self.interactor.fusion_consid_select_cells()
+        self.box = self.interactor.fusion_consid_select_cells()
 
     def set_propagation(self, value):
         self.interactor.propagation = value
@@ -366,53 +392,15 @@ class ViewerEditor(QtGui.QWidget):
         self.interactor.position = self.plan[self.interactor.orientation]
         self.interactor.refresh()
 
-
-def voxelize(input_image, polydata, polyList):
-    # input image : SpatialImage
-    # polydata : type vtk.vtkPolyData
-    bounds = polydata.GetBounds()
-    spacing = input_image.voxelsize
-
-    out_image = vtk.vtkImageData()
-    out_image.SetSpacing(spacing[0], spacing[1], spacing[2])
-    dims = np.zeros((3,), dtype=np.uint8)
-    for i in range(0, 3):
-        dims[i] = int(np.ceil((bounds[2 * i + 1] - bounds[2 * i]) / spacing[i]))
-    out_image.SetDimensions(dims)
-    out_image.SetExtent(0, dims[0] - 1, 0, dims[1] - 1, 0, dims[2] - 1)
-    origin = np.zeros((3,), dtype=np.float)
-    origin[0] = bounds[0] + spacing[0] / 2
-    origin[1] = bounds[2] + spacing[1] / 2
-    origin[2] = bounds[4] + spacing[2] / 2
-    out_image.SetOrigin(origin)
-    out_image.SetScalarTypeToUnsignedChar()
-    out_image.AllocateScalars()
-    foreground = 255
-    background = 0
-    counts = out_image.GetNumberOfPoints()
-    for i in range(0, counts):
-        out_image.GetPointData().GetScalars().SetTuple1(i, foreground)
-    pol2stenc = vtk.vtkPolyDataToImageStencil()
-    pol2stenc.SetInput(polydata)
-    pol2stenc.SetOutputOrigin(origin)
-    pol2stenc.SetOutputSpacing(spacing)
-    pol2stenc.SetOutputWholeExtent(out_image.GetExtent())
-    pol2stenc.Update()
-    imgstenc = vtk.vtkImageStencil()
-    imgstenc.SetInput(out_image)
-    imgstenc.SetStencil(pol2stenc.GetOutput())
-    imgstenc.ReverseStencilOff()
-    imgstenc.SetBackgroundValue(background)
-    imgstenc.Update()
-
-    writer = vtk.vtkMetaImageWriter()
-    writer.SetInput(imgstenc.GetOutput())
-    writer.SetFileName("/home/sophie/Bureau/vtk_polydata_to_voxel/test.mha")
-    writer.Write()
-    return imgstenc
+    def apply_change_to_segmentation(self):
+        """
+        connect button save to the method that actually save things
+        """
+        array = self.interactor.apply_change_to_segmentation()
+        return array
 
 
-def voisinage(matrix, contour, label):
+def voisinage(matrix, contour, label, background_list):
     """
     take as input a segmented matrix, a polydata and a label
     return a list of id corresponding to the neighboors of the polydata in the matrix
@@ -432,8 +420,11 @@ def voisinage(matrix, contour, label):
         voisins = [(xmin, y, z), (x, ymin, z), (x, y, zmin), (xmax, y, z), (x, ymax, z), (x, y, zmax)]
         for voisin in voisins:
             lab = matrix[voisin[0], voisin[1], voisin[2]]
-            if lab != label and lab != 0 and lab != 0 and not lab in labels:
+            if lab != label and not lab in labels:
                 labels.append(lab)
+        for bck in background_list:
+            if bck in labels:
+                labels.remove(bck)
     return labels
 
 
@@ -589,46 +580,6 @@ def delete_shared_borders_mieux(poly1, poly2):
     poly1.Modified()
 
 
-def delete_shared_borders_pas_top(poly1, poly2):
-    """
-    first function to remove the shared bounderies between two polydata
-    """
-    frontFusion = [i for i in xrange(poly2.GetNumberOfPoints()) if is_shared_point(i, poly2, poly1) != -1]
-    frontConsid = [is_shared_point(i, poly2, poly1) for i in frontFusion]
-
-    for p in frontFusion:
-        idCell = vtk.vtkIdList()
-        poly2.GetPointCells(p, idCell)
-        for j in xrange(idCell.GetNumberOfIds()):
-            pointId = vtk.vtkIdList()
-            poly2.GetCellPoints(idCell.GetId(j), pointId)
-            frontiere = True
-            for k in xrange(pointId.GetNumberOfIds()):
-                if is_shared_point(pointId.GetId(k), poly2, poly1) == -1:
-                    frontiere = False
-                    break
-            if frontiere:
-                poly2.DeleteCell(idCell.GetId(j))
-                poly2.RemoveDeletedCells()
-                poly2.Modified()
-
-    for p in frontConsid:
-        idCell = vtk.vtkIdList()
-        poly1.GetPointCells(p, idCell)
-        for j in xrange(idCell.GetNumberOfIds()):
-            pointId = vtk.vtkIdList()
-            poly1.GetCellPoints(idCell.GetId(j), pointId)
-            frontiere = True
-            for k in xrange(pointId.GetNumberOfIds()):
-                if is_shared_point(pointId.GetId(k), poly1, poly2) == -1:
-                    frontiere = False
-                    break
-            if frontiere:
-                poly1.DeleteCell(idCell.GetId(j))
-                poly1.RemoveDeletedCells()
-                poly1.Modified()
-
-
 def is_poly_in_plan(poly, orientation, position):
     """
     simple function to determine if a plane intersect a polydata
@@ -643,18 +594,11 @@ class SelectCellInteractorStyle (vtk.vtkInteractorStyleTrackballCamera):
     class of interactor use to retrieve label of a cell in a cut_plane of a segmented matrix
     param : data : the segmented matrix
     """
+    #TODO : essayer avec une picklist sur les plans de coupes
 
     def __init__(self, parent=None):
         self.AddObserver("MiddleButtonPressEvent", self.MiddleButtonPressEvent)
         self.data = np.arange(1)
-        self.pointsData = vtk.vtkPolyData()
-        self.pointsMapper = vtk.vtkDataSetMapper()
-        self.pointsMapper.SetInput(self.pointsData)
-        self.pointsActor = vtk.vtkActor()
-        self.pointsActor.SetMapper(self.pointsMapper)
-        self.pointsActor.GetProperty().SetPointSize(1)
-        self.pointsActor.GetProperty().SetOpacity(1)
-        self.pointsActor.GetProperty().SetColor(0.8, 0, 0.4)
 
         self._ignored_labels = [0, 1]
         self._selected_label = None
@@ -669,19 +613,14 @@ class SelectCellInteractorStyle (vtk.vtkInteractorStyleTrackballCamera):
         pos = self.GetInteractor().GetEventPosition()
         self.GetInteractor().GetPicker().Pick(pos[0], pos[1], 0, self.GetCurrentRenderer())
         points = self.GetInteractor().GetPicker().GetPickedPositions()
-        coord = points.GetPoint(0)
-        if (self.GetInteractor().GetPicker().GetPointId() != -1):
-            label = self.data[int(coord[0])][int(coord[1])][int(coord[2])]
-            # Background case
-            if label not in self._ignored_labels:
-                reader = matrix_to_image_reader('la', self.data, self.data.dtype)
-                dat = reader.GetOutput()
-                self.pointsData.ShallowCopy(compute_points(dat, label))
-                self.GetCurrentRenderer().AddActor(self.pointsActor)
-                self.GetCurrentRenderer().Render()
-                self.GetCurrentRenderer().GetRenderWindow().Render()
-                self._selected_label = label
-                self.InvokeEvent("LabelSelectedEvent")
+        if points.GetNumberOfPoints() > 0:
+            coord = points.GetPoint(0)
+            if (self.GetInteractor().GetPicker().GetPointId() != -1):
+                label = self.data[int(coord[0])][int(coord[1])][int(coord[2])]
+                # Background case
+                if label not in self._ignored_labels:
+                    self._selected_label = label
+                    self.InvokeEvent("LabelSelectedEvent")
 
 
 class InteractorEditor(vtk.vtkInteractorStyle):
@@ -763,6 +702,7 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         self.background = vtk.vtkImageActor()
         self.polyInPlan = list()
         self.matrix = []
+        self.background_list = list()
 
         self.x = 0
         self.y = 1
@@ -843,32 +783,33 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         pos = self.GetInteractor().GetEventPosition()
         self.GetInteractor().GetPicker().Pick(pos[0], pos[1], 0, self.GetCurrentRenderer())
         points = self.GetInteractor().GetPicker().GetPickedPositions()
-        coord = points.GetPoint(0)
-        if self.mode == 0:
-            fp = self.consideredCell.FindPoint(coord)
-            co = self.consideredCell.GetPoint(fp)
-            if distance(co, coord) <= 1:
-                self.selectedPoint = fp
-            else:
-                self.selectedPoint = -1
-        elif self.mode == 1:
-            for label, poly in self.polyList.items():
-                points = vtk.vtkPoints()
-                points.InsertNextPoint(coord)
-                polypoint = vtk.vtkPolyData()
-                polypoint.SetPoints(points)
-
-                selectEnclosed = vtk.vtkSelectEnclosedPoints()
-                selectEnclosed.SetInput(polypoint)
-                selectEnclosed.SetSurface(poly)
-                selectEnclosed.Update()
-                if selectEnclosed.IsInside(0):
-                    self.selectedLabel = label
-                    break
+        if points.GetNumberOfPoints() > 0:
+            coord = points.GetPoint(0)
+            if self.mode == 0:
+                fp = self.consideredCell.FindPoint(coord)
+                co = self.consideredCell.GetPoint(fp)
+                if distance(co, coord) <= 1:
+                    self.selectedPoint = fp
                 else:
-                    self.selectedLabel = -1
-            print self.selectedLabel
-            self.refresh()
+                    self.selectedPoint = -1
+            elif self.mode == 1:
+                for label, poly in self.polyList.items():
+                    points = vtk.vtkPoints()
+                    points.InsertNextPoint(coord)
+                    polypoint = vtk.vtkPolyData()
+                    polypoint.SetPoints(points)
+
+                    selectEnclosed = vtk.vtkSelectEnclosedPoints()
+                    selectEnclosed.SetInput(polypoint)
+                    selectEnclosed.SetSurface(poly)
+                    selectEnclosed.Update()
+                    if selectEnclosed.IsInside(0):
+                        self.selectedLabel = label
+                        break
+                    else:
+                        self.selectedLabel = -1
+                print self.selectedLabel
+                self.refresh()
 
     # TODO : trouver une meilleure formule de deplacement que la proportionnalite
 
@@ -945,7 +886,7 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         if self.mode == 1 and self.selectedLabel != -1 and self.selectedLabel not in self.deletedLabel:
             fusionPoly = self.polyList[self.selectedLabel]
             delete_shared_borders_mieux(self.consideredCell, fusionPoly)
-            labels = voisinage(self.matrix, fusionPoly, self.selectedLabel)
+            labels = voisinage(self.matrix, fusionPoly, self.selectedLabel, self.background_list)
             if self.label in labels:
                 labels.remove(self.label)
             for delLab in self.deletedLabel:
@@ -972,7 +913,71 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
             self.deletedLabel.append(self.selectedLabel)
             self.selectedLabel = -1
             self.refresh()
+            box = np.zeros(6)
+            self.consideredCell.GetBounds(box)
+            return box
 
+    def apply_change_to_segmentation(self):
+        reader = matrix_to_image_reader('la', self.matrix, self.matrix.dtype)
+        img = reader.GetOutput()
+
+        for lab, poly in self.polyList.items():
+            pol2stenc = vtk.vtkPolyDataToImageStencil()
+            pol2stenc.SetInput(poly)
+            pol2stenc.Update()
+            imgstenc = vtk.vtkImageStencil()
+            imgstenc.SetInput(img)
+            imgstenc.SetStencil(pol2stenc.GetOutput())
+            imgstenc.ReverseStencilOn()
+            imgstenc.SetBackgroundValue(lab)
+            imgstenc.Update()
+            img = imgstenc.GetOutput()
+
+        pol2stenc = vtk.vtkPolyDataToImageStencil()
+        pol2stenc.SetInput(self.consideredCell)
+        pol2stenc.Update()
+
+        imgstenc = vtk.vtkImageStencil()
+        imgstenc.SetInput(img)
+        imgstenc.SetStencil(pol2stenc.GetOutput())
+        imgstenc.ReverseStencilOn()
+        imgstenc.SetBackgroundValue(self.label)
+        imgstenc.Update()
+        img = imgstenc.GetOutput()
+
+        typee = img.GetScalarType()
+        if typee == VTK_SIGNED_CHAR:
+            ty = 'b'
+        elif typee == VTK_UNSIGNED_CHAR:
+            ty = 'B'
+        elif typee == VTK_SHORT:
+            ty = 'h'
+        elif typee == VTK_UNSIGNED_SHORT:
+            ty = 'H'
+        elif typee == VTK_INT:
+            ty = 'i'
+        elif typee == VTK_UNSIGNED_INT:
+            ty = 'I'
+        elif typee == VTK_INT:
+            ty = 'f'
+        elif typee == VTK_DOUBLE:
+            ty = 'd'
+
+        export = vtk.vtkImageExport()
+        export.SetInput(img)
+        extent = img.GetWholeExtent()
+        dim = (extent[5] - extent[4] + 1, extent[3] - extent[2] + 1, extent[1] - extent[0] + 1)
+        array = np.zeros(dim, ty)
+        export.Export(array)
+        array = array.transpose()
+        bounds = np.zeros(6)
+        self.consideredCell.GetBounds(bounds)
+        for x, arrayx in enumerate(array[int(bounds[0]):int(bounds[1]) + 1]):
+            for y, arrayy in enumerate(arrayx[int(bounds[2]):int(bounds[3]) + 1]):
+                for z, arrayz in enumerate(arrayy[int(bounds[4]):int(bounds[5]) + 1]):
+                    if arrayz in self.deletedLabel:
+                        array[int(bounds[0]) + x][int(bounds[2]) + y][int(bounds[4]) + z] = self.label
+        return array
 
 if __name__ == "__main__":
     import sys
