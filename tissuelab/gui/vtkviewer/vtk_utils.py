@@ -153,7 +153,10 @@ def matrix_to_image_reader(name, data_matrix, datatype=np.uint16, decimate=1):
     return reader
 
 def obj_extent(obj):
-    box = obj.GetOutputInformation(0).Get(vtk.vtkStreamingDemandDrivenPipeline.WHOLE_EXTENT())
+    if vtk.VTK_MAJOR_VERSION <= 5:
+        box = obj.GetOutput().GetWholeExtent()
+    else:
+        box = obj.GetOutputInformation(0).Get(vtk.vtkStreamingDemandDrivenPipeline.WHOLE_EXTENT())
     return box
 
 def blend_funct(data_matrix, data1, lookuptable1, data2, lookuptable2, orientation):
