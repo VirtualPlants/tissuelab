@@ -24,6 +24,9 @@ from openalea.vpltk.qt import QtGui, QtCore
 from PyQt4 import QtTest
 from tissuelab.gui.vtkviewer.vtkviewer import VtkViewer
 
+SAVE_AS_REFERENCE = False
+PAUSE_FACTOR = 1000
+
 
 def demo_actor():
     source = vtk.vtkSphereSource()
@@ -110,12 +113,17 @@ class QtTestCase(object):
         if self.instance is None:
             self.app.exec_()
 
-    def pause(self, duration=1000):
-        self._duration = duration
+    def pause(self, duration=1):
+        self._duration = duration * PAUSE_FACTOR
         self._pause = True
 
 
 class TestCase(QtTestCase, unittest.TestCase):
+
+    def _refpath(self):
+        from openalea.core.path import path
+        filename = self.id().replace('TestCase.', '') + '.png'
+        return path('ref') / filename
 
     def setUp(self):
         self.widget = None
@@ -125,20 +133,32 @@ class TestCase(QtTestCase, unittest.TestCase):
         self._pause = False
         self._duration = 1000
 
+        self.widget.resize(300, 300)
+
+        label = QtGui.QLabel('salut')
+        label.resize(300, 300)
+        label.setPixmap(QtGui.QPixmap(self._refpath()))
+        self.cmp_widget = QtGui.QWidget()
+        layout = QtGui.QGridLayout(self.cmp_widget)
+        layout.addWidget(QtGui.QLabel("Test"), 0, 0)
+        layout.addWidget(self.widget, 1, 0)
+        layout.addWidget(QtGui.QLabel("Reference"), 0, 1)
+        layout.addWidget(label, 1, 1)
+
     def test_actor(self):
         actor = demo_actor()
         self.widget.add_actor("actor", actor)
-        self.pause()
+        self.pause(0.5)
 
     def test_polydata(self):
         cube = demo_polydata_cube()
         self.widget.add_polydata("cube", cube, colormap='glasbey', alpha=0.5)
-        self.pause()
+        self.pause(0.5)
 
     def test_outline(self):
         matrix = demo_matrix_xyz()
         self.widget.add_outline("matrix", matrix)
-        self.pause(500)
+        self.pause(0.5)
 
     def test_matrix_cut_planes(self):
         matrix = demo_matrix_xyz()
@@ -162,13 +182,13 @@ class TestCase(QtTestCase, unittest.TestCase):
         self.widget.move_cut_plane(n, 95, 3)
         self.widget.set_cut_planes_alpha(n, 0.5)
         self.widget.render()
-        self.pause(2000)
+        self.pause(1)
 
     def test_volume(self):
         matrix = demo_matrix_xyz()
         self.widget.add_matrix_as_volume("matrix", matrix, colormap='glasbey', alphamap='constant',
                                          alpha=1, bg_id=0)
-        self.pause(2000)
+        self.pause(0.5)
 
     def test_intensity_range(self):
         self.widget.add_matrix_as_volume("matrix_ref", demo_matrix_range(delta=0), colormap='curvature',
@@ -176,14 +196,22 @@ class TestCase(QtTestCase, unittest.TestCase):
         self.widget.add_matrix_as_volume("matrix_2", demo_matrix_range(delta=10), colormap='curvature',
                                          alphamap='constant', alpha=1, bg_id=0,
                                          intensity_range=(105, 135))
-        self.pause(5000)
+        self.pause(2)
 
     def tearDown(self):
         self.widget.compute()
-        self.widget.show()
-        self.widget.raise_()
+        self.cmp_widget.show()
+        self.cmp_widget.raise_()
+
         if self._pause:
-            QtTest.QTest.qWait(self._duration)
+            if SAVE_AS_REFERENCE:
+                filepath = self._refpath()
+                self.widget.setFocus(True)
+                QtTest.QTest.qWait(1)
+                self.widget.save_screenshot(filepath)
+            else:
+                QtTest.QTest.qWait(self._duration)
+
         if self.widget:
             self.widget.setAttribute(QtCore.Qt.WA_DeleteOnClose)
             self.widget.close()

@@ -286,13 +286,19 @@ class VtkViewer(QtGui.QWidget):
         if mimetype not in image_writers:
             raise TypeError("No vtk writer found for type " + str(mimetype))
             return
-        self.render()
+
+        self.compute()
+
         screenshooter = vtk.vtkWindowToImageFilter()
         screenshooter.SetInput(self.vtkWidget.GetRenderWindow())
+        screenshooter.Modified()
         screenshooter.Update()
+
         writer = image_writers[mimetype]()
         writer.SetFileName(filename)
-        writer.SetInput(screenshooter.GetOutput())
+        writer.SetInputConnection(screenshooter.GetOutputPort())
+        writer.Update()
+
         writer.Write()
 
     def refresh(self):
@@ -301,7 +307,8 @@ class VtkViewer(QtGui.QWidget):
     def _refresh_props(self, prop_dict, property_dict):
         for name, prop in prop_dict.items():
             if property_dict[name]['disp']:
-                self.ren.AddViewProp(prop)
+                if not self.ren.HasViewProp(prop):
+                    self.ren.AddViewProp(prop)
             else:
                 if self.ren.HasViewProp(prop):
                     self.ren.RemoveViewProp(prop)
