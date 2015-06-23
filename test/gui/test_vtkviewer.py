@@ -168,9 +168,9 @@ class TestCase(QtTestCase, unittest.TestCase):
         self.widget.move_cut_plane(n, -1000, 2)
         self.widget.render()
 
-        extent = self.widget.actor['matrix_cut_plane_1'].GetDisplayExtent()
+        extent = self.widget.view_prop['matrix_cut_plane_1'].GetDisplayExtent()
         self.assertListEqual(list(extent), [99, 99, 0, 99, 0, 99])
-        extent = self.widget.actor['matrix_cut_plane_2'].GetDisplayExtent()
+        extent = self.widget.view_prop['matrix_cut_plane_2'].GetDisplayExtent()
         self.assertListEqual(list(extent), [0, 99, 0, 0, 0, 99])
 
     def test_matrix_cut_planes2(self):

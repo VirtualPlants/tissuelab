@@ -136,6 +136,14 @@ image_writers = {
 }
 
 
+def name_volume(name):
+    return 'volume_%s' % name
+
+
+def name_polydata(name):
+    return '%s_polydata' % name
+
+
 class VtkViewer(QtGui.QWidget):
 
     """
@@ -196,9 +204,7 @@ class VtkViewer(QtGui.QWidget):
         self.object_repr = {}
         self.matrix = {}
         self.reader = {}
-        self.volume_property = {}
-        self.volume = {}
-        self.actor = {}
+        self.view_prop = {}
         self.polydata = {}
         self.property = {}
         self.vtkdata = {}
@@ -213,70 +219,58 @@ class VtkViewer(QtGui.QWidget):
     ################################################
 
     def display_volume(self, name=None, disp=True):
-        self.clear_scene()
         self._display_volume(name, disp)
         self.compute()
 
     def display_cut_planes(self, name=None, disp=True):
-        self.clear_scene()
         self._display_cut_planes(name, disp)
         self.compute()
 
     def display_polydata(self, name=None, disp=True):
-        self.clear_scene()
         self._display_polydata(name, disp)
         self.compute()
 
     def _display_volume(self, name, disp=True):
         if name is None:
-            for name in self.volume:
-                self.volume_property[name]['disp'] = disp
+            for name in self.matrix:
+                self.property[name_volume(name)]['disp'] = disp
         else:
-            self.volume_property[name]['disp'] = disp
+            self.property[name]['disp'] = disp
 
     def _display_cut_planes(self, name, disp=True):
         if name is None:
-            for actor_name in self.actor:
-                if '_cut_plane_' in actor_name:
-                    self.property[actor_name]['disp'] = disp
+            for view_prop_name in self.view_prop:
+                if '_cut_plane_' in view_prop_name:
+                    self.property[view_prop_name]['disp'] = disp
         else:
-            for actor_name in self.actor:
-                if actor_name.startswith('%s_cut_plane_' % name):
-                    self.property[actor_name]['disp'] = disp
+            for view_prop_name in self.view_prop:
+                if view_prop_name.startswith('%s_cut_plane_' % name):
+                    self.property[view_prop_name]['disp'] = disp
 
     def _display_polydata(self, name, disp=True):
         if name is None:
-            for actor_name in self.actor:
-                if '_polydata' in actor_name:
-                    self.property[actor_name]['disp'] = disp
+            for view_prop_name in self.view_prop:
+                if name_polydata(view_prop_name) in self.property:
+                    self.property[name_polydata(view_prop_name)]['disp'] = disp
         else:
-            for actor_name in self.actor:
-                if actor_name.startswith('%s_polydata' % name):
-                    self.property[actor_name]['disp'] = disp
+            self.property[name_polydata(name)]['disp'] = disp
 
     def initialize(self):
         pass
 
     def clear_scene(self):
-        for volume in self.volume.values():
-            self.ren.RemoveVolume(volume)
-        for actor in self.actor.values():
-            self.ren.RemoveActor(actor)
+        for view_prop in self.view_prop.values():
+            self.ren.RemoveViewProp(view_prop)
 
     def clear(self):
-        for name, volume in self.volume.items():
-            self.ren.RemoveVolume(volume)
-            del self.volume[name]
-        for name, actor in self.actor.items():
-            self.ren.RemoveActor(actor)
-            del self.actor[name]
+        for name, view_prop in self.view_prop.items():
+            self.ren.RemoveViewProp(view_prop)
+            del self.view_prop[name]
 
         self.object_repr = {}
         self.matrix = {}
         self.reader = {}
-        self.volume_property = {}
-        self.volume = {}
-        self.actor = {}
+        self.view_prop = {}
         self.polydata = {}
         self.blend = {}
         self.vtkdata = {}
@@ -304,96 +298,64 @@ class VtkViewer(QtGui.QWidget):
     def refresh(self):
         self.compute()
 
-    def _refresh_props(self, prop_dict, property_dict):
-        for name, prop in prop_dict.items():
-            if property_dict[name]['disp']:
+    def compute(self):
+        for name, prop in self.view_prop.items():
+            if self.property[name]['disp']:
                 if not self.ren.HasViewProp(prop):
                     self.ren.AddViewProp(prop)
             else:
                 if self.ren.HasViewProp(prop):
                     self.ren.RemoveViewProp(prop)
 
-    def compute(self):
-        self._refresh_props(self.volume, self.volume_property)
-        self._refresh_props(self.actor, self.property)
         self.iren.Initialize()
         self.iren.Start()
         self.render()
 
+    def _remove_view_prop(self, name):
+        if name in self.view_prop:
+            self.ren.RemoveViewProp(self.view_prop[name])
+            del self.view_prop[name]
+        if name in self.view_prop:
+            del self.property[name]
+        if name in self.view_prop:
+            del self.object_repr[name]
+
     def remove_matrix(self, name):
-        for key in self.volume.keys():
-            if key == name:
-                self.ren.RemoveVolume(self.volume[key])
-                del self.volume[key]
-        for key in self.actor.keys():
-            for orientation in [1, 2, 3]:
-                if key == name + "_cut_plane_" + str(orientation):
-                    self.ren.RemoveActor(self.actor[key])
-                    del self.actor[key]
-        for key in self.matrix.keys():
-            if key == name:
-                del self.matrix[key]
-        for key in self.reader.keys():
-            if key == name:
-                del self.reader[key]
-        for key in self.volume_property.keys():
-            if key == name:
-                del self.volume_property[key]
-        for key in self.property.keys():
-            for orientation in [1, 2, 3]:
-                if key == name + "_cut_plane_" + str(orientation):
-                    del self.property[key]
-        for key in self.vtkdata.keys():
-            for orientation in [1, 2, 3]:
-                if key == name + "_cut_plane_colors_" + str(orientation):
-                    del self.vtkdata[key]
-        for key in self.object_repr.keys():
-            if key == name:
-                del self.object_repr[key]
+        names = [name_volume(name)]
+        for orientation in [1, 2, 3]:
+            names.append(name + "_cut_plane_" + str(orientation))
+
+        for name in names:
+            self._remove_view_prop(name)
+
+        if name in self.matrix:
+            del self.matrix[name]
+        if name in self.reader:
+            del self.reader[name]
+
+        for orientation in [1, 2, 3]:
+            final_name = name + "_cut_plane_colors_" + str(orientation)
+            if final_name in self.vtkdata:
+                del self.vtkdata[final_name]
 
     def remove_polydata(self, name):
-        for key in self.actor.keys():
-            if key == name + "_polydata":
-                self.ren.RemoveActor(self.actor[key])
-                del self.actor[key]
-        for key in self.property.keys():
-            if key == name + "_polydata":
-                del self.property[key]
-        for key in self.object_repr.keys():
-            if key == name:
-                del self.object_repr[key]
+        self._remove_view_prop(name_polydata(name))
 
     def remove_blending(self, name):
-        for key in self.actor.keys():
-            for orientation in [1, 2, 3]:
-                if key == name + "_cut_plane_" + str(orientation):
-                    self.ren.RemoveActor(self.actor[key])
-                    del self.actor[key]
-        for key in self.matrix.keys():
-            if key == name:
-                del self.matrix[key]
-        for key in self.blend.keys():
-            if key == name:
-                del self.blend[key]
-        for key in self.property.keys():
-            for orientation in [1, 2, 3]:
-                if key == name + "_cut_plane_" + str(orientation):
-                    del self.property[key]
-        for key in self.object_repr.keys():
-            if key == name:
-                del self.object_repr[key]
+        names = [name_volume(name)]
+        for orientation in [1, 2, 3]:
+            names.append(name + "_cut_plane_" + str(orientation))
+
+        for name in names:
+            self._remove_view_prop(name)
+
+        if name in self.matrix:
+            del self.matrix[name]
+        if name in self.blend:
+            del self.blend[name]
 
     def remove_actor(self, name):
-        for key in self.actor.keys():
-            if key == name:
-                self.ren.RemoveActor(self.actor[key])
-                del self.actor[key]
-        for key in self.property.keys():
-            if key == name:
-                del self.property[key]
-        for key in self.object_repr.keys():
-            if key == name:
-                del self.object_repr[key]
+        self._remove_view_prop(name)
 
     def auto_focus(self):
         self.ren.ResetCamera()
@@ -402,11 +364,11 @@ class VtkViewer(QtGui.QWidget):
         self.iren.Render()
 
     def add_actor(self, name, actor, **kwargs):
-        if name in self.actor:
-            old_actor = self.actor[name]
-            self.ren.RemoveActor(old_actor)
-            del old_actor
-        self.actor[name] = actor
+        if name in self.view_prop:
+            old_view_prop = self.view_prop[name]
+            self.ren.RemoveActor(old_view_prop)
+            del old_view_prop
+        self.view_prop[name] = actor
         self.property[name] = dict(disp=True)
 
     def add_polydata(self, name, polydata, **kwargs):
@@ -432,7 +394,7 @@ class VtkViewer(QtGui.QWidget):
             # imgactor.SetPosition(-(nx - 1) / 2., -(ny - 1) / 2., -(nz - 1) / 2.)
             polydata_actor.SetPosition(-position[0], -position[1], -position[2])
 
-        self.add_actor('%s_polydata' % (name), polydata_actor)
+        self.add_actor(name_polydata(name), polydata_actor)
 
         x_slice = default_value(dtype, 'x_slice', **kwargs)
         y_slice = default_value(dtype, 'y_slice', **kwargs)
@@ -445,7 +407,7 @@ class VtkViewer(QtGui.QWidget):
         if isinstance(cmap, str):
             cmap = dict(name=cmap, color_points=self.colormaps[cmap]._color_points)
 
-        cell_data = get_polydata_cell_data(self.actor[name + '_polydata'].GetMapper().GetInput())
+        cell_data = get_polydata_cell_data(self.view_prop[name_polydata(name)].GetMapper().GetInput())
         if irange == attribute_definition[dtype]['intensity_range']:
             irange = (cell_data.min(), cell_data.max())
 
@@ -457,27 +419,27 @@ class VtkViewer(QtGui.QWidget):
 
         irange = kwargs.pop('intensity_range', None)
 
-        cell_data = get_polydata_cell_data(self.actor[name + '_polydata'].GetMapper().GetInput())
+        cell_data = get_polydata_cell_data(self.view_prop[name_polydata(name)].GetMapper().GetInput())
         lut = define_lookuptable(
             cell_data,
             colormap_points=colormap['color_points'],
             colormap_name=colormap['name'],
             intensity_range=irange)
-        self.actor[name + '_polydata'].GetMapper().SetLookupTable(lut)
+        self.view_prop[name_polydata(name)].GetMapper().SetLookupTable(lut)
 
     def set_polydata_alpha(self, name, **kwargs):
-        alpha = kwargs.get('alpha', self.actor[name + '_polydata'].GetProperty().GetOpacity())
-        self.actor[name + '_polydata'].GetProperty().SetOpacity(alpha)
+        alpha = kwargs.get('alpha', self.view_prop[name_polydata(name)].GetProperty().GetOpacity())
+        self.view_prop[name_polydata(name)].GetProperty().SetOpacity(alpha)
 
     def set_polydata_linewidth(self, name, **kwargs):
         linewidth = kwargs.get('linewidth', 1)
-        self.actor[name + '_polydata'].GetProperty().SetLineWidth(linewidth)
+        self.view_prop[name_polydata(name)].GetProperty().SetLineWidth(linewidth)
 
     def set_polydata_point_radius(self, name, **kwargs):
         dtype = 'polydata'
         point_radius = default_value(dtype, 'point_radius', **kwargs)
         # print "Glyph Radius : ",point_radius
-        object_polydata = self.object_repr[name]
+        object_polydata = self.object_repr[name_polydata(name)]
         displayed_polydata = self.polydata[name]
 
         if (object_polydata.GetNumberOfCells() == 0) and (object_polydata.GetNumberOfPoints() > 0):
@@ -496,7 +458,7 @@ class VtkViewer(QtGui.QWidget):
         else:
             polydata = displayed_polydata
 
-        mapper = self.actor[name + '_polydata'].GetMapper()
+        mapper = self.view_prop[name_polydata(name)].GetMapper()
         if vtk.VTK_MAJOR_VERSION <= 5:
             mapper.SetInput(polydata)
         else:
@@ -504,6 +466,7 @@ class VtkViewer(QtGui.QWidget):
 
     def slice_polydata(self, name, **kwargs):
         dtype = 'polydata'
+        polydata_name = name_polydata(name)
         x_slice = default_value(dtype, 'x_slice', **kwargs)
         y_slice = default_value(dtype, 'y_slice', **kwargs)
         z_slice = default_value(dtype, 'z_slice', **kwargs)
@@ -514,7 +477,7 @@ class VtkViewer(QtGui.QWidget):
         else:
             slicing_function = vtk_clipped_polydata
 
-        object_polydata = self.object_repr[name]
+        object_polydata = self.object_repr[polydata_name]
         point_polydata = (object_polydata.GetNumberOfCells() == 0) and (object_polydata.GetNumberOfPoints() > 0)
 
         polydata_extent = get_polydata_extent(object_polydata)
@@ -696,7 +659,9 @@ class VtkViewer(QtGui.QWidget):
         volume_property = vtk.vtkVolumeProperty()
         volume_property.SetColor(colorFunc)
         volume_property.SetScalarOpacity(alphaChannelFunc)
-        self.volume_property[name] = dict(
+
+        volume_name = name_volume(name)
+        self.property[volume_name] = dict(
             vtkVolumeProperty=volume_property, disp=True)
 
         volume = vtk.vtkVolume()
@@ -712,11 +677,11 @@ class VtkViewer(QtGui.QWidget):
 
         volume.SetScale(resolution[0], resolution[1], resolution[2])
 
-        if name in self.volume:
-            old_volume = self.volume[name]
-            self.ren.RemoveVolume(old_volume)
+        if volume_name in self.view_prop:
+            old_volume = self.view_prop[volume_name]
+            self.ren.RemoveViewProp(old_volume)
             del old_volume
-        self.volume[name] = volume
+        self.view_prop[volume_name] = volume
 
         self.set_matrix_lookuptable(name, cmap, intensity_range=irange, cut_planes=False)
         self.set_volume_alpha(name, alpha, alphamap, intensity_range=irange, bg_id=bg_id)
@@ -780,11 +745,10 @@ class VtkViewer(QtGui.QWidget):
     def set_cut_planes_alpha(self, name, alpha):
         alpha = default_value('matrix', 'cut_planes_alpha', cut_planes_alpha=alpha)
         for orientation in [1, 2, 3]:
-            self.actor[name + "_cut_plane_" + str(orientation)].SetOpacity(alpha)
+            self.view_prop[name + "_cut_plane_" + str(orientation)].SetOpacity(alpha)
 
     def set_volume_alpha(self, name, alpha=1.0, alphamap="constant", **kwargs):
-        alphaChannelFunc = self.volume_property[name][
-            'vtkVolumeProperty'].GetScalarOpacity()
+        alphaChannelFunc = self.property[name_volume(name)]['vtkVolumeProperty'].GetScalarOpacity()
         alphaChannelFunc.RemoveAllPoints()
 
         bg_id = kwargs.get('bg_id', None)
@@ -825,7 +789,7 @@ class VtkViewer(QtGui.QWidget):
                                  intensity_range=irange)
         if 'sh_id' in kwargs:
             lut.AddRGBPoint(kwargs['sh_id'], *kwargs.get('shade_color', (0., 0., 0.)))
-        self.volume_property[name]['vtkVolumeProperty'].SetColor(lut)
+        self.property[name_volume(name)]['vtkVolumeProperty'].SetColor(lut)
         if cut_planes:
             for orientation in [1, 2, 3]:
                 if name + "_cut_plane_colors_" + str(orientation) in self.vtkdata:
@@ -834,7 +798,7 @@ class VtkViewer(QtGui.QWidget):
         self.reader[name].Update()
 
     def move_cut_plane(self, name, position=0, orientation=1):
-        actor = self.actor['%s_cut_plane_%d' % (name, orientation)]
+        actor = self.view_prop['%s_cut_plane_%d' % (name, orientation)]
         reader = self.reader[name]
         x_min, x_max, y_min, y_max, z_min, z_max = obj_extent(reader)
 
@@ -871,12 +835,12 @@ class VtkViewer(QtGui.QWidget):
         blend.Update()
 
         for orientation in [1, 2, 3]:
-            cut_plane = self.actor[name + "_cut_plane_" + str(orientation)]
+            cut_plane = self.view_prop[name + "_cut_plane_" + str(orientation)]
             if vtk.VTK_MAJOR_VERSION <= 5:
                 cut_plane.SetInput(blend.GetOutput())
             else:
                 cut_plane.SetInputData(blend.GetOutput())
-            self.actor[name + "_cut_plane_" + str(orientation)].Update()
+            self.view_prop[name + "_cut_plane_" + str(orientation)].Update()
 
         # for orientation in [1, 2, 3]:
             # blend_actor, blend = blend_funct(data_matrix_1, reader_1, lut_1, reader_2, lut_2, orientation)
@@ -899,8 +863,7 @@ class VtkViewer(QtGui.QWidget):
             #     blend_actor.SetPosition(-position[0], -position[1], -position[2])
 
     def cell_color(self, name, cell_id):
-        colorFunc = self.volume_property[name][
-            'vtkVolumeProperty'].GetRGBTransferFunction()
+        colorFunc = self.property[name_volume(name)]['vtkVolumeProperty'].GetRGBTransferFunction()
         return colorFunc.GetColor(cell_id)
 
     def color_cell(self, name, cell_id=None, color=None, alpha=None):
@@ -908,8 +871,7 @@ class VtkViewer(QtGui.QWidget):
             color = (1., 1., 1.)
         if cell_id is None:
             cell_id = 1
-        colorFunc = self.volume_property[name][
-            'vtkVolumeProperty'].GetRGBTransferFunction()
+        colorFunc = self.property[name_volume(name)]['vtkVolumeProperty'].GetRGBTransferFunction()
         colorFunc.RemoveAllPoints()
         colorFunc.AddRGBPoint(cell_id - 1, 1., 1., 1.)
         colorFunc.AddRGBPoint(cell_id, *color)
@@ -920,8 +882,7 @@ class VtkViewer(QtGui.QWidget):
         TODO: replace with method that allows user to identify a cell
         """
 
-        alphaChannelFunc = self.volume_property[name][
-            'vtkVolumeProperty'].GetScalarOpacity()
+        alphaChannelFunc = self.property[name_volume(name)]['vtkVolumeProperty'].GetScalarOpacity()
 
         if alpha is None:
             alpha = 1.
