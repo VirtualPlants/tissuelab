@@ -333,6 +333,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                 colormap = attribute_value(world_object, dtype, 'polydata_colormap')
                 irange = attribute_value(world_object, dtype, 'intensity_range')
                 linewidth = attribute_value(world_object, dtype, 'linewidth')
+                point_radius = attribute_value(world_object, dtype, 'point_radius')
                 preserve_faces = attribute_value(world_object, dtype, 'preserve_faces')
                 x_slice = attribute_value(world_object, dtype, 'x_slice')
                 y_slice = attribute_value(world_object, dtype, 'y_slice')
@@ -341,6 +342,8 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                     self.display_polydata(name=world_object.name, disp=attribute['value'])
                 elif attribute['name'] == 'linewidth':
                     self.set_polydata_linewidth(world_object.name, linewidth=attribute['value'])
+                elif attribute['name'] == 'point_radius':
+                    self.set_polydata_point_radius(world_object.name, point_radius=attribute['value'])
                 elif attribute['name'] == 'polydata_colormap':
                     self.set_polydata_lookuptable(world_object.name, colormap=attribute['value'], alpha=alpha,
                                                   intensity_range=irange)
@@ -350,13 +353,13 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                     self.set_polydata_lookuptable(world_object.name, colormap=colormap, alpha=alpha,
                                                   intensity_range=attribute['value'])
                 elif attribute['name'] == 'x_slice':
-                    self.slice_polydata(name=world_object.name, x_slice=attribute['value'], y_slice=y_slice, z_slice=z_slice, preserve_faces=preserve_faces)
+                    self.slice_polydata(name=world_object.name, x_slice=attribute['value'], y_slice=y_slice, z_slice=z_slice, preserve_faces=preserve_faces, point_radius=point_radius)
                 elif attribute['name'] == 'y_slice':
-                    self.slice_polydata(name=world_object.name, x_slice=x_slice, y_slice=attribute['value'], z_slice=z_slice, preserve_faces=preserve_faces)
+                    self.slice_polydata(name=world_object.name, x_slice=x_slice, y_slice=attribute['value'], z_slice=z_slice, preserve_faces=preserve_faces, point_radius=point_radius)
                 elif attribute['name'] == 'z_slice':
-                    self.slice_polydata(name=world_object.name, x_slice=x_slice, y_slice=y_slice, z_slice=attribute['value'], preserve_faces=preserve_faces)
+                    self.slice_polydata(name=world_object.name, x_slice=x_slice, y_slice=y_slice, z_slice=attribute['value'], preserve_faces=preserve_faces, point_radius=point_radius)
                 elif attribute['name'] == 'preserve_faces':
-                    self.slice_polydata(name=world_object.name, x_slice=x_slice, y_slice=y_slice, z_slice=z_slice, preserve_faces=attribute['value'])
+                    self.slice_polydata(name=world_object.name, x_slice=x_slice, y_slice=y_slice, z_slice=z_slice, preserve_faces=attribute['value'], point_radius=point_radius)
 
             elif isinstance(object_data, ImageBlending):
                 if attribute['name'] == 'blending_factor':
@@ -381,6 +384,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         setdefault(world_object, dtype, 'intensity_range', conv=_irange, **kwargs)
         setdefault(world_object, dtype, 'position', conv=_tuple, **kwargs)
         setdefault(world_object, dtype, 'linewidth', **kwargs)
+        setdefault(world_object, dtype, 'point_radius', **kwargs)
 
         obj_kwargs = world_kwargs(world_object)
         super(VtkWorldViewer, self).add_polydata(world_object.name, polydata, **obj_kwargs)
@@ -392,11 +396,9 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         for axis in ['x', 'y', 'z']:
             attr_name = axis + '_slice'
             setdefault(world_object, dtype, attr_name, **kwargs)
-        setdefault(world_object, dtype, 'preserve_faces', **kwargs)
         world_object.silent = False
 
-        obj_kwargs = world_kwargs(world_object)
-        super(VtkWorldViewer, self).slice_polydata(world_object.name, **obj_kwargs)
+        setdefault(world_object, dtype, 'preserve_faces', **kwargs)
 
 
     def set_polydata_property(self, name, property=None, **kwargs):

@@ -45,10 +45,20 @@ def define_lookuptable(data, colormap_points, colormap_name, intensity_range=Non
     if colormap_name == 'glasbey':
         if i_max < 255:
             for i in xrange(256):
-                lut.AddRGBPoint(i, * colormap_points.values()[int(i)])
+                lut.AddRGBPoint(i, * colormap_points.values()[i])
         else:
-            for i in np.unique(data):
+
+            from time import time
+            start_time = time()
+            points = np.unique(data)
+            end_time = time()
+            print "Unique time : ",end_time - start_time," s"
+
+            start_time = time()
+            for i in points:
                 lut.AddRGBPoint(i, *colormap_points.values()[int(i) % 256])
+            end_time = time()
+            print "RGBPoint time : ",end_time - start_time," s"
     else:
         for value in colormap_points.keys():
             lut.AddRGBPoint(
@@ -137,38 +147,66 @@ def blend_funct(data_matrix, data1, lookuptable1, data2, lookuptable2, orientati
 
     return imgactor, blend
 
-def vtk_sub_polydata(vtk_polydata, clipping_function, value=0, inside_out=False):
+def vtk_sub_polydata(vtk_polydata, clipping_function, value=0, point_polydata=False, inside_out=False):
     import vtk
     import numpy as np
     
-    sub_polydata = vtk.vtkPolyData() 
-    sub_polydata.DeepCopy(vtk_polydata)
+    # sub_polydata = vtk.vtkPolyData() 
+    # sub_polydata.DeepCopy(vtk_polydata)
 
-    sub_polydata.GetPolys().InitTraversal()
-    idList = vtk.vtkIdList();
-    for i in xrange(sub_polydata.GetNumberOfPolys()):
-        poly = sub_polydata.GetPolys().GetNextCell(idList)
-        triangle_points = np.array([sub_polydata.GetPoints().GetPoint(idList.GetId(k)) for k in xrange(3)])
-        if (1-2*inside_out)*clipping_function.EvaluateFunction(triangle_points.mean(axis=0)) <= value:
-            sub_polydata.DeleteCell(i)
-    sub_polydata.RemoveDeletedCells()
+    # if sub_polydata.GetNumberOfCells() > 0:
+    #     sub_polydata.GetPolys().InitTraversal()
+    #     idList = vtk.vtkIdList();
+    #     for i in xrange(sub_polydata.GetNumberOfPolys()):
+    #         sub_polydata.GetPolys().GetNextCell(idList)
+    #         triangle_points = np.array([sub_polydata.GetPoints().GetPoint(idList.GetId(k)) for k in xrange(3)])
+    #         print triangle_points," : ",(1-2*inside_out)*clipping_function.EvaluateFunction(triangle_points.mean(axis=0))
+    #         if (1-2*inside_out)*clipping_function.EvaluateFunction(triangle_points.mean(axis=0)) <= value:
+    #             sub_polydata.DeleteCell(i)
+    #     sub_polydata.RemoveDeletedCells()
+
+    # elif sub_polydata.GetNumberOfPoints() > 0:
+    #     new_points = vtk.vtkPoints()
+    #     for i in xrange(sub_polydata.GetNumberOfPoints()):
+    #         point = np.array(sub_polydata.GetPoints().GetPoint(i))
+    #         if (1-2*inside_out)*clipping_function.EvaluateFunction(point) > value:
+    #             new_points.InsertPoint(i,point)
+    #     sub_polydata.SetPoints(new_points)
+
+    if point_polydata:
+        polydata_extractor = vtk.vtkExtractGeometry()
+    else:
+        polydata_extractor = vtk.vtkExtractPolyDataGeometry()
+    polydata_extractor.SetInput(vtk_polydata)
+    polydata_extractor.SetImplicitFunction(clipping_function)
+    if inside_out:
+        polydata_extractor.ExtractInsideOn()
+    else:
+        polydata_extractor.ExtractInsideOff()
+    polydata_extractor.Update()
+
+    sub_polydata = vtk.vtkPolyData() 
+    sub_polydata.DeepCopy(polydata_extractor.GetOutput())
+    
     return sub_polydata
 
-def vtk_clipped_polydata(vtk_polydata, clipping_function, value=0, inside_out=False):
+def vtk_clipped_polydata(vtk_polydata, clipping_function, value=0, point_polydata=False, inside_out=False):
     import vtk
     
-    cutEdges = vtk.vtkClipPolyData()
-    cutEdges.SetInput(vtk_polydata)
-    cutEdges.SetClipFunction(clipping_function)
-    cutEdges.SetValue(value)
+    if point_polydata:
+        polydata_clipper = vtk.vtkClipDataSet()
+    else:
+        polydata_clipper = vtk.vtkClipPolyData()
+    polydata_clipper.SetInput(vtk_polydata)
+    polydata_clipper.SetClipFunction(clipping_function)
+    polydata_clipper.SetValue(value)
     if inside_out:
-        cutEdges.InsideOutOn()
-    cutEdges.GenerateClippedOutputOn()
-    #cutEdges.GenerateClipScalarsOn()
-    cutEdges.Update()
+        polydata_clipper.InsideOutOn()
+    polydata_clipper.GenerateClippedOutputOn()
+    polydata_clipper.Update()
     
     cut_polydata = vtk.vtkPolyData()
-    cut_polydata.DeepCopy(cutEdges.GetOutput())
+    cut_polydata.DeepCopy(polydata_clipper.GetOutput())
 
     return cut_polydata
 

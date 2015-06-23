@@ -80,6 +80,7 @@ attribute_definition['polydata']['intensity_range'] = dict(
     interface=IIntRange,
     alias="Intensity Range")
 attribute_definition['polydata']['linewidth'] = dict(value=1, interface=IInt, alias="Linewidth", constraints=cst_width)
+attribute_definition['polydata']['point_radius'] = dict(value=1.0, interface=IFloat, constraints=cst_width,alias=u"Point Size")
 attribute_definition['polydata']['position'] = dict(value=(0.0, 0.0, 0.0), interface=ITuple, alias=u"Position")
 attribute_definition['polydata']['display_polydata'] = dict(value=True, interface=IBool, alias=u"Display Polydata")
 for axis in ['x', 'y', 'z']:
@@ -198,6 +199,7 @@ class VtkViewer(QtGui.QWidget):
         self.volume_property = {}
         self.volume = {}
         self.actor = {}
+        self.polydata = {}
         self.property = {}
         self.vtkdata = {}
         self.blend = {}
@@ -269,11 +271,14 @@ class VtkViewer(QtGui.QWidget):
             self.ren.RemoveActor(actor)
             del self.actor[name]
 
+        self.object_repr = {}
         self.matrix = {}
         self.reader = {}
         self.volume_property = {}
         self.volume = {}
         self.actor = {}
+        self.polydata = {}
+        self.blend = {}
         self.vtkdata = {}
 
     def save_screenshot(self, filename):
@@ -419,6 +424,14 @@ class VtkViewer(QtGui.QWidget):
 
         self.add_actor('%s_polydata' % (name), polydata_actor)
 
+        x_slice = default_value(dtype, 'x_slice', **kwargs)
+        y_slice = default_value(dtype, 'y_slice', **kwargs)
+        z_slice = default_value(dtype, 'z_slice', **kwargs)
+        preserve_faces = default_value(dtype, 'preserve_faces', **kwargs)
+        point_radius = default_value(dtype, 'point_radius', **kwargs)
+
+        self.slice_polydata(name, x_slice=x_slice, y_slice=y_slice, z_slice=z_slice, preserve_faces=preserve_faces, point_radius=point_radius)
+
         if isinstance(cmap, str):
             cmap = dict(name=cmap, color_points=self.colormaps[cmap]._color_points)
 
@@ -450,6 +463,32 @@ class VtkViewer(QtGui.QWidget):
         linewidth = kwargs.get('linewidth', 1)
         self.actor[name + '_polydata'].GetProperty().SetLineWidth(linewidth)
 
+    def set_polydata_point_radius(self, name, **kwargs):
+        dtype = 'polydata'
+        point_radius = default_value(dtype, 'point_radius', **kwargs)
+        # print "Glyph Radius : ",point_radius
+        object_polydata = self.object_repr[name]
+        displayed_polydata = self.polydata[name]
+
+        if (object_polydata.GetNumberOfCells() == 0) and (object_polydata.GetNumberOfPoints() > 0):
+            # print "Setting Glyph Radius : ",point_radius
+            sphere = vtk.vtkSphereSource()
+            sphere.SetRadius(point_radius)
+            sphere.SetThetaResolution(12)
+            sphere.SetPhiResolution(12)
+            glyph = vtk.vtkGlyph3D()
+            glyph.SetScaleModeToDataScalingOff()
+            glyph.SetColorModeToColorByScalar()
+            glyph.SetSource(sphere.GetOutput())
+            glyph.SetInput(displayed_polydata)
+            glyph.Update()
+            polydata = glyph.GetOutput()
+        else:
+            polydata = displayed_polydata
+
+        self.actor[name + '_polydata'].GetMapper().SetInput(polydata)
+
+
     def slice_polydata(self, name, **kwargs):
         dtype = 'polydata'
         x_slice = default_value(dtype, 'x_slice', **kwargs)
@@ -463,51 +502,58 @@ class VtkViewer(QtGui.QWidget):
             slicing_function = vtk_clipped_polydata
 
         object_polydata = self.object_repr[name]
+        point_polydata = (object_polydata.GetNumberOfCells() == 0) and (object_polydata.GetNumberOfPoints() > 0)
 
         polydata_extent = get_polydata_extent(object_polydata)
+        clipping_plane = vtk.vtkPlane()
+        sliced_polydata = vtk.vtkPolyData()
+        sliced_polydata.DeepCopy(object_polydata)
 
         plane_coords = np.array([x_slice[0]/100.,0.5,0.5])
         plane_center = (1-plane_coords)*polydata_extent[:,0] + plane_coords*polydata_extent[:,1]
-        clipping_plane = vtk.vtkPlane()
         clipping_plane.SetOrigin(plane_center)
         clipping_plane.SetNormal(1,0,0)
-        self.actor[name + '_polydata'].GetMapper().SetInput(slicing_function(object_polydata,clipping_plane))
+        polydata = slicing_function(sliced_polydata,clipping_plane,point_polydata=point_polydata)
+        # self.actor[name + '_polydata'].GetMapper().SetInput(slicing_function(sliced_polydata,clipping_plane))
 
-        polydata = self.actor[name + '_polydata'].GetMapper().GetInput()
+        sliced_polydata.DeepCopy(polydata)
         plane_coords = np.array([x_slice[1]/100.,0.5,0.5])
         plane_center = (1-plane_coords)*polydata_extent[:,0] + plane_coords*polydata_extent[:,1]
         clipping_plane.SetOrigin(plane_center)
         clipping_plane.SetNormal(1,0,0)
-        self.actor[name + '_polydata'].GetMapper().SetInput(slicing_function(polydata,clipping_plane,inside_out=True))
-
-        polydata = self.actor[name + '_polydata'].GetMapper().GetInput()
+        polydata = slicing_function(sliced_polydata,clipping_plane,point_polydata=point_polydata,inside_out=True)
+        
+        sliced_polydata.DeepCopy(polydata)
         plane_coords = np.array([0.5,y_slice[0]/100.,0.5])
         plane_center = (1-plane_coords)*polydata_extent[:,0] + plane_coords*polydata_extent[:,1]
         clipping_plane.SetOrigin(plane_center)
         clipping_plane.SetNormal(0,1,0)
-        self.actor[name + '_polydata'].GetMapper().SetInput(slicing_function(polydata,clipping_plane))
-
-        polydata = self.actor[name + '_polydata'].GetMapper().GetInput()
+        polydata = slicing_function(polydata,clipping_plane,point_polydata=point_polydata)
+        
         plane_coords = np.array([0.5,y_slice[1]/100.,0.5])
         plane_center = (1-plane_coords)*polydata_extent[:,0] + plane_coords*polydata_extent[:,1]
         clipping_plane.SetOrigin(plane_center)
         clipping_plane.SetNormal(0,1,0)
-        self.actor[name + '_polydata'].GetMapper().SetInput(slicing_function(polydata,clipping_plane,inside_out=True))
-
-        polydata = self.actor[name + '_polydata'].GetMapper().GetInput()
+        polydata = slicing_function(polydata,clipping_plane,point_polydata=point_polydata,inside_out=True)
+        
+        sliced_polydata.DeepCopy(polydata)
         plane_coords = np.array([0.5,0.5,z_slice[0]/100.])
         plane_center = (1-plane_coords)*polydata_extent[:,0] + plane_coords*polydata_extent[:,1]
         clipping_plane.SetOrigin(plane_center)
         clipping_plane.SetNormal(0,0,1)
-        self.actor[name + '_polydata'].GetMapper().SetInput(slicing_function(polydata,clipping_plane))
-
-        polydata = self.actor[name + '_polydata'].GetMapper().GetInput()
+        polydata = slicing_function(polydata,clipping_plane,point_polydata=point_polydata)
+        
+        sliced_polydata.DeepCopy(polydata)
         plane_coords = np.array([0.5,0.5,z_slice[1]/100.])
         plane_center = (1-plane_coords)*polydata_extent[:,0] + plane_coords*polydata_extent[:,1]
         clipping_plane.SetOrigin(plane_center)
         clipping_plane.SetNormal(0,0,1)
-        self.actor[name + '_polydata'].GetMapper().SetInput(slicing_function(polydata,clipping_plane,inside_out=True))
+        polydata = slicing_function(polydata,clipping_plane,point_polydata=point_polydata,inside_out=True)
         
+        sliced_polydata.DeepCopy(polydata)
+        self.polydata[name] = sliced_polydata
+        self.set_polydata_point_radius(name, **kwargs)
+
 
     def add_outline(self, name, data_matrix, **kwargs):
         self.reader[name] = reader = matrix_to_image_reader(name, data_matrix, np.uint16, 1)
