@@ -486,7 +486,11 @@ class VtkViewer(QtGui.QWidget):
         else:
             polydata = displayed_polydata
 
-        self.actor[name + '_polydata'].GetMapper().SetInput(polydata)
+        mapper = self.actor[name + '_polydata'].GetMapper()
+        if vtk.VTK_MAJOR_VERSION <= 5:
+            mapper.SetInput(polydata)
+        else:
+            mapper.SetInputData(polydata)
 
     def slice_polydata(self, name, **kwargs):
         dtype = 'polydata'
