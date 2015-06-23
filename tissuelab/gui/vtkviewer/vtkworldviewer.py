@@ -239,6 +239,8 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         self.object_repr[object_name] = object_data
 
         if isinstance(object_data, np.ndarray):
+            if hasattr(object_data,'resolution') and not world_object.kwargs.has_key('resolution'):
+                world_object.kwargs['resolution'] = object_data.resolution
             self.add_matrix(world_object, object_data, datatype=object_data.dtype, **world_object.kwargs)
         elif isinstance(object_data, vtk.vtkPolyData):
             self.add_polydata(world_object, object_data, **world_object.kwargs)
