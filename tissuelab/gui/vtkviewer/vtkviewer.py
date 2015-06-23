@@ -235,7 +235,7 @@ class VtkViewer(QtGui.QWidget):
             for name in self.matrix:
                 self.property[name_volume(name)]['disp'] = disp
         else:
-            self.property[name]['disp'] = disp
+            self.property[name_volume(name)]['disp'] = disp
 
     def _display_cut_planes(self, name, disp=True):
         if name is None:
@@ -388,6 +388,7 @@ class VtkViewer(QtGui.QWidget):
         polydata_actor = vtk.vtkActor()
         polydata_actor.SetMapper(mapper)
         polydata_actor.GetProperty().SetPointSize(1)
+        self.polydata[name] = polydata
 
         if position is not None:
             polydata_actor.SetOrigin(position[0], position[1], position[2])
@@ -438,9 +439,14 @@ class VtkViewer(QtGui.QWidget):
     def set_polydata_point_radius(self, name, **kwargs):
         dtype = 'polydata'
         point_radius = default_value(dtype, 'point_radius', **kwargs)
+        polydata_name = name_polydata(name)
+
         # print "Glyph Radius : ",point_radius
-        object_polydata = self.object_repr[name_polydata(name)]
         displayed_polydata = self.polydata[name]
+        if polydata_name in self.object_repr:
+            object_polydata = self.object_repr[polydata_name]
+        else:
+            object_polydata = displayed_polydata
 
         if (object_polydata.GetNumberOfCells() == 0) and (object_polydata.GetNumberOfPoints() > 0):
             # print "Setting Glyph Radius : ",point_radius
@@ -477,7 +483,12 @@ class VtkViewer(QtGui.QWidget):
         else:
             slicing_function = vtk_clipped_polydata
 
-        object_polydata = self.object_repr[polydata_name]
+        displayed_polydata = self.polydata[name]
+        if polydata_name in self.object_repr:
+            object_polydata = self.object_repr[polydata_name]
+        else:
+            object_polydata = displayed_polydata
+
         point_polydata = (object_polydata.GetNumberOfCells() == 0) and (object_polydata.GetNumberOfPoints() > 0)
 
         polydata_extent = get_polydata_extent(object_polydata)
