@@ -28,6 +28,7 @@ __all__ = [
 
 import vtk
 import numpy as np
+from vtk.util.numpy_support import get_numpy_array_type
 
 
 def define_lookuptable(data, colormap_points, colormap_name, intensity_range=None):
@@ -45,47 +46,44 @@ def define_lookuptable(data, colormap_points, colormap_name, intensity_range=Non
     if colormap_name == 'glasbey':
         if i_max < 255:
             for i in xrange(256):
-                lut.AddRGBPoint(i, * colormap_points.values()[int(i)])
+                lut.AddRGBPoint(i, * colormap_points.values()[i])
         else:
-            for i in np.unique(data):
+
+            from time import time
+            start_time = time()
+            points = np.unique(data)
+            end_time = time()
+            print "Unique time : ", end_time - start_time, " s"
+
+            start_time = time()
+            for i in points:
                 lut.AddRGBPoint(i, *colormap_points.values()[int(i) % 256])
+            end_time = time()
+            print "RGBPoint time : ", end_time - start_time, " s"
     else:
         for value in colormap_points.keys():
             lut.AddRGBPoint(
                 (1.0 - value) * i_min + value * i_max, *colormap_points[value])
     return lut
 
+
 def get_polydata_cell_data(polydata):
     """
-    TODO: use a dict to match vtk array types to np types 
-    (or existing vtk/np function?)
     """
-
     if polydata.GetCellData().GetNumberOfComponents() > 0:
-        if isinstance(polydata.GetCellData().GetArray(0), vtk.vtkIntArray):
-            cell_data = np.frombuffer(polydata.GetCellData().GetArray(0),np.uint16)
-        if isinstance(polydata.GetCellData().GetArray(0), vtk.vtkLongArray):
-            cell_data = np.frombuffer(polydata.GetCellData().GetArray(0),np.uint32)
-        elif isinstance(polydata.GetCellData().GetArray(0), vtk.vtkFloatArray):
-            cell_data = np.frombuffer(polydata.GetCellData().GetArray(0),np.float32)
-        elif isinstance(polydata.GetCellData().GetArray(0), vtk.vtkDoubleArray):
-            cell_data = np.frombuffer(polydata.GetCellData().GetArray(0),np.float64)
-        else:
-            cell_data = np.arange(1)
+        array = polydata.GetCellData().GetArray(0)
     elif polydata.GetPointData().GetNumberOfComponents() > 0:
-        if isinstance(polydata.GetPointData().GetArray(0), vtk.vtkIntArray):
-            cell_data = np.frombuffer(polydata.GetPointData().GetArray(0),np.uint16)
-        elif isinstance(polydata.GetPointData().GetArray(0), vtk.vtkLongArray):
-            cell_data = np.frombuffer(polydata.GetPointData().GetArray(0),np.uint32)
-        elif isinstance(polydata.GetPointData().GetArray(0), vtk.vtkFloatArray):
-            cell_data = np.frombuffer(polydata.GetPointData().GetArray(0),np.float32)
-        elif isinstance(polydata.GetPointData().GetArray(0), vtk.vtkDoubleArray):
-            cell_data = np.frombuffer(polydata.GetPointData().GetArray(0),np.float64)
-        else:
-            cell_data = np.arange(1)
+        array = polydata.GetPointData().GetArray(0)
     else:
+        return np.arange(1)
+
+    try:
+        cell_data = np.frombuffer(array, get_numpy_array_type(array.GetDataType()))
+    except KeyError:
         cell_data = np.arange(1)
+
     return cell_data
+
 
 def matrix_to_image_reader(name, data_matrix, datatype=np.uint16, decimate=1):
     nx, ny, nz = data_matrix.shape
@@ -102,6 +100,7 @@ def matrix_to_image_reader(name, data_matrix, datatype=np.uint16, decimate=1):
     reader.SetWholeExtent(0, nx - 1, 0, ny - 1, 0, nz - 1)
 
     return reader
+
 
 def blend_funct(data_matrix, data1, lookuptable1, data2, lookuptable2, orientation):
     nx, ny, nz = data_matrix.shape
@@ -136,3 +135,61 @@ def blend_funct(data_matrix, data1, lookuptable1, data2, lookuptable2, orientati
     imgactor.SetPosition(-(nx - 1) / 2., -(ny - 1) / 2., -(nz - 1) / 2.)
 
     return imgactor, blend
+
+
+def vtk_sub_polydata(vtk_polydata, clipping_function, value=0, point_polydata=False, inside_out=False):
+
+    if point_polydata:
+        polydata_extractor = vtk.vtkExtractGeometry()
+    else:
+        polydata_extractor = vtk.vtkExtractPolyDataGeometry()
+    if vtk.VTK_MAJOR_VERSION <= 5:
+        polydata_extractor.SetInput(vtk_polydata)
+    else:
+        polydata_extractor.SetInputData(vtk_polydata)
+    polydata_extractor.SetImplicitFunction(clipping_function)
+    if inside_out:
+        polydata_extractor.ExtractInsideOn()
+    else:
+        polydata_extractor.ExtractInsideOff()
+    polydata_extractor.Update()
+
+    sub_polydata = vtk.vtkPolyData()
+    sub_polydata.DeepCopy(polydata_extractor.GetOutput())
+
+    return sub_polydata
+
+
+def vtk_clipped_polydata(vtk_polydata, clipping_function, value=0, point_polydata=False, inside_out=False):
+
+    if point_polydata:
+        polydata_clipper = vtk.vtkClipDataSet()
+    else:
+        polydata_clipper = vtk.vtkClipPolyData()
+
+    if vtk.VTK_MAJOR_VERSION <= 5:
+        polydata_clipper.SetInput(vtk_polydata)
+    else:
+        polydata_clipper.SetInputData(vtk_polydata)
+
+    polydata_clipper.SetClipFunction(clipping_function)
+    polydata_clipper.SetValue(value)
+    if inside_out:
+        polydata_clipper.InsideOutOn()
+    polydata_clipper.GenerateClippedOutputOn()
+    polydata_clipper.Update()
+
+    cut_polydata = vtk.vtkPolyData()
+    cut_polydata.DeepCopy(polydata_clipper.GetOutput())
+
+    return cut_polydata
+
+
+def get_polydata_extent(vtk_polydata):
+
+    if vtk_polydata.GetNumberOfPoints() > 0:
+        polydata_points = np.array([vtk_polydata.GetPoints().GetPoint(p) for p in xrange(vtk_polydata.GetNumberOfPoints())])
+        polydata_extent = np.transpose([polydata_points.min(axis=0), polydata_points.max(axis=0)])
+    else:
+        polydata_extent = np.zeros((3, 2), int)
+    return polydata_extent
