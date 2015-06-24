@@ -239,7 +239,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         self.object_repr[object_name] = object_data
 
         if isinstance(object_data, np.ndarray):
-            if hasattr(object_data,'resolution') and not world_object.kwargs.has_key('resolution'):
+            if hasattr(object_data, 'resolution') and not world_object.kwargs.has_key('resolution'):
                 world_object.kwargs['resolution'] = object_data.resolution
             self.add_matrix(world_object, object_data, datatype=object_data.dtype, **world_object.kwargs)
         elif isinstance(object_data, vtk.vtkPolyData):
@@ -266,7 +266,6 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         elif isinstance(object_data, vtk.vtkActor):
             self.remove_actor(object_name)
         self.compute()
-
 
     def update_world_object(self, world, world_object, attribute):
         object_name = world_object.name
@@ -402,7 +401,6 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
 
         setdefault(world_object, dtype, 'preserve_faces', **kwargs)
 
-
     def set_polydata_property(self, name, property=None, **kwargs):
         cmap = kwargs.get('colormap', 'grey')
         i_min = kwargs.get('i_min', None)
@@ -513,6 +511,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         setdefault(world_object, dtype, 'bg_id', conv=_bg_id, **kwargs)
 
         kwargs = world_kwargs(world_object)
+        print '-->', kwargs['bg_id']
         super(VtkWorldViewer, self).add_matrix_as_volume(world_object.name, data_matrix,
                                                          datatype=datatype, decimate=1,
                                                          **kwargs)

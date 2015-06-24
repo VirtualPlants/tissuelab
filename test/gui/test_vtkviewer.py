@@ -17,133 +17,22 @@
 #
 ###############################################################################
 
-import vtk
-import numpy as np
-import unittest
 from openalea.vpltk.qt import QtGui, QtCore
-from PyQt4 import QtTest
 from tissuelab.gui.vtkviewer.vtkviewer import VtkViewer
-
-SAVE_AS_REFERENCE = False
-PAUSE_FACTOR = 1000
-
-
-def demo_actor():
-    source = vtk.vtkSphereSource()
-    source.SetCenter(0, 0, 0)
-    source.SetRadius(5.0)
-
-    # mapper
-    mapper = vtk.vtkPolyDataMapper()
-    if vtk.VTK_MAJOR_VERSION <= 5:
-        mapper.SetInput(source.GetOutput())
-    else:
-        mapper.SetInputConnection(source.GetOutputPort())
-
-    # actor
-    actor = vtk.vtkActor()
-    actor.SetMapper(mapper)
-
-    return actor
+from tissuelab.gui.vtkviewer.testing import VtkQtTestCase
+from tissuelab.gui.vtkviewer.testing import demo_actor, demo_matrix_range, demo_matrix_xyz, demo_polydata_cube
 
 
-def demo_polydata_cube():
+class TestCase(VtkQtTestCase):
+    WIDGET_CLASS = VtkViewer
+    SAVE_AS_REFERENCE = False
+    PAUSE_FACTOR = 1000
 
-    def mkVtkIdList(it):
-        vil = vtk.vtkIdList()
-        for i in it:
-            vil.InsertNextId(int(i))
-        return vil
+    def tear_down(self):
+        self.widget.compute()
 
-    x = [(0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (1.0, 1.0, 0.0), (0.0, 1.0, 0.0),
-         (0.0, 0.0, 1.0), (1.0, 0.0, 1.0), (1.0, 1.0, 1.0), (0.0, 1.0, 1.0)]
-
-    pts = [(0, 1, 2, 3), (4, 5, 6, 7), (0, 1, 5, 4),
-           (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)]
-
-    # We'll create the building blocks of polydata including data attributes.
-    cube = vtk.vtkPolyData()
-    points = vtk.vtkPoints()
-    polys = vtk.vtkCellArray()
-    scalars = vtk.vtkFloatArray()
-
-    # Load the point, cell, and data attributes.
-    for i in range(8):
-        points.InsertPoint(i, x[i])
-    for i in range(6):
-        polys.InsertNextCell(mkVtkIdList(pts[i]))
-    for i in range(8):
-        scalars.InsertTuple1(i, i)
-
-    # We now assign the pieces to the vtkPolyData.
-    cube.SetPoints(points)
-    cube.SetPolys(polys)
-    cube.GetPointData().SetScalars(scalars)
-
-    return cube
-
-
-def demo_matrix_xyz():
-    dtype = np.uint16
-    matrix = np.zeros([100, 100, 100], dtype=dtype)
-    matrix[90:100, 0:10, 0:10] = 1
-    matrix[0:10, 90:100, 0:10] = 2
-    matrix[0:10, 0:10, 90:100] = 3
-    return matrix
-
-
-def demo_matrix_range(delta=0):
-    dtype = np.uint16
-    matrix = np.zeros([255, 255, 255], dtype=dtype)
-    for i in range(0, 255, 10):
-        matrix[i:i + 5, delta + 0:delta + 5, 0:5] = i
-    return matrix
-
-
-class QtTestCase(object):
-
-    def init(self):
-        self.instance = QtGui.QApplication.instance()
-        if self.instance is None:
-            self.app = QtGui.QApplication([])
-        else:
-            self.app = self.instance
-
-    def exec_(self):
-        if self.instance is None:
-            self.app.exec_()
-
-    def pause(self, duration=1):
-        self._duration = duration * PAUSE_FACTOR
-        self._pause = True
-
-
-class TestCase(QtTestCase, unittest.TestCase):
-
-    def _refpath(self):
-        from openalea.core.path import path
-        filename = self.id().replace('TestCase.', '') + '.png'
-        return path('ref') / filename
-
-    def setUp(self):
-        self.widget = None
-        self.init()
-        self.widget = VtkViewer()
-        self.widget.ren.SetBackground(0, 0, 0)
-        self._pause = False
-        self._duration = 1000
-
-        self.widget.resize(300, 300)
-
-        label = QtGui.QLabel('salut')
-        label.resize(300, 300)
-        label.setPixmap(QtGui.QPixmap(self._refpath()))
-        self.cmp_widget = QtGui.QWidget()
-        layout = QtGui.QGridLayout(self.cmp_widget)
-        layout.addWidget(QtGui.QLabel("Test"), 0, 0)
-        layout.addWidget(self.widget, 1, 0)
-        layout.addWidget(QtGui.QLabel("Reference"), 0, 1)
-        layout.addWidget(label, 1, 1)
+    def save_screenshot(self, filepath):
+        self.widget.save_screenshot(filepath)
 
     def test_actor(self):
         actor = demo_actor()
@@ -197,37 +86,3 @@ class TestCase(QtTestCase, unittest.TestCase):
                                          alphamap='constant', alpha=1, bg_id=0,
                                          intensity_range=(105, 135))
         self.pause(2)
-
-    def tearDown(self):
-        self.widget.compute()
-        self.cmp_widget.show()
-        self.cmp_widget.raise_()
-
-        if self._pause:
-            if SAVE_AS_REFERENCE:
-                filepath = self._refpath()
-                self.widget.setFocus(True)
-                QtTest.QTest.qWait(1)
-                self.widget.save_screenshot(filepath)
-            else:
-                QtTest.QTest.qWait(self._duration)
-
-        if self.widget:
-            self.widget.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-            self.widget.close()
-            del self.widget
-        self.app.quit()
-        del self.app
-        del self.instance
-
-if __name__ == '__main__':
-
-    tc = QtTestCase()
-    tc.init()
-
-    widget = VtkViewer()
-    widget.show()
-    widget.raise_()
-    widget.compute()
-
-    tc.exec_()
