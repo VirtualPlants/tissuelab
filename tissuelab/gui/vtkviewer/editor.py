@@ -442,10 +442,13 @@ def cutplane(poly, orientation, position):
     plane.SetOrigin(origine)
     plane.SetNormal(normal)
     cutter = vtk.vtkCutter()
-    cutter.SetInput(poly)
+    if vtk.VTK_MAJOR_VERSION <= 5:
+        cutter.SetInput(poly)
+    else:
+        cutter.SetInputData(poly)
     cutter.SetCutFunction(plane)
     cutter.Update()
-    return cutter.GetOutput()
+    return cutter
 
 
 def get_contours(matrix, label):
@@ -458,7 +461,10 @@ def get_contours(matrix, label):
 
 def compute_points(matrix, label):
     contour = vtk.vtkDiscreteMarchingCubes()
-    contour.SetInput(matrix)
+    if vtk.VTK_MAJOR_VERSION <= 5:
+        contour.SetInput(matrix)
+    else:
+        contour.SetInputData(matrix)
     contour.ComputeScalarsOn()
     contour.ComputeGradientsOn()
     contour.SetValue(0, label)
@@ -476,7 +482,10 @@ def get_contours2(matrix, label):
 
 def compute_points2(matrix, label):
     contour = vtk.vtkDiscreteMarchingCubes()
-    contour.SetInput(matrix)
+    if vtk.VTK_MAJOR_VERSION <= 5:
+        contour.SetInput(matrix)
+    else:
+        contour.SetInputData(matrix)
     contour.ComputeScalarsOff()
     contour.ComputeGradientsOff()
     for i, lab in enumerate(label):
@@ -496,7 +505,11 @@ def compute_image(matrix):
     colors.SetInputConnection(reader.GetOutputPort())
     colors.SetLookupTable(lut)
     imgactor = vtk.vtkImageActor()
-    imgactor.SetInput(colors.GetOutput())
+    if vtk.VTK_MAJOR_VERSION <= 5:
+        imgactor.SetInput(colors.GetOutput())
+    else:
+        imgactor.SetInputData(colors.GetOut())
+    #imgactor.SetInputConnection(colors.GetOutputPort())
     imgactor.SetOpacity(0.2)
     imgactor.SetDisplayExtent(box[0], box[1], box[2], box[3], (box[4] + box[5]) / 2, (box[4] + box[5]) / 2)
     return imgactor
@@ -741,7 +754,7 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         for lab in self.polyInPlan:
             cutter = cutplane(self.polyList[lab], self.orientation, self.position)
             newmap = vtk.vtkPolyDataMapper()
-            newmap.SetInput(cutter)
+            newmap.SetInputConnection(cutter.GetOutputPort())
             newmap.ScalarVisibilityOff()
             newact = vtk.vtkActor()
             newact.SetMapper(newmap)
@@ -752,7 +765,7 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
             self.GetCurrentRenderer().AddActor(newact)
         considcutter = cutplane(self.consideredCell, self.orientation, self.position)
         considmap = vtk.vtkPolyDataMapper()
-        considmap.SetInput(considcutter)
+        considmap.SetInputConnection(considcutter.GetOutputPort())
         considmap.ScalarVisibilityOff()
         considact = vtk.vtkActor()
         considact.SetMapper(considmap)
@@ -798,9 +811,11 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
                     points.InsertNextPoint(coord)
                     polypoint = vtk.vtkPolyData()
                     polypoint.SetPoints(points)
-
                     selectEnclosed = vtk.vtkSelectEnclosedPoints()
-                    selectEnclosed.SetInput(polypoint)
+                    if vtk.VTK_MAJOR_VERSION <= 5:
+                        selectEnclosed.SetInput(polypoint)
+                    else:
+                        selectEnclosed.SetInputData(polypoint)
                     selectEnclosed.SetSurface(poly)
                     selectEnclosed.Update()
                     if selectEnclosed.IsInside(0):
@@ -840,7 +855,10 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
                 sphere.SetCenter(oldcoord)
 
                 selectEnclosed = vtk.vtkSelectEnclosedPoints()
-                selectEnclosed.SetInput(self.consideredCell)
+                if vtk.VTK_MAJOR_VERSION <= 5:
+                    selectEnclosed.SetInput(self.consideredCell)
+                else:
+                    selectEnclosed.SetInputData(self.consideredCell)
                 selectEnclosed.SetSurface(sphere.GetOutput())
                 selectEnclosed.Update()
 
@@ -860,7 +878,10 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
                     boxx = sphere.GetOutput().GetBounds()
                     if intersection(box, boxx):
                         selectEnclosed = vtk.vtkSelectEnclosedPoints()
-                        selectEnclosed.SetInput(poly)
+                        if vtk.VTK_MAJOR_VERSION <= 5:
+                            selectEnclosed.SetInput(poly)
+                        else:
+                            selectEnclosed.SetInputData(poly)
                         selectEnclosed.SetSurface(sphere.GetOutput())
                         selectEnclosed.Update()
                         for i in xrange(poly.GetNumberOfPoints()):
@@ -903,7 +924,7 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
             append.Update()
 
             cleaning = vtk.vtkCleanPolyData()
-            cleaning.SetInput(append.GetOutput())
+            cleaning.SetInputConnection(append.GetOutputPort())
             cleaning.PointMergingOn()
             cleaning.SetTolerance(0.0)
             cleaning.Update()
@@ -923,10 +944,16 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
 
         for lab, poly in self.polyList.items():
             pol2stenc = vtk.vtkPolyDataToImageStencil()
-            pol2stenc.SetInput(poly)
+            if vtk.VTK_MAJOR_VERSION <= 5:
+                pol2stenc.SetInput(poly)
+            else:
+                pol2stenc.SetInputData(poly)
             pol2stenc.Update()
             imgstenc = vtk.vtkImageStencil()
-            imgstenc.SetInput(img)
+            if vtk.VTK_MAJOR_VERSION <= 5:
+                imgstenc.SetInput(img)
+            else:
+                imgstenc.SetInputData(img)
             imgstenc.SetStencil(pol2stenc.GetOutput())
             imgstenc.ReverseStencilOn()
             imgstenc.SetBackgroundValue(lab)
@@ -934,17 +961,22 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
             img = imgstenc.GetOutput()
 
         pol2stenc = vtk.vtkPolyDataToImageStencil()
-        pol2stenc.SetInput(self.consideredCell)
+        if vtk.VTK_MAJOR_VERSION <= 5:
+            pol2stenc.SetInput(self.consideredCell)
+        else:
+            pol2stenc.SetInputData(self.consideredCell)
         pol2stenc.Update()
 
         imgstenc = vtk.vtkImageStencil()
-        imgstenc.SetInput(img)
+        if vtk.VTK_MAJOR_VERSION <= 5:
+            imgstenc.SetInput(img)
+        else:
+            imgstenc.SetInputData(img)
         imgstenc.SetStencil(pol2stenc.GetOutput())
         imgstenc.ReverseStencilOn()
         imgstenc.SetBackgroundValue(self.label)
         imgstenc.Update()
-        img = imgstenc.GetOutput()
-
+        #img = imgstenc.GetOutput()
         typee = img.GetScalarType()
         if typee == VTK_SIGNED_CHAR:
             ty = 'b'
@@ -964,8 +996,8 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
             ty = 'd'
 
         export = vtk.vtkImageExport()
-        export.SetInput(img)
-        extent = img.GetWholeExtent()
+        export.SetInputConnection(imgstenc.GetOutputPort())
+        extent = imgstenc.GetOutput().GetWholeExtent()
         dim = (extent[5] - extent[4] + 1, extent[3] - extent[2] + 1, extent[1] - extent[0] + 1)
         array = np.zeros(dim, ty)
         export.Export(array)

@@ -33,8 +33,8 @@ from openalea.oalab.plugins.interface import IIntRange, IColormap
 
 from tissuelab.gui.vtkviewer.qvtkrenderwindowinteractor import QVTKRenderWindowInteractor
 from tissuelab.gui.vtkviewer.colormap_def import load_colormaps
-from tissuelab.gui.vtkviewer.vtk_utils import matrix_to_image_reader, define_lookuptable, get_polydata_cell_data, get_polydata_extent
-from tissuelab.gui.vtkviewer.vtk_utils import vtk_clipped_polydata, vtk_sub_polydata
+from tissuelab.gui.vtkviewer.vtk_utils import (matrix_to_image_reader, define_lookuptable, get_polydata_cell_data,
+                                               obj_extent, get_polydata_extent, vtk_clipped_polydata, vtk_sub_polydata)
 
 
 def expand(widget):
@@ -298,14 +298,17 @@ class VtkViewer(QtGui.QWidget):
     def refresh(self):
         self.compute()
 
-    def compute(self):
-        for name, volume in self.volume.items():
-            if self.volume_property[name]['disp']:
-                self.ren.AddVolume(volume)
-        for name, actor in self.actor.items():
-            if self.property[name]['disp']:
-                self.ren.AddActor(actor)
+    def _refresh_props(self, prop_dict, property_dict):
+        for name, prop in prop_dict.items():
+            if property_dict[name]['disp']:
+                self.ren.AddViewProp(prop)
+            else:
+                if self.ren.HasViewProp(prop):
+                    self.ren.RemoveViewProp(prop)
 
+    def compute(self):
+        self._refresh_props(self.volume, self.volume_property)
+        self._refresh_props(self.actor, self.property)
         self.iren.Initialize()
         self.iren.Start()
         self.render()
@@ -558,6 +561,17 @@ class VtkViewer(QtGui.QWidget):
         self.set_polydata_point_radius(name, **kwargs)
 
     def add_outline(self, name, data_matrix, **kwargs):
+        """
+        reader:op      -(sic)->  ic:outline:op     -(sic)->  outline_mapper
+        vtkImageImport ------->  vtkOutlineFilter  ------->  vtkPolyDataMapper
+
+        -(sic)-> = SetInputConnection
+        """
+        if self.ren.GetBackground() == (1.0, 1.0, 1.0):
+            default_color = (0., 0., 0.)
+        else:
+            default_color = (1.0, 1.0, 1.0)
+        color = kwargs.get('color', default_color)
         self.reader[name] = reader = matrix_to_image_reader(name, data_matrix, np.uint16, 1)
         nx, ny, nz = data_matrix.shape
         outline = vtk.vtkOutlineFilter()
@@ -568,7 +582,7 @@ class VtkViewer(QtGui.QWidget):
         outline_actor.SetOrigin(nx / 2., ny / 2., nz / 2.)
         outline_actor.SetPosition(- nx / 2., -ny / 2., -nz / 2.)
         outline_actor.SetMapper(outline_mapper)
-        outline_actor.GetProperty().SetColor(1, 1, 1)
+        outline_actor.GetProperty().SetColor(color)
         self.add_actor('%s_outline' % (name), outline_actor)
 
     def add_matrix_cut_planes(self, name, data_matrix, datatype=np.uint16, decimate=1, **kwargs):
@@ -595,27 +609,37 @@ class VtkViewer(QtGui.QWidget):
 
         lut = define_lookuptable(data_matrix, colormap_points=cmap['color_points'], colormap_name=cmap['name'])
 
-        for orientation in [1, 2, 3]:
-            nx, ny, nz = data_matrix.shape
-            xMax = nx - 1
-            yMax = ny - 1
-            zMax = nz - 1
+        x_min, x_max, y_min, y_max, z_min, z_max = obj_extent(reader)
 
+        x = int(np.round((x_max - x_min) / 2))
+        y = int(np.round((y_max - y_min) / 2))
+        z = int(np.round((z_max - z_min) / 2))
+
+        if vtk.VTK_MAJOR_VERSION >= 6:
             colors = vtk.vtkImageMapToColors()
             colors.SetInputConnection(reader.GetOutputPort())
             colors.SetLookupTable(lut)
+            colors.Update()
 
+        for orientation in [1, 2, 3]:
             imgactor = vtk.vtkImageActor()
-            imgactor.SetInput(colors.GetOutput())
+            if vtk.VTK_MAJOR_VERSION <= 5:
+                colors = vtk.vtkImageMapToColors()
+                colors.SetInputConnection(reader.GetOutputPort())
+                colors.SetLookupTable(lut)
+                # We need to define vtkImageMapToColors here else, if defined outside vtk5 crash
+                # If we call colors.Update here, no crash but picking doesn't work
+                # Why ??. In vtk 6, all seem logical, see above, outside loop
+
+                imgactor.SetInput(colors.GetOutput())
+            else:
+                imgactor.SetInputData(colors.GetOutput())
             if orientation == 1:
-                imgactor.SetDisplayExtent(
-                    np.round(xMax / 2), np.round(xMax / 2), 0, yMax, 0, zMax)
+                imgactor.SetDisplayExtent(x, x, y_min, y_max, z_min, z_max)
             elif orientation == 2:
-                imgactor.SetDisplayExtent(
-                    0, xMax, np.round(yMax / 2), np.round(yMax / 2), 0, zMax)
+                imgactor.SetDisplayExtent(x_min, x_max, y, y, z_min, z_max)
             elif orientation == 3:
-                imgactor.SetDisplayExtent(
-                    0, xMax, 0, yMax, np.round(zMax / 2), np.round(zMax / 2))
+                imgactor.SetDisplayExtent(x_min, x_max, y_min, y_max, z, z)
 
             imgactor.SetScale(resolution[0], resolution[1], resolution[2])
             # imgactor, blend = blend_funct(data_matrix, reader, lut, reader, lut, orientation)
@@ -624,9 +648,6 @@ class VtkViewer(QtGui.QWidget):
             if position is not None:
                 imgactor.SetOrigin(position[0], position[1], position[2])
                 imgactor.SetPosition(-position[0], -position[1], -position[2])
-
-            self.reader[name] = reader = matrix_to_image_reader(
-                name, data_matrix, datatype, decimate)
 
             self.vtkdata['%s_cut_plane_colors_%d' %
                          (name, orientation)] = colors
@@ -701,9 +722,6 @@ class VtkViewer(QtGui.QWidget):
         resolution = default_value(dtype, 'resolution', **kwargs)
         position = default_value(dtype, 'position', **kwargs)
 
-        readers = {}
-        colors = {}
-
         nx, ny, nz = data_matrices[0].shape
         xMax = nx - 1
         yMax = ny - 1
@@ -730,7 +748,10 @@ class VtkViewer(QtGui.QWidget):
             # blend_actor, blend = blend_funct(data_matrix_1, reader_1, lut_1, reader_2, lut_2, orientation)
 
             blend_actor = vtk.vtkImageActor()
-            blend_actor.SetInput(blend.GetOutput())
+            if vtk.VTK_MAJOR_VERSION <= 5:
+                blend_actor.SetInput(blend.GetOutput())
+            else:
+                blend_actor.SetInputData(blend.GetOutput())
             if orientation == 1:
                 blend_actor.SetDisplayExtent(
                     np.round(xMax / 2), np.round(xMax / 2), 0, yMax, 0, zMax)
@@ -767,12 +788,11 @@ class VtkViewer(QtGui.QWidget):
             alphaChannelFunc.ClampingOn()
             alphaChannelFunc.AddPoint(irange[0], alpha)
             alphaChannelFunc.AddPoint(irange[1], alpha)
-
             if bg_id is not None:
-                if not bg_id - 1 == sh_id:
+                if bg_id - 1 != sh_id:
                     alphaChannelFunc.AddPoint(bg_id - 1, alpha)
                 alphaChannelFunc.AddPoint(bg_id, 0.0)
-                if not bg_id + 1 == sh_id:
+                if bg_id + 1 != sh_id:
                     alphaChannelFunc.AddPoint(bg_id + 1, alpha)
 
             if sh_id is not None:
@@ -804,30 +824,29 @@ class VtkViewer(QtGui.QWidget):
                 if name + "_cut_plane_colors_" + str(orientation) in self.vtkdata:
                     self.vtkdata[
                         name + "_cut_plane_colors_" + str(orientation)].SetLookupTable(lut)
+        self.reader[name].Update()
 
     def move_cut_plane(self, name, position=0, orientation=1):
         actor = self.actor['%s_cut_plane_%d' % (name, orientation)]
-        data_matrix = self.matrix[name]
-        nx, ny, nz = data_matrix.shape
+        reader = self.reader[name]
+        x_min, x_max, y_min, y_max, z_min, z_max = obj_extent(reader)
 
-        xMax = nx - 1
-        yMax = ny - 1
-        zMax = nz - 1
-        bounds = [xMax, yMax, zMax]
+        bound_max = [x_max, y_max, z_max]
+        bound_min = [x_min, y_min, z_min]
 
-        if position > bounds[orientation - 1]:
-            position = bounds[orientation - 1]
-        elif position < 0:
-            position = 0
+        if position > bound_max[orientation - 1]:
+            position = bound_max[orientation - 1]
+        elif position < bound_min[orientation - 1]:
+            position = bound_min[orientation - 1]
 
         if orientation == 1:
-            actor.SetDisplayExtent(position, position, 0, yMax, 0, zMax)
+            actor.SetDisplayExtent(position, position, y_min, y_max, z_min, z_max)
 
         elif orientation == 2:
-            actor.SetDisplayExtent(0, xMax, position, position, 0, zMax)
+            actor.SetDisplayExtent(x_min, x_max, position, position, z_min, z_max)
 
         elif orientation == 3:
-            actor.SetDisplayExtent(0, xMax, 0, yMax, position, position)
+            actor.SetDisplayExtent(x_min, x_max, y_min, y_max, position, position)
 
         self.render()
 
@@ -845,7 +864,11 @@ class VtkViewer(QtGui.QWidget):
         blend.Update()
 
         for orientation in [1, 2, 3]:
-            self.actor[name + "_cut_plane_" + str(orientation)].SetInput(blend.GetOutput())
+            cut_plane = self.actor[name + "_cut_plane_" + str(orientation)]
+            if vtk.VTK_MAJOR_VERSION <= 5:
+                cut_plane.SetInput(blend.GetOutput())
+            else:
+                cut_plane.SetInputData(blend.GetOutput())
             self.actor[name + "_cut_plane_" + str(orientation)].Update()
 
         # for orientation in [1, 2, 3]:

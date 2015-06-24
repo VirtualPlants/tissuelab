@@ -27,8 +27,34 @@ __all__ = [
 ]
 
 import vtk
+from vtk.util import numpy_support
 import numpy as np
 from vtk.util.numpy_support import get_numpy_array_type
+
+
+"""
+========
+VTK TIPS
+========
+
+VTK 5->6
+========
+
+if vtk.VTK_MAJOR_VERSION <= 5:
+    image.SetNumberOfScalarComponents(1)
+    image.SetScalarTypeToDouble()
+else:
+    image.AllocateScalars(VTK_DOUBLE, 1)
+
+vtkImageImport to vtkActor
+==========================
+
+imageImport.Update()
+if vtk.VTK_MAJOR_VERSION <= 5:
+    actor.SetInput(imageImport.GetOutput())
+else:
+    actor.SetInputData(imageImport.GetOutput())
+"""
 
 
 def define_lookuptable(data, colormap_points, colormap_name, intensity_range=None):
@@ -87,20 +113,51 @@ def get_polydata_cell_data(polydata):
 
 def matrix_to_image_reader(name, data_matrix, datatype=np.uint16, decimate=1):
     nx, ny, nz = data_matrix.shape
-    data_string = data_matrix.tostring('F')
+    datatype = data_matrix.dtype
 
     reader = vtk.vtkImageImport()
+    #reader.SetImportVoidPointer(data_matrix) # No copy but index order changed
+    data_string = data_matrix.tostring('F')
     reader.CopyImportVoidPointer(data_string, len(data_string))
+
+    reader.SetNumberOfScalarComponents(1)
+
     if datatype == np.uint8:
         reader.SetDataScalarTypeToUnsignedChar()
     else:
         reader.SetDataScalarTypeToUnsignedShort()
-    reader.SetNumberOfScalarComponents(1)
-    reader.SetDataExtent(0, nx - 1, 0, ny - 1, 0, nz - 1)
-    reader.SetWholeExtent(0, nx - 1, 0, ny - 1, 0, nz - 1)
+    if vtk.VTK_MAJOR_VERSION <= 5:
+        pass
+    else:
+        reader.GetOutput().AllocateScalars(numpy_support.get_vtk_array_type(datatype), 1)
+
+    box = np.zeros(6)
+    reader.GetOutput().GetBounds(box)
+
+    x_min = 0
+    x_max = nx - 1
+
+    y_min = 0
+    y_max = ny - 1
+
+    z_min = 0
+    z_max = nz - 1
+
+    #reader.SetDataOrigin(0, 0, 0)
+    reader.SetWholeExtent(x_min, x_max, y_min, y_max, z_min, z_max)
+    reader.SetDataExtentToWholeExtent()
+    reader.Modified()
+    reader.UpdateInformation()
+    reader.Update()
 
     return reader
 
+def obj_extent(obj):
+    if vtk.VTK_MAJOR_VERSION <= 5:
+        box = obj.GetOutput().GetWholeExtent()
+    else:
+        box = obj.GetOutputInformation(0).Get(vtk.vtkStreamingDemandDrivenPipeline.WHOLE_EXTENT())
+    return box
 
 def blend_funct(data_matrix, data1, lookuptable1, data2, lookuptable2, orientation):
     nx, ny, nz = data_matrix.shape
