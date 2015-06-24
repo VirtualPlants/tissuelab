@@ -609,24 +609,31 @@ class VtkViewer(QtGui.QWidget):
 
         lut = define_lookuptable(data_matrix, colormap_points=cmap['color_points'], colormap_name=cmap['name'])
 
-        colors = vtk.vtkImageMapToColors()
-        colors.SetInputConnection(reader.GetOutputPort())
-        colors.SetLookupTable(lut)
-        colors.Update()
-
         x_min, x_max, y_min, y_max, z_min, z_max = obj_extent(reader)
 
         x = int(np.round((x_max - x_min) / 2))
         y = int(np.round((y_max - y_min) / 2))
         z = int(np.round((z_max - z_min) / 2))
 
+        if vtk.VTK_MAJOR_VERSION >= 6:
+            colors = vtk.vtkImageMapToColors()
+            colors.SetInputConnection(reader.GetOutputPort())
+            colors.SetLookupTable(lut)
+            colors.Update()
+
         for orientation in [1, 2, 3]:
             imgactor = vtk.vtkImageActor()
             if vtk.VTK_MAJOR_VERSION <= 5:
+                colors = vtk.vtkImageMapToColors()
+                colors.SetInputConnection(reader.GetOutputPort())
+                colors.SetLookupTable(lut)
+                # We need to define vtkImageMapToColors here else, if defined outside vtk5 crash
+                # If we call colors.Update here, no crash but picking doesn't work
+                # Why ??. In vtk 6, all seem logical, see above, outside loop
+
                 imgactor.SetInput(colors.GetOutput())
             else:
                 imgactor.SetInputData(colors.GetOutput())
-            colors.Update()
             if orientation == 1:
                 imgactor.SetDisplayExtent(x, x, y_min, y_max, z_min, z_max)
             elif orientation == 2:
