@@ -35,7 +35,7 @@ class PymageCommandLineParser(CommandLineParser):
 
     def __init__(self, session=None):
         CommandLineParser.__init__(self, session=session)
-        self.parser.add_argument('images', metavar='images', nargs='+',
+        self.parser.add_argument('images', metavar='images', nargs='*',
                                  help='Image to display in lab')
         self.parser.add_argument('--blend', action="store_true",
                                  help='Blend images two by two')

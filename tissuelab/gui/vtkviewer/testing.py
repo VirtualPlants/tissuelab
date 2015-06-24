@@ -95,25 +95,7 @@ def demo_matrix_range(delta=0):
         matrix[i:i + 5, delta + 0:delta + 5, 0:5] = i
     return matrix
 
-
-class QtTestCase(unittest.TestCase):
-    PAUSE_FACTOR = 1000
-    SAVE_AS_REFERENCE = False
-
-    def init(self):
-        self.instance = QtGui.QApplication.instance()
-        if self.instance is None:
-            self.app = QtGui.QApplication([])
-        else:
-            self.app = self.instance
-
-    def exec_(self):
-        if self.instance is None:
-            self.app.exec_()
-
-    def pause(self, duration=1):
-        self._duration = duration * self.PAUSE_FACTOR
-        self._pause = True
+from openalea.oalab.testing.qtunittest import QtTestCase
 
 
 class VtkQtTestCase(QtTestCase):
@@ -141,8 +123,6 @@ class VtkQtTestCase(QtTestCase):
         self.init()
         self.widget = self.WIDGET_CLASS()
         self.widget.ren.SetBackground(0, 0, 0)
-        self._pause = False
-        self._duration = 1000
 
         self.widget.resize(300, 300)
 
