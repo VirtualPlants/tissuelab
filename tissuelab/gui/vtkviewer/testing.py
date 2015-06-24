@@ -126,10 +126,17 @@ class VtkQtTestCase(QtTestCase):
 
     def _refpath(self):
         from openalea.core.path import path
-        filename = self.id().replace('TestCase.', '') + '.png'
+        if self._ref is None:
+            filename = self.id().replace('TestCase.', '') + '.png'
+        else:
+            filename = self._ref
         return path('ref') / filename
 
+    def ref(self, filename):
+        self._ref = filename
+
     def setUp(self):
+        self._ref = None
         self.widget = None
         self.init()
         self.widget = self.WIDGET_CLASS()
@@ -139,21 +146,24 @@ class VtkQtTestCase(QtTestCase):
 
         self.widget.resize(300, 300)
 
-        label = QtGui.QLabel('salut')
-        label.resize(300, 300)
-        label.setPixmap(QtGui.QPixmap(self._refpath()))
+        self.l_ref = QtGui.QLabel()
         self.cmp_widget = QtGui.QWidget()
         layout = QtGui.QGridLayout(self.cmp_widget)
         name = self.id().split('.')[-1]
         layout.addWidget(QtGui.QLabel(name), 0, 0)
         layout.addWidget(self.widget, 1, 0)
         layout.addWidget(QtGui.QLabel("Reference"), 0, 1)
-        layout.addWidget(label, 1, 1)
+        layout.addWidget(self.l_ref, 1, 1)
 
         self.set_up()
 
     def tearDown(self):
         self.tear_down()
+
+        self.l_ref.resize(300, 300)
+        self.l_ref.setPixmap(QtGui.QPixmap(self._refpath()))
+        self._ref = None
+
         self.cmp_widget.show()
         self.cmp_widget.raise_()
 

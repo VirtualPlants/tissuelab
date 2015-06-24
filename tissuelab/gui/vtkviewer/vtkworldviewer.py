@@ -164,9 +164,11 @@ def _plane_position(world_object, attr_name, plane_position, **kwargs):
     return dict(value=plane_position, constraints=constraints)
 
 
-def _bg_id(world_object, attr_name, identifiant, **kwargs):
-    attribute = _irange(world_object, attr_name, identifiant)
-    attribute['value'] = 1
+def _bg_id(world_object, attr_name, value, **kwargs):
+    attribute = _irange(world_object, attr_name, value)
+    if value is None:
+        value = 1
+    attribute['value'] = value
     return attribute
 
 
@@ -509,9 +511,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         setdefault(world_object, dtype, 'position', conv=_tuple, **kwargs)
         setdefault(world_object, dtype, 'resolution', conv=_tuple, **kwargs)
         setdefault(world_object, dtype, 'bg_id', conv=_bg_id, **kwargs)
-
         kwargs = world_kwargs(world_object)
-        print '-->', kwargs['bg_id']
         super(VtkWorldViewer, self).add_matrix_as_volume(world_object.name, data_matrix,
                                                          datatype=datatype, decimate=1,
                                                          **kwargs)

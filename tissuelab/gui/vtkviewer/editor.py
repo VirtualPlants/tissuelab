@@ -508,7 +508,7 @@ def compute_image(matrix):
     if vtk.VTK_MAJOR_VERSION <= 5:
         imgactor.SetInput(colors.GetOutput())
     else:
-        imgactor.SetInputData(colors.GetOut())
+        imgactor.SetInputData(colors.GetOutput())
     #imgactor.SetInputConnection(colors.GetOutputPort())
     imgactor.SetOpacity(0.2)
     imgactor.SetDisplayExtent(box[0], box[1], box[2], box[3], (box[4] + box[5]) / 2, (box[4] + box[5]) / 2)

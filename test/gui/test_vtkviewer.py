@@ -22,6 +22,10 @@ from tissuelab.gui.vtkviewer.vtkviewer import VtkViewer
 from tissuelab.gui.vtkviewer.testing import VtkQtTestCase
 from tissuelab.gui.vtkviewer.testing import demo_actor, demo_matrix_range, demo_matrix_xyz, demo_polydata_cube
 
+########################################################################################################################
+# WARNING: image references are also used in test_vtkworldviewer
+########################################################################################################################
+
 
 class TestCase(VtkQtTestCase):
     WIDGET_CLASS = VtkViewer
