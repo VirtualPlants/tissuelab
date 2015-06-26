@@ -116,7 +116,10 @@ class TissueViewer(QtGui.QWidget):
 
     def apply_change_to_segmentation(self, matrix):
         self.vtk.world.__setitem__(self.mode_selector.matrix_name(0), matrix)
-        self.mode_selector.set_label(self.mode_selector.get_label())
+        self.mode_selector.set_label(
+            self.vtk.interactor_style.selected_label(),
+            self.vtk.interactor_style.resolution,
+            self.vtk.interactor_style.position)
 
     def save_screenshot(self):
         from openalea.vpltk.qt.compat import getsavefilename
