@@ -85,6 +85,7 @@ class EditorWindow(QtGui.QWidget):
         self.control.sb_propagation.setValue(5)
         self.control.bp_z.setEnabled(False)
         self.control.bp_move.setEnabled(False)
+        self.control.bp_fusion.setEnabled(False)
 
         self._create_connections()
 
@@ -187,6 +188,7 @@ class EditorWindow(QtGui.QWidget):
         self.set_mode(0)
         self.control.bp_move.setEnabled(False)
         self.control.bp_select.setEnabled(True)
+        self.control.bp_fusion.setEnabled(False)
 
     def set_mode_to_select(self):
         """
@@ -194,6 +196,7 @@ class EditorWindow(QtGui.QWidget):
         """
         self.set_mode(1)
         self.control.bp_select.setEnabled(False)
+        self.control.bp_fusion.setEnabled(True)
         self.control.bp_move.setEnabled(True)
 
     def fusion_consid_select_cells(self):
