@@ -24,6 +24,8 @@ class IVtkPolyDataEditor(object):
     """
     Class to edit a vtkPolyData:
         - move points
+        - fusion polydata
+        not anymore
         - delete points
         - add points
         - add edges
@@ -41,7 +43,12 @@ class IVtkPolyDataEditor(object):
         :param polydata: A :obj:`~vtk.vtkPolyData` or list of vtkPolyData
         """
 
+    def set_label(self, label):
+        """
+        :param label: a integer
+        """
+
     def polydata(self):
         """
-        :return: list of polydata
+        :return: Dict of label/polydata
         """

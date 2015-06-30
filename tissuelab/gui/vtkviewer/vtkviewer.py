@@ -80,12 +80,26 @@ attribute_definition['polydata']['intensity_range'] = dict(
     interface=IIntRange,
     alias="Intensity Range")
 attribute_definition['polydata']['linewidth'] = dict(value=1, interface=IInt, alias="Linewidth", constraints=cst_width)
-attribute_definition['polydata']['point_radius'] = dict(value=1.0, interface=IFloat, constraints=cst_width, alias=u"Point Size")
+attribute_definition[
+    'polydata'][
+    'point_radius'] = dict(
+    value=1.0,
+    interface=IFloat,
+    constraints=cst_width,
+    alias=u"Point Size")
 attribute_definition['polydata']['position'] = dict(value=(0.0, 0.0, 0.0), interface=ITuple, alias=u"Position")
 attribute_definition['polydata']['display_polydata'] = dict(value=True, interface=IBool, alias=u"Display Polydata")
 for axis in ['x', 'y', 'z']:
     alias = u"Move " + axis + " slice"
-    attribute_definition['polydata'][axis + "_slice"] = dict(value=(0, 100), interface=IIntRange, constraints=cst_percent_range, alias=alias)
+    attribute_definition[
+        'polydata'][
+        axis + "_slice"] = dict(
+        value=(
+            0,
+            100),
+        interface=IIntRange,
+        constraints=cst_percent_range,
+        alias=alias)
 attribute_definition['polydata']['preserve_faces'] = dict(value=False, interface=IBool, alias=u"Preserve Faces")
 
 
@@ -403,7 +417,13 @@ class VtkViewer(QtGui.QWidget):
         preserve_faces = default_value(dtype, 'preserve_faces', **kwargs)
         point_radius = default_value(dtype, 'point_radius', **kwargs)
 
-        self.slice_polydata(name, x_slice=x_slice, y_slice=y_slice, z_slice=z_slice, preserve_faces=preserve_faces, point_radius=point_radius)
+        self.slice_polydata(
+            name,
+            x_slice=x_slice,
+            y_slice=y_slice,
+            z_slice=z_slice,
+            preserve_faces=preserve_faces,
+            point_radius=point_radius)
 
         if isinstance(cmap, str):
             cmap = dict(name=cmap, color_points=self.colormaps[cmap]._color_points)

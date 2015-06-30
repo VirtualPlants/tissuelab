@@ -81,7 +81,10 @@ class TissueViewer(QtGui.QWidget):
             self.vtk.interactor_style.data = matrix
 
     def label_selected(self, obj, event):
-        self.mode_selector.set_label(self.vtk.interactor_style.selected_label())
+        self.mode_selector.set_label(
+            self.vtk.interactor_style.selected_label(),
+            self.vtk.interactor_style.resolution,
+            self.vtk.interactor_style.position)
 
     def change_mode(self, mode=MODE_VISUALISATION):
         self._mode = mode
@@ -89,7 +92,13 @@ class TissueViewer(QtGui.QWidget):
             self.vtk.set_interactor_style()
         elif mode == self.MODE_EDITION:
             interactor_style = SelectCellInteractorStyle()
-            interactor_style.data = self.mode_selector.matrix(0)
+            name = self.mode_selector.matrix_name(0)
+            interactor_style.data = self.vtk.world[name].data
+            for attribute in self.vtk.world[name].attributes:
+                if attribute['name'] == 'resolution':
+                    interactor_style.resolution = attribute['value']
+                elif attribute['name'] == 'position':
+                    interactor_style.position = attribute['value']
             self.vtk.set_interactor_style(interactor_style)
             interactor_style.AddObserver("LabelSelectedEvent", self.label_selected)
         elif mode == self.MODE_BLENDING:
@@ -107,7 +116,10 @@ class TissueViewer(QtGui.QWidget):
 
     def apply_change_to_segmentation(self, matrix):
         self.vtk.world.__setitem__(self.mode_selector.matrix_name(0), matrix)
-        self.mode_selector.set_label(self.mode_selector.get_label())
+        self.mode_selector.set_label(
+            self.vtk.interactor_style.selected_label(),
+            self.vtk.interactor_style.resolution,
+            self.vtk.interactor_style.position)
 
     def save_screenshot(self):
         from openalea.vpltk.qt.compat import getsavefilename

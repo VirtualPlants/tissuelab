@@ -459,6 +459,16 @@ def get_contours(matrix, label):
     return compute_points(reader.GetOutput(), label)
 
 
+def get_contours_with_scale(matrix, label, resolution):
+    """
+    take as input a segmented matrix and an id and return the contour of the polydata associated
+    with the resolution passed in argument
+    """
+    reader = matrix_to_image_reader('la', matrix, matrix.dtype)
+    reader.SetDataSpacing(resolution)
+    return compute_points(reader.GetOutput(), label)
+
+
 def compute_points(matrix, label):
     contour = vtk.vtkDiscreteMarchingCubes()
     if vtk.VTK_MAJOR_VERSION <= 5:
@@ -612,9 +622,17 @@ class SelectCellInteractorStyle (vtk.vtkInteractorStyleTrackballCamera):
     def __init__(self, parent=None):
         self.AddObserver("MiddleButtonPressEvent", self.MiddleButtonPressEvent)
         self.data = np.arange(1)
+        self.resolution = [1, 1, 1]
+        self.position = [0, 0, 0]
 
         self._ignored_labels = [0, 1]
         self._selected_label = None
+        self.picker = vtk.vtkPointPicker()
+        self.picker.SetTolerance(0.05)
+        self.picker.PickFromListOn()
+
+    def set_pick_list(self, imgactor):
+        self.picker.AddPickList(imgactor)
 
     def ignore_labels(self, labels):
         self._ignored_labels = labels
@@ -629,7 +647,10 @@ class SelectCellInteractorStyle (vtk.vtkInteractorStyleTrackballCamera):
         if points.GetNumberOfPoints() > 0:
             coord = points.GetPoint(0)
             if (self.GetInteractor().GetPicker().GetPointId() != -1):
-                label = self.data[int(coord[0])][int(coord[1])][int(coord[2])]
+                x = int(coord[0] / self.resolution[0] + self.position[0])
+                y = int(coord[1] / self.resolution[1] + self.position[1])
+                z = int(coord[2] / self.resolution[2] + self.position[2])
+                label = self.data[x, y, z]
                 # Background case
                 if label not in self._ignored_labels:
                     self._selected_label = label
