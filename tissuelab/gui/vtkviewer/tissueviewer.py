@@ -27,6 +27,7 @@ from openalea.vpltk.qt import QtGui
 from tissuelab.gui.vtkviewer.editor import SelectCellInteractorStyle
 from tissuelab.gui.vtkviewer.vtk_viewer_select_mode import VtkviewerSelectMode
 from tissuelab.gui.vtkviewer.vtkworldviewer import VtkWorldViewer
+from tissuelab.gui.vtkviewer.point_editor import SelectPointInteractorStyle
 
 
 class TissueViewer(QtGui.QWidget):
@@ -34,6 +35,7 @@ class TissueViewer(QtGui.QWidget):
     MODE_VISUALISATION = 0
     MODE_EDITION = 1
     MODE_BLENDING = 2
+    MODE_POINT_EDITION = 3 
 
     def __init__(self):
         QtGui.QWidget.__init__(self)
@@ -96,7 +98,11 @@ class TissueViewer(QtGui.QWidget):
             self.vtk.interactor_style.position)
 
     def change_mode(self, mode=MODE_VISUALISATION):
-        self._mode = mode
+        if self._mode != mode:
+            if self._mode == self.MODE_POINT_EDITION:
+                self.vtk.world.remove('selected_cell')
+                self.vtk.world.remove('axes')
+                self.vtk.world.remove("selected_axis")
         if mode == self.MODE_VISUALISATION:
             self.vtk.set_interactor_style()
         elif mode == self.MODE_EDITION:
@@ -111,9 +117,14 @@ class TissueViewer(QtGui.QWidget):
             interactor_style.AddObserver("LabelSelectedEvent", self.label_selected)
             self.vtk.set_interactor_style(interactor_style)
         elif mode == self.MODE_BLENDING:
-            self.vtk.set_interactor_style()
+            self.vtk.set_interactor_style(interactor_style)
+        elif mode == self.MODE_POINT_EDITION:
+            world_object = self.vtk.world[self.mode_selector.polydata_cb.currentText()]
+            interactor_style = SelectPointInteractorStyle(world_object=world_object)
+            self.vtk.set_interactor_style(interactor_style)
         else:
             raise NotImplementedError('Edit mode %d is not implemented' % mode)
+        self._mode = mode
 
     def launch_popup(self, matrix1, matrix2, label):
         if self._editor is None:

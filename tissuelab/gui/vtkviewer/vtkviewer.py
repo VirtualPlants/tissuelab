@@ -507,8 +507,8 @@ class VtkViewer(QtGui.QWidget):
             slicing_function = vtk_clipped_polydata
 
         displayed_polydata = self.polydata[name]
-        if polydata_name in self.object_repr:
-            object_polydata = self.object_repr[polydata_name]
+        if name in self.object_repr:
+            object_polydata = self.object_repr[name]
         else:
             object_polydata = displayed_polydata
 
@@ -724,6 +724,8 @@ class VtkViewer(QtGui.QWidget):
         dtype = 'matrix'
 
         self.matrix[name] = data_matrices[0]
+
+        self.reader[name] = matrix_to_image_reader(name, self.matrix[name], datatype=np.uint16, decimate=1)
 
         resolution = default_value(dtype, 'resolution', **kwargs)
         position = default_value(dtype, 'position', **kwargs)

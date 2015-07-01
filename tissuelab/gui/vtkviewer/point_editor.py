@@ -25,9 +25,9 @@ from scipy.cluster.vq                       import vq
 from copy import deepcopy
 
 from openalea.core.world.world import World
-from vplants.meshing.triangular_mesh import TriangularMesh
+from tissuelab.gui.vtkviewer.vtkworldviewer import world_kwargs
 
-class SelectCellPoint (vtk.vtkInteractorStyleTrackballCamera):
+class SelectPointInteractorStyle (vtk.vtkInteractorStyleTrackballCamera):
 
     def __init__(self, parent=None, world=None, world_object=None):
         #vtk.vtkInteractorStyleTrackballCamera.__init__(self,parent=parent)
@@ -69,7 +69,6 @@ class SelectCellPoint (vtk.vtkInteractorStyleTrackballCamera):
         self.motion_plane_actor.SetMapper(motion_plane_mapper)
         self.motion_plane_actor.GetProperty().SetColor(1.0, 0.0, 1.0)
         self.motion_plane_actor.GetProperty().SetOpacity(0.3)
-
 
         if world is None:
             self.world = World()
@@ -362,7 +361,7 @@ class SelectCellPoint (vtk.vtkInteractorStyleTrackballCamera):
             elif key == 'd':
                 if self.data.points.has_key(self.selected_cell):
                     del self.data.points[self.selected_cell]
-                    self.world.add(self.data,self.world_object.name)
+                    self.world.add(self.data,self.world_object.name,**world_kwargs(self.world_object))
                 self.world.remove('selected_cell')
                 self.world.remove('axes')
                 self.grab_mode = False
