@@ -241,7 +241,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         self.object_repr[object_name] = object_data
 
         if isinstance(object_data, np.ndarray):
-            if hasattr(object_data, 'resolution') and not world_object.kwargs.has_key('resolution'):
+            if hasattr(object_data, 'resolution') and 'resolution' not in world_object.kwargs:
                 world_object.kwargs['resolution'] = object_data.resolution
             self.add_matrix(world_object, object_data, datatype=object_data.dtype, **world_object.kwargs)
         elif isinstance(object_data, vtk.vtkPolyData):
@@ -356,13 +356,37 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                     self.set_polydata_lookuptable(world_object.name, colormap=colormap, alpha=alpha,
                                                   intensity_range=attribute['value'])
                 elif attribute['name'] == 'x_slice':
-                    self.slice_polydata(name=world_object.name, x_slice=attribute['value'], y_slice=y_slice, z_slice=z_slice, preserve_faces=preserve_faces, point_radius=point_radius)
+                    self.slice_polydata(
+                        name=world_object.name,
+                        x_slice=attribute['value'],
+                        y_slice=y_slice,
+                        z_slice=z_slice,
+                        preserve_faces=preserve_faces,
+                        point_radius=point_radius)
                 elif attribute['name'] == 'y_slice':
-                    self.slice_polydata(name=world_object.name, x_slice=x_slice, y_slice=attribute['value'], z_slice=z_slice, preserve_faces=preserve_faces, point_radius=point_radius)
+                    self.slice_polydata(
+                        name=world_object.name,
+                        x_slice=x_slice,
+                        y_slice=attribute['value'],
+                        z_slice=z_slice,
+                        preserve_faces=preserve_faces,
+                        point_radius=point_radius)
                 elif attribute['name'] == 'z_slice':
-                    self.slice_polydata(name=world_object.name, x_slice=x_slice, y_slice=y_slice, z_slice=attribute['value'], preserve_faces=preserve_faces, point_radius=point_radius)
+                    self.slice_polydata(
+                        name=world_object.name,
+                        x_slice=x_slice,
+                        y_slice=y_slice,
+                        z_slice=attribute['value'],
+                        preserve_faces=preserve_faces,
+                        point_radius=point_radius)
                 elif attribute['name'] == 'preserve_faces':
-                    self.slice_polydata(name=world_object.name, x_slice=x_slice, y_slice=y_slice, z_slice=z_slice, preserve_faces=attribute['value'], point_radius=point_radius)
+                    self.slice_polydata(
+                        name=world_object.name,
+                        x_slice=x_slice,
+                        y_slice=y_slice,
+                        z_slice=z_slice,
+                        preserve_faces=attribute['value'],
+                        point_radius=point_radius)
 
             elif isinstance(object_data, ImageBlending):
                 if attribute['name'] == 'blending_factor':
@@ -386,6 +410,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         setdefault(world_object, dtype, 'alpha', 'polydata_alpha', **kwargs)
         setdefault(world_object, dtype, 'intensity_range', conv=_irange, **kwargs)
         setdefault(world_object, dtype, 'position', conv=_tuple, **kwargs)
+        setdefault(world_object, dtype, 'resolution', conv=_tuple, **kwargs)
         setdefault(world_object, dtype, 'linewidth', **kwargs)
         setdefault(world_object, dtype, 'point_radius', **kwargs)
 
@@ -424,7 +449,8 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
             for (fid, t) in zip(property.keys(), xrange(n_triangles)):
                 vtk_property.InsertValue(t, property[fid])
 
-            # lut = define_lookuptable(np.array(property.values()), colormap=self.colormaps[cmap], i_min=i_min, i_max=i_max)
+            # lut = define_lookuptable(np.array(property.values()),
+            # colormap=self.colormaps[cmap], i_min=i_min, i_max=i_max)
             lut = define_lookuptable(np.array(property.values()),
                                      colormap_points=self.colormaps[cmap]._color_points,
                                      colormap_name=cmap,
@@ -517,7 +543,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                                                          **kwargs)
 
     def add_blending(self, world_object, image_blending, **kwargs):
-        from vtk_utils import blend_funct
+        from .vtk_utils import blend_funct
 
         # dtype = 'blending'
         dtype = 'matrix'

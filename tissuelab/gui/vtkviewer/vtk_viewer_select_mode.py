@@ -1,5 +1,5 @@
 from tissuelab.gui.vtkviewer.designer._vtk_viewer_select_mode import Ui_vtk_viewer_select_mode, _translate
-from tissuelab.gui.vtkviewer.editor import get_contours_with_scale
+from tissuelab.gui.vtkviewer.editor import get_contours
 from tissuelab.gui.vtkviewer.vtkworldviewer import ImageBlending
 from openalea.vpltk.qt import QtGui, QtCore
 from openalea.core.observer import AbstractListener
@@ -212,9 +212,9 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
             name = str(self._label)
             self.world.remove("cell_edit_" + name)
         self._label = label
-        contour = get_contours_with_scale(self.matrix(0), self._label, res)
+        contour = get_contours(self.matrix(0), self._label)
         name2 = str(self._label)
-        self.world.add(contour, name="cell_edit_" + name2, colormap='glasbey', position=pos)
+        self.world.add(contour, name="cell_edit_" + name2, colormap='glasbey', position=pos, resolution=res)
 
         self.enable_button()
 

@@ -78,10 +78,10 @@ class EditorWindow(QtGui.QWidget):
         self.block_propagation = False
 
         self.control.slider_propagation.setMinimum(1)
-        self.control.slider_propagation.setMaximum(40)
+        self.control.slider_propagation.setMaximum(20)
         self.control.slider_propagation.setValue(5)
         self.control.sb_propagation.setMinimum(1)
-        self.control.sb_propagation.setMaximum(40)
+        self.control.sb_propagation.setMaximum(20)
         self.control.sb_propagation.setValue(5)
         self.control.bp_z.setEnabled(False)
         self.control.bp_move.setEnabled(False)
@@ -614,13 +614,45 @@ def is_poly_in_plan(poly, orientation, position):
     return box[orientation * 2] < position and box[orientation * 2 + 1] > position
 
 
+def find_point_next(poly, point0, point1):
+    """
+    find point in next in the polydata
+    require a polydata with lines/vertices cell only and point link to two lines and eventually one vertice
+    """
+    consid_cell = vtk.vtkIdList()
+    plist1 = vtk.vtkIdList()
+    plist2 = vtk.vtkIdList()
+    poly.GetPointCells(point0, consid_cell)
+    if consid_cell.GetNumberOfIds() == 2:
+        poly.GetCellPoints(consid_cell.GetId(0), plist1)
+        poly.GetCellPoints(consid_cell.GetId(1), plist2)
+        if plist1.GetNumberOfIds() == 2 and plist2.GetNumberOfIds() == 2:
+            if plist1.GetId(0) == point0:
+                point2a = plist1.GetId(1)
+            else:
+                point2a = plist1.GetId(0)
+
+            if plist2.GetId(0) == point0:
+                point2b = plist2.GetId(1)
+            else:
+                point2b = plist2.GetId(0)
+
+            if point2a == point1:
+                return point2b
+            else:
+                return point2a
+        else:
+            return -1
+    else:
+        return -1
+
+
 class SelectCellInteractorStyle (vtk.vtkInteractorStyleTrackballCamera):
 
     """
     class of interactor use to retrieve label of a cell in a cut_plane of a segmented matrix
     param : data : the segmented matrix
     """
-    #TODO : essayer avec une picklist sur les plans de coupes
 
     def __init__(self, parent=None):
         self.AddObserver("MiddleButtonPressEvent", self.MiddleButtonPressEvent)
@@ -647,17 +679,20 @@ class SelectCellInteractorStyle (vtk.vtkInteractorStyleTrackballCamera):
         pos = self.GetInteractor().GetEventPosition()
         self.GetInteractor().GetPicker().Pick(pos[0], pos[1], 0, self.GetCurrentRenderer())
         points = self.GetInteractor().GetPicker().GetPickedPositions()
+
         if points.GetNumberOfPoints() > 0:
             coord = points.GetPoint(0)
             if (self.GetInteractor().GetPicker().GetPointId() != -1):
-                x = int(coord[0] / self.resolution[0] + self.position[0])
-                y = int(coord[1] / self.resolution[1] + self.position[1])
-                z = int(coord[2] / self.resolution[2] + self.position[2])
-                label = self.data[x, y, z]
-                # Background case
-                if label not in self._ignored_labels:
-                    self._selected_label = label
-                    self.InvokeEvent("LabelSelectedEvent")
+                x = int((coord[0] / self.resolution[0] + self.position[0]))
+                y = int((coord[1] / self.resolution[1] + self.position[1]))
+                z = int((coord[2] / self.resolution[2] + self.position[2]))
+                xm, ym, zm = self.data.shape
+                if x < xm and y < ym and z < zm:
+                    label = self.data[x, y, z]
+                    # Background case
+                    if label not in self._ignored_labels:
+                        self._selected_label = label
+                        self.InvokeEvent("LabelSelectedEvent")
 
 
 class InteractorEditor(vtk.vtkInteractorStyle):
@@ -731,8 +766,38 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
     def __init__(self, parent=None):
         self.AddObserver("LeftButtonPressEvent", self.LeftButtonPressEvent)
         self.AddObserver("LeftButtonReleaseEvent", self.LeftButtonReleaseEvent)
-        #self.AddObserver("MiddleButtonPressEvent", self.MiddleButtonPressEvent)
-        #self.AddObserver("KeyPressEvent",self.KeyPressEvent)
+        self.AddObserver("MouseMoveEvent", self.MouseMoved)
+
+        self.grab_mode = False
+        self.move_point = vtk.vtkPolyData()
+        points = vtk.vtkPoints()
+        lines = vtk.vtkCellArray()
+
+        points.InsertNextPoint([0, 0, 0])
+        points.InsertNextPoint([0, 0, 0])
+        points.InsertNextPoint([0, 0, 0])
+
+        lines.InsertNextCell(2)
+        lines.InsertCellPoint(0)
+        lines.InsertCellPoint(1)
+
+        lines.InsertNextCell(2)
+        lines.InsertCellPoint(0)
+        lines.InsertCellPoint(2)
+
+        self.move_point.SetPoints(points)
+        self.move_point.SetLines(lines)
+
+        move_map = vtk.vtkPolyDataMapper()
+        if vtk.VTK_MAJOR_VERSION <= 5:
+            move_map.SetInput(self.move_point)
+        else:
+            move_map.SetInputData(self.move_point)
+        self.move_actor = vtk.vtkActor()
+        self.move_actor.SetMapper(move_map)
+        self.move_actor.GetProperty().SetColor(1, 1, 1)
+        self.move_actor.GetProperty().SetPointSize(3)
+        self.move_actor.VisibilityOff()
 
         self.consideredCell = vtk.vtkPolyData()
         self.polyList = dict()
@@ -740,10 +805,10 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         self.polyInPlan = list()
         self.matrix = []
         self.background_list = list()
+        self.consid_cut = vtk.vtkPolyData()
 
         self.x = 0
         self.y = 1
-
         self.orientation = 2
         self.position = 0
         self.mode = 0
@@ -760,6 +825,7 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         self.GetCurrentRenderer().RemoveAllViewProps()
         self.refresh_poly()
         self.refresh_background()
+        self.GetCurrentRenderer().AddActor(self.move_actor)
         self.GetCurrentRenderer().ResetCamera()
         self.GetCurrentRenderer().Render()
         self.GetCurrentRenderer().GetRenderWindow().Render()
@@ -788,12 +854,21 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
                 newact.GetProperty().SetColor(0, 0, 1)
             self.GetCurrentRenderer().AddActor(newact)
         considcutter = cutplane(self.consideredCell, self.orientation, self.position)
+        self.consid_cut = considcutter.GetOutput()
+        cons = cutplane(self.consideredCell, self.orientation, self.position)
+        cut_point_line = cons.GetOutput()
+        verts = vtk.vtkCellArray()
+        for i in xrange(cut_point_line.GetNumberOfPoints()):
+            verts.InsertNextCell(1)
+            verts.InsertCellPoint(i)
+        cut_point_line.SetVerts(verts)
         considmap = vtk.vtkPolyDataMapper()
-        considmap.SetInputConnection(considcutter.GetOutputPort())
+        considmap.SetInput(cut_point_line)
         considmap.ScalarVisibilityOff()
         considact = vtk.vtkActor()
         considact.SetMapper(considmap)
         considact.GetProperty().SetColor(1, 0, 0)
+        considact.GetProperty().SetPointSize(3)
         self.GetCurrentRenderer().AddActor(considact)
 
     def refresh_background(self):
@@ -827,6 +902,64 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
                 co = self.consideredCell.GetPoint(fp)
                 if distance(co, coord) <= 1:
                     self.selectedPoint = fp
+                    consid_point = self.consid_cut.FindPoint(coord)
+
+                    coord1 = np.zeros(3)
+                    coord2 = np.zeros(3)
+
+                    consid_cell = vtk.vtkIdList()
+                    plist1 = vtk.vtkIdList()
+                    plist2 = vtk.vtkIdList()
+                    self.consid_cut.GetPointCells(consid_point, consid_cell)
+                    self.consid_cut.GetCellPoints(consid_cell.GetId(0), plist1)
+                    self.consid_cut.GetCellPoints(consid_cell.GetId(1), plist2)
+                    if plist1.GetId(0) == consid_point:
+                        point1 = plist1.GetId(1)
+                    else:
+                        point1 = plist1.GetId(0)
+
+                    if plist2.GetId(0) == consid_point:
+                        point2 = plist2.GetId(1)
+                    else:
+                        point2 = plist2.GetId(0)
+                    self.consid_cut.GetPoint(point1, coord1)
+                    dist = 0
+                    p0 = point1
+                    p1 = consid_point
+                    while dist <= self.propagation:
+                        self.consid_cut.GetPoint(p0, coord1)
+                        pnext = find_point_next(self.consid_cut, p0, p1)
+                        if pnext == -1:
+                            break
+                        coord_next = np.zeros(3)
+                        self.consid_cut.GetPoint(pnext, coord_next)
+                        dist = distance(coord, coord_next)
+                        p1 = p0
+                        p0 = pnext
+
+                    dist = 0
+                    p0 = point2
+                    p1 = consid_point
+                    while dist <= self.propagation:
+                        self.consid_cut.GetPoint(p0, coord2)
+                        pnext = find_point_next(self.consid_cut, p0, p1)
+                        if pnext == -1:
+                            break
+                        coord_next = np.zeros(3)
+                        self.consid_cut.GetPoint(pnext, coord_next)
+                        dist = distance(coord, coord_next)
+                        p1 = p0
+                        p0 = pnext
+
+                    self.move_point.GetPoints().SetPoint(0, coord)
+                    self.move_point.GetPoints().SetPoint(1, coord1)
+                    self.move_point.GetPoints().SetPoint(2, coord2)
+                    self.move_point.Modified()
+                    self.grab_mode = True
+                    self.move_actor.VisibilityOn()
+
+                    self.GetCurrentRenderer().Render()
+                    self.GetCurrentRenderer().GetRenderWindow().Render()
                 else:
                     self.selectedPoint = -1
             elif self.mode == 1:
@@ -862,6 +995,7 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         """
         if self.mode == 0:
             if (self.selectedPoint != -1):
+                self.grab_mode = False
                 pos = self.GetInteractor().GetEventPosition()
                 self.GetInteractor().GetPicker().Pick(pos[0], pos[1], 0, self.GetCurrentRenderer())
                 pw = self.GetInteractor().GetPicker().GetPickPosition()
@@ -893,6 +1027,7 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
                         new_coord = np.zeros(3)
                         new_coord[self.x] = coord[self.x] - (transx - transx * dist / self.propagation)
                         new_coord[self.y] = coord[self.y] - (transy - transy * dist / self.propagation)
+
                         new_coord[self.orientation] = coord[self.orientation]
                         self.consideredCell.GetPoints().SetPoint(i, new_coord)
                         self.consideredCell.Modified()
@@ -912,13 +1047,25 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
                             if selectEnclosed.IsInside(i):
                                 coord = poly.GetPoint(i)
                                 dist = distance(oldcoord, coord)
-                                newcoord = np.zeros(3)
+                                new_coord = np.zeros(3)
                                 new_coord[self.x] = coord[self.x] - (transx - transx * dist / self.propagation)
                                 new_coord[self.y] = coord[self.y] - (transy - transy * dist / self.propagation)
+
                                 new_coord[self.orientation] = coord[self.orientation]
                                 poly.GetPoints().SetPoint(i, new_coord)
                                 poly.Modified()
+
+                self.move_actor.VisibilityOff()
                 self.refresh()
+
+    def MouseMoved(self, obj, event):
+        if self.grab_mode:
+            if (self.selectedPoint != -1):
+                pos = self.GetInteractor().GetEventPosition()
+                self.GetInteractor().GetPicker().Pick(pos[0], pos[1], 0, self.GetCurrentRenderer())
+                pw = self.GetInteractor().GetPicker().GetPickPosition()
+                self.move_point.GetPoints().SetPoint(0, pw)
+                self.move_point.Modified()
                 self.GetCurrentRenderer().Render()
                 self.GetCurrentRenderer().GetRenderWindow().Render()
 
