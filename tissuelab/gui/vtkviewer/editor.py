@@ -112,7 +112,7 @@ class EditorWindow(QtGui.QWidget):
         a method to pass the parameter needed by the viewer and his interactor
         """
         self.viewer.set_data(intensity_mat, segmented_mat, label)
-        self.set_slider_spinbox()
+        #self.set_slider_spinbox()
         self.show()
 
     def move_in_plane_plus(self):
@@ -175,6 +175,7 @@ class EditorWindow(QtGui.QWidget):
         self.control.slider_cut_plane.setMaximum(self.viewer.box[cutplan * 2 + 1])
         self.control.sb_cut_plane.setMinimum(self.viewer.box[cutplan * 2])
         self.control.sb_cut_plane.setMaximum(self.viewer.box[cutplan * 2 + 1])
+
         self.block_cut_plane = False
         self.control.slider_cut_plane.setSliderPosition(value)
 
@@ -263,7 +264,7 @@ class ViewerEditor(QtGui.QWidget):
         self.vtkWidget.GetRenderWindow().AddRenderer(self.ren)
         self.iren = self.vtkWidget.GetRenderWindow().GetInteractor()
 
-        self.picker = vtk.vtkCellPicker()
+        self.picker = vtk.vtkPointPicker()
         self.picker.SetTolerance(0.005)
         self.picker.PickFromListOn()
         self.picker.InitializePickList()
@@ -309,6 +310,7 @@ class ViewerEditor(QtGui.QWidget):
         self.label = lab
         self.interactor.label = lab
         reader = matrix_to_image_reader('la', self.segmented_matrix, self.segmented_matrix.dtype)
+
         mat = reader.GetOutput()
         cellule = compute_points(mat, lab)
         box = cellule.GetBounds()
@@ -327,6 +329,9 @@ class ViewerEditor(QtGui.QWidget):
         self.set_segmented_matrix(segmented_mat)
         self.set_intensity_matrix(intensity_mat)
         self.set_label(label)
+        self.iren.Initialize()
+        self.iren.Start()
+        #self.render()
         self.interactor.refresh()
 
     def move_in_plane(self, value):
@@ -512,19 +517,28 @@ def compute_image(matrix):
     take a matrix in input and return the vtkImageActor associated
     """
     reader = matrix_to_image_reader('la', matrix, matrix.dtype)
+
     box = reader.GetDataExtent()
     lut = define_LUT(matrix)
     colors = vtk.vtkImageMapToColors()
     colors.SetInputConnection(reader.GetOutputPort())
     colors.SetLookupTable(lut)
+
     imgactor = vtk.vtkImageActor()
     if vtk.VTK_MAJOR_VERSION <= 5:
         imgactor.SetInput(colors.GetOutput())
     else:
+        colors.Update()
         imgactor.SetInputData(colors.GetOutput())
     #imgactor.SetInputConnection(colors.GetOutputPort())
     imgactor.SetOpacity(0.2)
-    imgactor.SetDisplayExtent(box[0], box[1], box[2], box[3], (box[4] + box[5]) / 2, (box[4] + box[5]) / 2)
+    imgactor.SetDisplayExtent(
+        int(box[0]),
+        int(box[1]),
+        int(box[2]),
+        int(box[3]),
+        int((box[4] + box[5]) / 2),
+        int((box[4] + box[5]) / 2))
     return imgactor
 
 
@@ -728,7 +742,6 @@ class InteractorEditor(vtk.vtkInteractorStyle):
             self.poly.GetPoint(fp, co)
             if self.distance(co, coord) <= 1:
                 self.selectedPoint = fp
-                print fp
             else:
                 self.selectedPoint = -1
 
@@ -766,7 +779,8 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
     def __init__(self, parent=None):
         self.AddObserver("LeftButtonPressEvent", self.LeftButtonPressEvent)
         self.AddObserver("LeftButtonReleaseEvent", self.LeftButtonReleaseEvent)
-        self.AddObserver("MouseMoveEvent", self.MouseMoved)
+        self.AddObserver("MouseMoveEvent", self.MouseMoveEvent)
+        self.AddObserver("KeyPressEvent", self.KeyPressEvent)
 
         self.grab_mode = False
         self.move_point = vtk.vtkPolyData()
@@ -806,6 +820,7 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         self.matrix = []
         self.background_list = list()
         self.consid_cut = vtk.vtkPolyData()
+        #self.list_action = list()
 
         self.x = 0
         self.y = 1
@@ -863,7 +878,11 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
             verts.InsertCellPoint(i)
         cut_point_line.SetVerts(verts)
         considmap = vtk.vtkPolyDataMapper()
-        considmap.SetInput(cut_point_line)
+        if vtk.VTK_MAJOR_VERSION <= 5:
+            considmap.SetInput(cut_point_line)
+        else:
+            considmap.SetInputData(cut_point_line)
+
         considmap.ScalarVisibilityOff()
         considact = vtk.vtkActor()
         considact.SetMapper(considmap)
@@ -875,7 +894,7 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         """
         compute the new extent of the background
         """
-        bounds = np.zeros(6)
+        bounds = np.zeros(6, dtype=np.int)
         self.GetCurrentRenderer().ComputeVisiblePropBounds(bounds)
         for lim in bounds:
             lim = int(lim)
@@ -971,9 +990,10 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
                     selectEnclosed = vtk.vtkSelectEnclosedPoints()
                     if vtk.VTK_MAJOR_VERSION <= 5:
                         selectEnclosed.SetInput(polypoint)
+                        selectEnclosed.SetSurface(poly)
                     else:
                         selectEnclosed.SetInputData(polypoint)
-                    selectEnclosed.SetSurface(poly)
+                        selectEnclosed.SetSurfaceData(poly)
                     selectEnclosed.Update()
                     if selectEnclosed.IsInside(0):
                         self.selectedLabel = label
@@ -1015,9 +1035,10 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
                 selectEnclosed = vtk.vtkSelectEnclosedPoints()
                 if vtk.VTK_MAJOR_VERSION <= 5:
                     selectEnclosed.SetInput(self.consideredCell)
+                    selectEnclosed.SetSurface(sphere.GetOutput())
                 else:
                     selectEnclosed.SetInputData(self.consideredCell)
-                selectEnclosed.SetSurface(sphere.GetOutput())
+                    selectEnclosed.SetSurfaceData(sphere.GetOutput())
                 selectEnclosed.Update()
 
                 for i in xrange(self.consideredCell.GetNumberOfPoints()):
@@ -1039,9 +1060,10 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
                         selectEnclosed = vtk.vtkSelectEnclosedPoints()
                         if vtk.VTK_MAJOR_VERSION <= 5:
                             selectEnclosed.SetInput(poly)
+                            selectEnclosed.SetSurface(sphere.GetOutput())
                         else:
                             selectEnclosed.SetInputData(poly)
-                        selectEnclosed.SetSurface(sphere.GetOutput())
+                            selectEnclosed.SetSurfaceData(sphere.GetOutput())
                         selectEnclosed.Update()
                         for i in xrange(poly.GetNumberOfPoints()):
                             if selectEnclosed.IsInside(i):
@@ -1054,11 +1076,11 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
                                 new_coord[self.orientation] = coord[self.orientation]
                                 poly.GetPoints().SetPoint(i, new_coord)
                                 poly.Modified()
-
+                #self.list_action.append(['translation',newcoord,transx,transy])
                 self.move_actor.VisibilityOff()
                 self.refresh()
 
-    def MouseMoved(self, obj, event):
+    def MouseMoveEvent(self, obj, event):
         if self.grab_mode:
             if (self.selectedPoint != -1):
                 pos = self.GetInteractor().GetEventPosition()
@@ -1068,6 +1090,11 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
                 self.move_point.Modified()
                 self.GetCurrentRenderer().Render()
                 self.GetCurrentRenderer().GetRenderWindow().Render()
+
+    def KeyPressEvent(self, obj, event):
+        key = self.GetInteractor().GetKeyCode()
+        if key == z:
+            print "work in progress"
 
     def fusion_consid_select_cells(self):
         """
@@ -1090,8 +1117,12 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
                 if labs not in self.polyList:
                     self.polyList[labs] = compute_points(mat, labs)
             append = vtk.vtkAppendPolyData()
-            append.AddInput(self.consideredCell)
-            append.AddInput(fusionPoly)
+            if vtk.VTK_MAJOR_VERSION <= 5:
+                append.AddInput(self.consideredCell)
+                append.AddInput(fusionPoly)
+            else:
+                append.AddInputData(self.consideredCell)
+                append.AddInputData(fusionPoly)
             append.Update()
 
             cleaning = vtk.vtkCleanPolyData()
@@ -1123,9 +1154,10 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
             imgstenc = vtk.vtkImageStencil()
             if vtk.VTK_MAJOR_VERSION <= 5:
                 imgstenc.SetInput(img)
+                imgstenc.SetStencil(pol2stenc.GetOutput())
             else:
                 imgstenc.SetInputData(img)
-            imgstenc.SetStencil(pol2stenc.GetOutput())
+                imgstenc.SetStencilConnection(pol2stenc.GetOutputPort())
             imgstenc.ReverseStencilOn()
             imgstenc.SetBackgroundValue(lab)
             imgstenc.Update()
@@ -1141,9 +1173,10 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         imgstenc = vtk.vtkImageStencil()
         if vtk.VTK_MAJOR_VERSION <= 5:
             imgstenc.SetInput(img)
+            imgstenc.SetStencil(pol2stenc.GetOutput())
         else:
             imgstenc.SetInputData(img)
-        imgstenc.SetStencil(pol2stenc.GetOutput())
+            imgstenc.SetStencilConnection(pol2stenc.GetOutputPort())
         imgstenc.ReverseStencilOn()
         imgstenc.SetBackgroundValue(self.label)
         imgstenc.Update()
@@ -1168,7 +1201,11 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
 
         export = vtk.vtkImageExport()
         export.SetInputConnection(imgstenc.GetOutputPort())
-        extent = imgstenc.GetOutput().GetWholeExtent()
+
+        if vtk.VTK_MAJOR_VERSION <= 5:
+            extent = imgstenc.GetOutput().GetWholeExtent()
+        else:
+            extent = imgstenc.GetOutput().GetExtent()
         dim = (extent[5] - extent[4] + 1, extent[3] - extent[2] + 1, extent[1] - extent[0] + 1)
         array = np.zeros(dim, ty)
         export.Export(array)
