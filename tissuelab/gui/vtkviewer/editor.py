@@ -112,7 +112,7 @@ class EditorWindow(QtGui.QWidget):
         a method to pass the parameter needed by the viewer and his interactor
         """
         self.viewer.set_data(intensity_mat, segmented_mat, label)
-        #self.set_slider_spinbox()
+        self.set_slider_spinbox()
         self.show()
 
     def move_in_plane_plus(self):
@@ -1031,6 +1031,7 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
                 sphere = vtk.vtkSphereSource()
                 sphere.SetRadius(self.propagation)
                 sphere.SetCenter(oldcoord)
+                sphere.Update()
 
                 selectEnclosed = vtk.vtkSelectEnclosedPoints()
                 if vtk.VTK_MAJOR_VERSION <= 5:
