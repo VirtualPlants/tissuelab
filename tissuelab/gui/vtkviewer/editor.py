@@ -439,7 +439,7 @@ def voisinage(matrix, contour, label, background_list):
 def cutplane(poly, orientation, position):
     """
     take as input a polydata, an axis (orientation) and the position along the axis (position)
-    return the intersection of the polydata and the plane
+    return the intersection of the polydata and the plane created by the axis and position
     """
     origine = np.zeros(3)
     origine[orientation] = position
@@ -799,6 +799,34 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         lines.InsertCellPoint(0)
         lines.InsertCellPoint(2)
 
+        self.consideredCell = vtk.vtkPolyData()
+        self.polyList = dict()
+        self.background = vtk.vtkImageActor()
+        self.polyInPlan = list()
+        self.matrix = []
+        self.background_list = list()
+        self.consid_cut = vtk.vtkPolyData()
+
+        self.x = 0
+        self.y = 1
+        self.orientation = 2
+        self.position = 0
+        self.mode = 0
+        self.propagation = 5
+        self.selectedPoint = -1
+        self.selectedLabel = -1
+        self.label = -1
+        self.deletedLabel = list()
+
+        origine = np.zeros(3)
+        origine[self.orientation] = self.position
+        normal = np.zeros(3)
+        normal[self.orientation] = 1
+
+        self.plane = vtk.vtkPlane()
+        self.plane.SetOrigin(origine)
+        self.plane.SetNormal(normal)
+
         self.move_point.SetPoints(points)
         self.move_point.SetLines(lines)
 
@@ -813,34 +841,31 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         self.move_actor.GetProperty().SetPointSize(3)
         self.move_actor.VisibilityOff()
 
-        self.consideredCell = vtk.vtkPolyData()
-        self.polyList = dict()
-        self.background = vtk.vtkImageActor()
-        self.polyInPlan = list()
-        self.matrix = []
-        self.background_list = list()
-        self.consid_cut = vtk.vtkPolyData()
-        #self.list_action = list()
-
-        self.x = 0
-        self.y = 1
-        self.orientation = 2
-        self.position = 0
-        self.mode = 0
-        self.propagation = 5
-        self.selectedPoint = -1
-        self.selectedLabel = -1
-        self.label = -1
-        self.deletedLabel = list()
+        self.sphere_propagation = vtk.vtkSphereSource()
+        self.sphere_propagation.SetRadius(self.propagation)
+        spheremap = vtk.vtkPolyDataMapper()
+        spheremap.SetInputConnection(self.sphere_propagation.GetOutputPort())
+        self.sphere_actor = vtk.vtkActor()
+        self.sphere_actor.SetMapper(spheremap)
+        self.sphere_actor.VisibilityOff()
 
     def refresh(self):
         """
         method to refresh the renderer after a change
         """
         self.GetCurrentRenderer().RemoveAllViewProps()
+
+        origine = np.zeros(3)
+        origine[self.orientation] = self.position
+        normal = np.zeros(3)
+        normal[self.orientation] = 1
+        self.plane.SetOrigin(origine)
+        self.plane.SetNormal(normal)
+
         self.refresh_poly()
         self.refresh_background()
         self.GetCurrentRenderer().AddActor(self.move_actor)
+        self.GetCurrentRenderer().AddActor(self.sphere_actor)
         self.GetCurrentRenderer().ResetCamera()
         self.GetCurrentRenderer().Render()
         self.GetCurrentRenderer().GetRenderWindow().Render()
@@ -857,7 +882,12 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
                 self.orientation,
                 self.position)]
         for lab in self.polyInPlan:
-            cutter = cutplane(self.polyList[lab], self.orientation, self.position)
+            cutter = vtk.vtkCutter()
+            if vtk.VTK_MAJOR_VERSION <= 5:
+                cutter.SetInput(self.polyList[lab])
+            else:
+                cutter.SetInputData(self.polyList[lab])
+            cutter.SetCutFunction(self.plane)
             newmap = vtk.vtkPolyDataMapper()
             newmap.SetInputConnection(cutter.GetOutputPort())
             newmap.ScalarVisibilityOff()
@@ -868,9 +898,21 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
             else:
                 newact.GetProperty().SetColor(0, 0, 1)
             self.GetCurrentRenderer().AddActor(newact)
-        considcutter = cutplane(self.consideredCell, self.orientation, self.position)
-        self.consid_cut = considcutter.GetOutput()
-        cons = cutplane(self.consideredCell, self.orientation, self.position)
+        consid_cutter = vtk.vtkCutter()
+        if vtk.VTK_MAJOR_VERSION <= 5:
+            consid_cutter.SetInput(self.consideredCell)
+        else:
+            consid_cutter.SetInputData(self.consideredCell)
+        consid_cutter.SetCutFunction(self.plane)
+        consid_cutter.Update()
+        self.consid_cut = consid_cutter.GetOutput()
+        cons = vtk.vtkCutter()
+        if vtk.VTK_MAJOR_VERSION <= 5:
+            cons.SetInput(self.consideredCell)
+        else:
+            cons.SetInputData(self.consideredCell)
+        cons.SetCutFunction(self.plane)
+        cons.Update()
         cut_point_line = cons.GetOutput()
         verts = vtk.vtkCellArray()
         for i in xrange(cut_point_line.GetNumberOfPoints()):
@@ -977,6 +1019,11 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
                     self.grab_mode = True
                     self.move_actor.VisibilityOn()
 
+                    self.sphere_propagation.SetCenter(coord)
+                    self.sphere_propagation.SetRadius(self.propagation)
+                    self.sphere_propagation.Update()
+                    self.sphere_actor.VisibilityOn()
+
                     self.GetCurrentRenderer().Render()
                     self.GetCurrentRenderer().GetRenderWindow().Render()
                 else:
@@ -1028,18 +1075,13 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
                 transx = (oldcoord[self.x] - newcoord[self.x])
                 transy = (oldcoord[self.y] - newcoord[self.y])
 
-                sphere = vtk.vtkSphereSource()
-                sphere.SetRadius(self.propagation)
-                sphere.SetCenter(oldcoord)
-                sphere.Update()
-
                 selectEnclosed = vtk.vtkSelectEnclosedPoints()
                 if vtk.VTK_MAJOR_VERSION <= 5:
                     selectEnclosed.SetInput(self.consideredCell)
-                    selectEnclosed.SetSurface(sphere.GetOutput())
+                    selectEnclosed.SetSurface(self.sphere_propagation.GetOutput())
                 else:
                     selectEnclosed.SetInputData(self.consideredCell)
-                    selectEnclosed.SetSurfaceData(sphere.GetOutput())
+                    selectEnclosed.SetSurfaceData(self.sphere_propagation.GetOutput())
                 selectEnclosed.Update()
 
                 for i in xrange(self.consideredCell.GetNumberOfPoints()):
@@ -1056,15 +1098,15 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
 
                 for poly in self.polyList.values():
                     box = poly.GetBounds()
-                    boxx = sphere.GetOutput().GetBounds()
+                    boxx = self.sphere_propagation.GetOutput().GetBounds()
                     if intersection(box, boxx):
                         selectEnclosed = vtk.vtkSelectEnclosedPoints()
                         if vtk.VTK_MAJOR_VERSION <= 5:
                             selectEnclosed.SetInput(poly)
-                            selectEnclosed.SetSurface(sphere.GetOutput())
+                            selectEnclosed.SetSurface(self.sphere_propagation.GetOutput())
                         else:
                             selectEnclosed.SetInputData(poly)
-                            selectEnclosed.SetSurfaceData(sphere.GetOutput())
+                            selectEnclosed.SetSurfaceData(self.sphere_propagation.GetOutput())
                         selectEnclosed.Update()
                         for i in xrange(poly.GetNumberOfPoints()):
                             if selectEnclosed.IsInside(i):
@@ -1079,6 +1121,7 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
                                 poly.Modified()
                 #self.list_action.append(['translation',newcoord,transx,transy])
                 self.move_actor.VisibilityOff()
+                self.sphere_actor.VisibilityOff()
                 self.refresh()
 
     def MouseMoveEvent(self, obj, event):
@@ -1181,7 +1224,6 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         imgstenc.ReverseStencilOn()
         imgstenc.SetBackgroundValue(self.label)
         imgstenc.Update()
-        #img = imgstenc.GetOutput()
         typee = img.GetScalarType()
         if typee == VTK_SIGNED_CHAR:
             ty = 'b'
