@@ -87,6 +87,7 @@ attribute_definition[
     interface=IFloat,
     constraints=cst_width,
     alias=u"Point Size")
+attribute_definition['polydata']['resolution'] = dict(value=(1.0, 1.0, 1.0), interface=ITuple, alias=u"Resolution")
 attribute_definition['polydata']['position'] = dict(value=(0.0, 0.0, 0.0), interface=ITuple, alias=u"Position")
 attribute_definition['polydata']['display_polydata'] = dict(value=True, interface=IBool, alias=u"Display Polydata")
 for axis in ['x', 'y', 'z']:
@@ -387,6 +388,7 @@ class VtkViewer(QtGui.QWidget):
 
     def add_polydata(self, name, polydata, **kwargs):
         dtype = 'polydata'
+        resolution = tuple(default_value(dtype, 'resolution', **kwargs))
         position = tuple(default_value(dtype, 'position', **kwargs))
         alpha = default_value(dtype, ['polydata_alpha', 'alpha'], **kwargs)
         cmap = default_value(dtype, ['polydata_colormap', 'colormap'], **kwargs)
@@ -404,6 +406,7 @@ class VtkViewer(QtGui.QWidget):
         polydata_actor.GetProperty().SetPointSize(1)
         self.polydata[name] = polydata
 
+        polydata_actor.SetScale(resolution[0], resolution[1], resolution[2])
         if position is not None:
             polydata_actor.SetOrigin(position[0], position[1], position[2])
             # imgactor.SetPosition(-(nx - 1) / 2., -(ny - 1) / 2., -(nz - 1) / 2.)
