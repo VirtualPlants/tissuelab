@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'panel_control_editor.ui'
 #
-# Created: Fri May 29 15:26:06 2015
+# Created: Thu Jul  9 15:59:29 2015
 #      by: PyQt4 UI code generator 4.10.4
 #
 # WARNING! All changes made in this file will be lost!
@@ -17,16 +17,19 @@ except AttributeError:
 
 try:
     _encoding = QtGui.QApplication.UnicodeUTF8
+
     def _translate(context, text, disambig):
         return QtGui.QApplication.translate(context, text, disambig, _encoding)
 except AttributeError:
     def _translate(context, text, disambig):
         return QtGui.QApplication.translate(context, text, disambig)
 
+
 class Ui_panel_control_editor(object):
+
     def setupUi(self, panel_control_editor):
         panel_control_editor.setObjectName(_fromUtf8("panel_control_editor"))
-        panel_control_editor.resize(446, 82)
+        panel_control_editor.resize(450, 82)
         self.gridLayout = QtGui.QGridLayout(panel_control_editor)
         self.gridLayout.setObjectName(_fromUtf8("gridLayout"))
         self.sb_cut_plane = QtGui.QSpinBox(panel_control_editor)
@@ -48,7 +51,7 @@ class Ui_panel_control_editor(object):
         self.bp_save.setMinimumSize(QtCore.QSize(50, 27))
         self.bp_save.setMaximumSize(QtCore.QSize(80, 27))
         self.bp_save.setObjectName(_fromUtf8("bp_save"))
-        self.gridLayout.addWidget(self.bp_save, 1, 8, 1, 1)
+        self.gridLayout.addWidget(self.bp_save, 1, 9, 1, 1)
         self.bp_plus = QtGui.QPushButton(panel_control_editor)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
@@ -58,7 +61,7 @@ class Ui_panel_control_editor(object):
         self.bp_plus.setMinimumSize(QtCore.QSize(30, 27))
         self.bp_plus.setMaximumSize(QtCore.QSize(60, 27))
         self.bp_plus.setObjectName(_fromUtf8("bp_plus"))
-        self.gridLayout.addWidget(self.bp_plus, 1, 7, 1, 1)
+        self.gridLayout.addWidget(self.bp_plus, 1, 8, 1, 1)
         self.bp_z = QtGui.QPushButton(panel_control_editor)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
@@ -104,23 +107,28 @@ class Ui_panel_control_editor(object):
         self.bp_move.setMaximumSize(QtCore.QSize(120, 16777215))
         self.bp_move.setObjectName(_fromUtf8("bp_move"))
         self.gridLayout.addWidget(self.bp_move, 0, 0, 1, 2)
-        self.sb_propagation = QtGui.QSpinBox(panel_control_editor)
-        self.sb_propagation.setMinimumSize(QtCore.QSize(60, 0))
-        self.sb_propagation.setMaximumSize(QtCore.QSize(120, 16777215))
-        self.sb_propagation.setObjectName(_fromUtf8("sb_propagation"))
-        self.gridLayout.addWidget(self.sb_propagation, 0, 5, 1, 1)
         self.slider_cut_plane = QtGui.QSlider(panel_control_editor)
         self.slider_cut_plane.setMinimumSize(QtCore.QSize(90, 29))
         self.slider_cut_plane.setMaximumSize(QtCore.QSize(16777215, 16777215))
         self.slider_cut_plane.setOrientation(QtCore.Qt.Horizontal)
         self.slider_cut_plane.setObjectName(_fromUtf8("slider_cut_plane"))
-        self.gridLayout.addWidget(self.slider_cut_plane, 1, 5, 1, 2)
+        self.gridLayout.addWidget(self.slider_cut_plane, 1, 6, 1, 2)
         self.slider_propagation = QtGui.QSlider(panel_control_editor)
         self.slider_propagation.setMinimumSize(QtCore.QSize(60, 0))
         self.slider_propagation.setMaximumSize(QtCore.QSize(120, 16777215))
         self.slider_propagation.setOrientation(QtCore.Qt.Horizontal)
         self.slider_propagation.setObjectName(_fromUtf8("slider_propagation"))
-        self.gridLayout.addWidget(self.slider_propagation, 0, 6, 1, 1)
+        self.gridLayout.addWidget(self.slider_propagation, 0, 9, 1, 1)
+        self.sb_propagation = QtGui.QSpinBox(panel_control_editor)
+        self.sb_propagation.setMinimumSize(QtCore.QSize(60, 0))
+        self.sb_propagation.setMaximumSize(QtCore.QSize(120, 16777215))
+        self.sb_propagation.setObjectName(_fromUtf8("sb_propagation"))
+        self.gridLayout.addWidget(self.sb_propagation, 0, 8, 1, 1)
+        self.bp_new_edit = QtGui.QPushButton(panel_control_editor)
+        self.bp_new_edit.setMinimumSize(QtCore.QSize(60, 0))
+        self.bp_new_edit.setMaximumSize(QtCore.QSize(120, 16777215))
+        self.bp_new_edit.setObjectName(_fromUtf8("bp_new_edit"))
+        self.gridLayout.addWidget(self.bp_new_edit, 0, 7, 1, 1)
 
         self.retranslateUi(panel_control_editor)
         QtCore.QMetaObject.connectSlotsByName(panel_control_editor)
@@ -135,9 +143,18 @@ class Ui_panel_control_editor(object):
         self.bp_x.setText(_translate("panel_control_editor", "X", None))
         self.bp_select.setToolTip(_translate("panel_control_editor", "this mode allow you to select a cell", None))
         self.bp_select.setText(_translate("panel_control_editor", "Select", None))
-        self.bp_fusion.setToolTip(_translate("panel_control_editor", "click to fusion the considered cell with the selected one", None))
+        self.bp_fusion.setToolTip(
+            _translate("panel_control_editor",
+                       "click to fusion the considered cell with the selected one",
+                       None))
         self.bp_fusion.setText(_translate("panel_control_editor", "Fusion", None))
-        self.bp_move.setToolTip(_translate("panel_control_editor", "this mode allow you to move the point in the considered cell", None))
+        self.bp_move.setToolTip(
+            _translate("panel_control_editor",
+                               "this mode allow you to move the point in the considered cell",
+                               None))
         self.bp_move.setText(_translate("panel_control_editor", "move", None))
-        self.sb_propagation.setToolTip(_translate("panel_control_editor", "choose the propagation of the deplacement you want", None))
-
+        self.sb_propagation.setToolTip(
+            _translate("panel_control_editor",
+                       "choose the propagation of the deplacement you want",
+                       None))
+        self.bp_new_edit.setText(_translate("panel_control_editor", "Edit select", None))

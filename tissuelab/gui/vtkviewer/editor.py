@@ -86,6 +86,7 @@ class EditorWindow(QtGui.QWidget):
         self.control.bp_z.setEnabled(False)
         self.control.bp_move.setEnabled(False)
         self.control.bp_fusion.setEnabled(False)
+        self.control.bp_new_edit.setEnabled(False)
 
         self._create_connections()
 
@@ -103,6 +104,8 @@ class EditorWindow(QtGui.QWidget):
         self.control.slider_propagation.valueChanged.connect(self.set_propagation)
         self.control.sb_propagation.valueChanged.connect(self.set_propagation)
         self.control.bp_save.pressed.connect(self.apply_change_to_segmentation)
+        self.control.bp_new_edit.pressed.connect(self.edit_new_cell)
+        self.viewer.interactor.AddObserver("CellSelected", self.cell_selected)
 
     def resizeEvent(self, *args, **kwargs):
         return QtGui.QWidget.resizeEvent(self, *args, **kwargs)
@@ -189,7 +192,7 @@ class EditorWindow(QtGui.QWidget):
         self.set_mode(0)
         self.control.bp_move.setEnabled(False)
         self.control.bp_select.setEnabled(True)
-        self.control.bp_fusion.setEnabled(False)
+        #self.control.bp_fusion.setEnabled(False)
 
     def set_mode_to_select(self):
         """
@@ -197,7 +200,7 @@ class EditorWindow(QtGui.QWidget):
         """
         self.set_mode(1)
         self.control.bp_select.setEnabled(False)
-        self.control.bp_fusion.setEnabled(True)
+        #self.control.bp_fusion.setEnabled(True)
         self.control.bp_move.setEnabled(True)
 
     def fusion_consid_select_cells(self):
@@ -224,6 +227,19 @@ class EditorWindow(QtGui.QWidget):
         """
         array = self.viewer.apply_change_to_segmentation()
         self.segmentation_changed.emit(array)
+
+    def cell_selected(self, obj, event):
+        if self.viewer.interactor.selectedLabel == -1:
+            self.control.bp_fusion.setEnabled(False)
+            self.control.bp_new_edit.setEnabled(False)
+        else:
+            self.control.bp_fusion.setEnabled(True)
+            self.control.bp_new_edit.setEnabled(True)
+
+    def edit_new_cell(self):
+        self.viewer.edit_new_cell()
+        self.control.bp_fusion.setEnabled(False)
+        self.control.bp_new_edit.setEnabled(False)
 
 
 class ControlsEditor(QtGui.QWidget, Ui_panel_control_editor):
@@ -406,6 +422,10 @@ class ViewerEditor(QtGui.QWidget):
         """
         array = self.interactor.apply_change_to_segmentation()
         return array
+
+    def edit_new_cell(self):
+        self.set_label(self.interactor.selectedLabel)
+        self.interactor.refresh()
 
 
 def voisinage(matrix, contour, label, background_list):
@@ -707,6 +727,8 @@ class SelectCellInteractorStyle (vtk.vtkInteractorStyleTrackballCamera):
                     if label not in self._ignored_labels:
                         self._selected_label = label
                         self.InvokeEvent("LabelSelectedEvent")
+                    else:
+                        self.InvokeEvent("bla")
 
 
 class InteractorEditor(vtk.vtkInteractorStyle):
@@ -1047,7 +1069,7 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
                         break
                     else:
                         self.selectedLabel = -1
-                print self.selectedLabel
+                self.InvokeEvent("CellSelected")
                 self.refresh()
 
     # TODO : trouver une meilleure formule de deplacement que la proportionnalite

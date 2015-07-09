@@ -99,8 +99,8 @@ class TissueViewer(QtGui.QWidget):
                     interactor_style.resolution = attribute['value']
                 elif attribute['name'] == 'position':
                     interactor_style.position = attribute['value']
-            self.vtk.set_interactor_style(interactor_style)
             interactor_style.AddObserver("LabelSelectedEvent", self.label_selected)
+            self.vtk.set_interactor_style(interactor_style)
         elif mode == self.MODE_BLENDING:
             self.vtk.set_interactor_style()
         else:
