@@ -89,7 +89,7 @@ class OmeroDb(object):
         return username, host, port, uri, identifier
 
     def _get(self, username, host, port, uri, identifier, category='Image'):
-        from openalea.oalab.gui.utils import password
+        from openalea.oalab.utils import password
         _passwd = password()
         if _passwd is None:
             return

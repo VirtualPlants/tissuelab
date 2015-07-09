@@ -17,7 +17,7 @@
 ###############################################################################
 
 from openalea.core.service.control import create_control, group_controls
-from openalea.oalab.gui.utils import ModalDialog, qicon
+from openalea.oalab.utils import ModalDialog, qicon
 from openalea.oalab.service.qt_control import edit
 from openalea.vpltk.qt import QtCore, QtGui
 from tissuelab.omero.omerodbbrowser import OmeroDbBrowser

@@ -92,7 +92,7 @@ def demo():
 
 if __name__ == '__main__':
 
-    from openalea.oalab.gui.splittablewindow import TestMainWin
+    from openalea.oalab.widget.splittablewindow import TestMainWin
     instance = QtGui.QApplication.instance()
 
     if instance is None:

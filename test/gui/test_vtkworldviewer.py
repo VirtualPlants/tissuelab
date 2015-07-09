@@ -22,7 +22,7 @@ from tissuelab.gui.vtkviewer.vtkworldviewer import VtkWorldViewer
 from tissuelab.gui.vtkviewer.testing import VtkQtTestCase
 from tissuelab.gui.vtkviewer.testing import demo_actor, demo_matrix_range, demo_matrix_xyz, demo_polydata_cube
 
-from openalea.oalab.world import World
+from openalea.core.world import World
 
 
 class TestCase(VtkQtTestCase):

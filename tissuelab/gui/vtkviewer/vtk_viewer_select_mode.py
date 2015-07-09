@@ -4,7 +4,7 @@ from tissuelab.gui.vtkviewer.vtkworldviewer import ImageBlending
 from openalea.vpltk.qt import QtGui, QtCore
 from openalea.core.observer import AbstractListener
 
-from openalea.oalab.world import World
+from openalea.core.world import World
 import numpy as np
 
 

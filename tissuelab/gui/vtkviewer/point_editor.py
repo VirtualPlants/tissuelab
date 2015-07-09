@@ -24,7 +24,7 @@ import vtk
 from scipy.cluster.vq                       import vq
 from copy import deepcopy
 
-from openalea.oalab.world.world import World
+from openalea.core.world.world import World
 from vplants.meshing.triangular_mesh import TriangularMesh
 
 class SelectCellPoint (vtk.vtkInteractorStyleTrackballCamera):

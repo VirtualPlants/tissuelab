@@ -16,10 +16,10 @@
 #
 ###############################################################################
 
-from openalea.oalab.plugins.applets import PluginApplet
+from openalea.core.plugin import PluginMeta
 
 
-class LineageViewer(PluginApplet):
+class LineageViewer(PluginMeta):
 
     name = 'LineageViewer'
     alias = 'Lineage Viewer'
@@ -30,7 +30,7 @@ class LineageViewer(PluginApplet):
         return LineageViewer
 
 
-class OmeroClient(PluginApplet):
+class OmeroClient(PluginMeta):
 
     name = 'OmeroClient'
     alias = 'Omero DB'
@@ -41,7 +41,7 @@ class OmeroClient(PluginApplet):
         return OmeroClient
 
 
-class TissueViewer(PluginApplet):
+class TissueViewer(PluginMeta):
 
     name = 'TissueViewer'
     alias = '3D Viewer'
@@ -52,7 +52,7 @@ class TissueViewer(PluginApplet):
         return TissueViewer
 
 
-class VtkControlPanel(PluginApplet):
+class VtkControlPanel(PluginMeta):
 
     name = 'VtkControlPanel'
     alias = '3D Viewer controls'

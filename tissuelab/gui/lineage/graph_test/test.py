@@ -113,7 +113,7 @@ def main(args):
     from tissuelab.plugins.labs import TissueLab
     lab = TissueLab()
 
-    from openalea.oalab.gui.mainwindow import MainWindow as MW
+    from openalea.oalab.widget.mainwindow import MainWindow as MW
     from openalea.oalab.session.session import Session
     session = Session()
     session.extension = 'tissue'

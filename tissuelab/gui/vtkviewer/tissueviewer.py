@@ -19,7 +19,7 @@
 
 
 import weakref
-from openalea.oalab.gui.utils import qicon
+from openalea.oalab.utils import qicon
 
 from openalea.vpltk.qt import QtGui
 from openalea.core.service.ipython import interpreter as get_interpreter

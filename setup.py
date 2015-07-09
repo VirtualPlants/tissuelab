@@ -90,14 +90,11 @@ setup(
         ],
 
         'oalab.applet': [
-            'TissueViewer = tissuelab.plugin.applet:TissueViewer',
-            'VtkControlPanel = tissuelab.plugin.applet:VtkControlPanel',
-            'OmeroClient = tissuelab.plugin.applet:OmeroClient',
-            'LineageViewer = tissuelab.plugin.applet:LineageViewer',
+            'TissueLabApplet=tissuelab.plugin.applet',
         ],
 
         'oalab.lab': [
-            'TissueLab = tissuelab.plugin.lab:TissueLab',
+            'TissueLab = tissuelab.plugin.lab',
         ],
 
         'oalab.db': [

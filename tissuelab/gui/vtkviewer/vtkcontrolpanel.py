@@ -16,7 +16,7 @@
 #
 ###############################################################################
 
-from openalea.oalab.gui.control.manager import ControlManagerWidget
+from openalea.oalab.control.manager import ControlManagerWidget
 from openalea.vpltk.qt import QtGui, QtCore
 from openalea.core.service.ipython import interpreter as get_interpreter
 

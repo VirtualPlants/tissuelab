@@ -25,7 +25,7 @@ import numpy as np
 from scipy import ndimage as nd
 
 from openalea.core.observer import AbstractListener
-from openalea.oalab.world import World
+from openalea.core.world import World
 from openalea.vpltk.qt import QtGui
 
 

@@ -28,7 +28,7 @@ import mimetypes
 
 from openalea.vpltk.qt import QtGui
 from openalea.core.interface import IBool, IInt, IFloat, ITuple, IEnumStr
-from openalea.oalab.plugins.interface import IIntRange, IColormap
+from openalea.oalab.interface import IIntRange, IColormap
 # Do not import world related module in this module, see vtkworldviewer instead!
 
 from tissuelab.gui.vtkviewer.qvtkrenderwindowinteractor import QVTKRenderWindowInteractor
