@@ -326,12 +326,13 @@ class ViewerEditor(QtGui.QWidget):
         self.label = lab
         self.interactor.label = lab
         reader = matrix_to_image_reader('la', self.segmented_matrix, self.segmented_matrix.dtype)
-
         mat = reader.GetOutput()
         cellule = compute_points(mat, lab)
         box = cellule.GetBounds()
         plan = [int((box[i * 2] + box[i * 2 + 1]) / 2) for i in xrange(3)]
         labels = voisinage(self.segmented_matrix, cellule, lab, self.background_list)
+        print labels
+        print 'voila'
         self.interactor.consideredCell = cellule
         self.plan = plan
         self.interactor.position = plan[2]
@@ -341,13 +342,40 @@ class ViewerEditor(QtGui.QWidget):
         self.interactor.polyList = {labs: compute_points(mat, labs) for labs in labels}
         self.interactor.deletedLabel[:] = []
 
+    def set_new_label(self, label):
+        reader = matrix_to_image_reader('la', self.segmented_matrix, self.segmented_matrix.dtype)
+        mat = reader.GetOutput()
+        cellule = self.interactor.polyList[label]
+        box = cellule.GetBounds()
+        plan = [int((box[i * 2] + box[i * 2 + 1]) / 2) for i in xrange(3)]
+        self.plan = plan
+        self.interactor.position = plan[2]
+        self.box = box
+        labels = voisinage(self.segmented_matrix, cellule, label, self.background_list)
+        for labs in labels:
+            if labs == self.label:
+                self.interactor.polyList[labs] = self.interactor.consideredCell
+            elif labs not in self.interactor.polyList.keys():
+                self.interactor.polyList[labs] = compute_points(mat, labs)
+        self.label = label
+        self.interactor.label = label
+        self.interactor.consideredCell = cellule
+        del self.interactor.polyList[label]
+        for la in self.interactor.polyList.keys():
+            if la not in labels:
+                del self.interactor.polyList[la]
+        self.interactor.deletedLabel[:] = []
+
     def set_data(self, intensity_mat, segmented_mat, label):
         self.set_segmented_matrix(segmented_mat)
         self.set_intensity_matrix(intensity_mat)
         self.set_label(label)
         self.iren.Initialize()
         self.iren.Start()
-        #self.render()
+        self.interactor.refresh()
+
+    def edit_new_cell(self):
+        self.set_new_label(self.interactor.selectedLabel)
         self.interactor.refresh()
 
     def move_in_plane(self, value):
@@ -422,10 +450,6 @@ class ViewerEditor(QtGui.QWidget):
         """
         array = self.interactor.apply_change_to_segmentation()
         return array
-
-    def edit_new_cell(self):
-        self.set_label(self.interactor.selectedLabel)
-        self.interactor.refresh()
 
 
 def voisinage(matrix, contour, label, background_list):
@@ -727,8 +751,6 @@ class SelectCellInteractorStyle (vtk.vtkInteractorStyleTrackballCamera):
                     if label not in self._ignored_labels:
                         self._selected_label = label
                         self.InvokeEvent("LabelSelectedEvent")
-                    else:
-                        self.InvokeEvent("bla")
 
 
 class InteractorEditor(vtk.vtkInteractorStyle):
@@ -1069,6 +1091,7 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
                         break
                     else:
                         self.selectedLabel = -1
+                print self.selectedLabel
                 self.InvokeEvent("CellSelected")
                 self.refresh()
 
