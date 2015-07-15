@@ -101,6 +101,7 @@ class EditorWindow(QtGui.QWidget):
         self.control.bp_move.pressed.connect(self.set_mode_to_move)
         self.control.bp_select.pressed.connect(self.set_mode_to_select)
         self.control.bp_fusion.pressed.connect(self.fusion_consid_select_cells)
+        self.control.bp_split.pressed.connect(self.split_considered_cell)
         self.control.slider_propagation.valueChanged.connect(self.set_propagation)
         self.control.sb_propagation.valueChanged.connect(self.set_propagation)
         self.control.bp_save.pressed.connect(self.apply_change_to_segmentation)
@@ -208,6 +209,10 @@ class EditorWindow(QtGui.QWidget):
         a method to connect the button 'fusion' to the 'fusion algo' of the interactor
         """
         self.viewer.fusion_consid_select_cells()
+        self.set_slider_spinbox()
+
+    def split_considered_cell(self):
+        self.viewer.split_considered_cell()
         self.set_slider_spinbox()
 
     def set_propagation(self, value):
@@ -331,8 +336,6 @@ class ViewerEditor(QtGui.QWidget):
         box = cellule.GetBounds()
         plan = [int((box[i * 2] + box[i * 2 + 1]) / 2) for i in xrange(3)]
         labels = voisinage(self.segmented_matrix, cellule, lab, self.background_list)
-        print labels
-        print 'voila'
         self.interactor.consideredCell = cellule
         self.plan = plan
         self.interactor.position = plan[2]
@@ -385,6 +388,9 @@ class ViewerEditor(QtGui.QWidget):
 
     def fusion_consid_select_cells(self):
         self.box = self.interactor.fusion_consid_select_cells()
+
+    def split_considered_cell(self):
+        self.box = self.interactor.split_considered_cell()
 
     def set_propagation(self, value):
         self.interactor.propagation = value
@@ -1191,7 +1197,8 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         remove the bounderies between them,
         and add the selectedLabel's neighboords to the polyList
         """
-        if self.mode == 1 and self.selectedLabel != -1 and self.selectedLabel not in self.deletedLabel:
+        #if self.mode == 1 and self.selectedLabel != -1 and self.selectedLabel not in self.deletedLabel:
+        if self.selectedLabel != -1 and self.selectedLabel not in self.deletedLabel:
             fusionPoly = self.polyList[self.selectedLabel]
             delete_shared_borders_mieux(self.consideredCell, fusionPoly)
             labels = voisinage(self.matrix, fusionPoly, self.selectedLabel, self.background_list)
@@ -1228,6 +1235,60 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
             box = np.zeros(6)
             self.consideredCell.GetBounds(box)
             return box
+
+    def split_considered_cell(self):
+        clipper = vtk.vtkClipPolyData()
+        if vtk.VTK_MAJOR_VERSION <= 5:
+            clipper.SetInput(self.consideredCell)
+        else:
+            clipper.SetInputData(self.consideredCell)
+        clipper.SetClipFunction(self.plane)
+        clipper.GenerateClippedOutputOn()
+        clipper.Update()
+
+        feat = vtk.vtkFeatureEdges()
+        feat.SetInputConnection(clipper.GetOutputPort())
+
+        feat.BoundaryEdgesOn()
+        feat.FeatureEdgesOff()
+        feat.NonManifoldEdgesOff()
+        feat.ManifoldEdgesOff()
+
+        strip = vtk.vtkStripper()
+        strip.SetInputConnection(feat.GetOutputPort())
+        strip.Update()
+
+        poly = vtk.vtkPolyData()
+        poly.SetPoints(strip.GetOutput().GetPoints())
+        poly.SetPolys(strip.GetOutput().GetLines())
+
+        triangle = vtk.vtkTriangleFilter()
+        if vtk.VTK_MAJOR_VERSION <= 5:
+            triangle.SetInput(poly)
+        else:
+            triangle.SetInputData(poly)
+
+        subdivisionFilter = vtk.vtkLoopSubdivisionFilter()
+        subdivisionFilter.SetNumberOfSubdivisions(2)
+        subdivisionFilter.SetInputConnection(triangle.GetOutputPort())
+
+        append0 = vtk.vtkAppendPolyData()
+        append0.AddInputConnection(clipper.GetOutputPort(0))
+        append0.AddInputConnection(subdivisionFilter.GetOutputPort())
+        append0.Update()
+
+        append1 = vtk.vtkAppendPolyData()
+        append1.AddInputConnection(clipper.GetOutputPort(1))
+        append1.AddInputConnection(subdivisionFilter.GetOutputPort())
+        append1.Update()
+
+        self.consideredCell = append0.GetOutput()
+        self.polyList[5000] = append1.GetOutput()
+
+        self.refresh()
+        box = np.zeros(6)
+        self.consideredCell.GetBounds(box)
+        return box
 
     def apply_change_to_segmentation(self):
         reader = matrix_to_image_reader('la', self.matrix, self.matrix.dtype)
