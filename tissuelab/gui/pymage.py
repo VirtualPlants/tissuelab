@@ -23,7 +23,7 @@ from openalea.vpltk.qt import QtGui
 from openalea.core.path import path as Path
 from openalea.oalab.cli.parser import CommandLineParser
 from openalea.oalab.plugin.builtin.lab.minilab import MiniLab
-from openalea.oalab.main2 import launch_lab
+from openalea.oalab.main import launch_lab
 from openalea.core.world import World
 
 from openalea.core.service.plugin import plugin_instance
