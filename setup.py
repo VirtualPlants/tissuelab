@@ -101,9 +101,5 @@ setup(
             'omero = tissuelab.plugin.db:OmeroDb',
         ],
 
-        'oalab.interface': [
-        ],
-
-
     },
 )
