@@ -43,7 +43,7 @@ from vtk import VTK_DOUBLE
 #TODO : rajouter une méthode de déplacement en fonction de l'intensité ????
 #TODO : réparer bug de loopsubdivision
 #TODO : réparer bug qui fait crasher quand split puis fusion
-
+#TODO : garder les mêmes réglages pour les matrices quand on fait apply (affichage coupe/volume, intensity/segmented, même tranche....
 
 def expand(widget):
     p = QtGui.QSizePolicy
