@@ -90,15 +90,15 @@ setup(
         ],
 
         'oalab.applet': [
-            'TissueLabApplet=tissuelab.plugin.applet',
+            'oalab.applet/tissuelab = tissuelab.plugin.applet',
         ],
 
         'oalab.lab': [
-            'TissueLab = tissuelab.plugin.lab',
+            'oalab.lab/tissuelab = tissuelab.plugin.lab',
         ],
 
         'oalab.db': [
-            'omero = tissuelab.plugin.db:OmeroDb',
+            'oalab.db/tissuelab = tissuelab.plugin.db',
         ],
 
     },

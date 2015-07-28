@@ -23,7 +23,7 @@ from openalea.core.plugin import PluginDef
 class LineageViewer(object):
 
     name = 'LineageViewer'
-    alias = 'Lineage Viewer'
+    label = 'Lineage Viewer'
     icon = 'icon_lineageviewer.png'
 
     def __call__(self):
@@ -35,7 +35,7 @@ class LineageViewer(object):
 class OmeroClient(object):
 
     name = 'OmeroClient'
-    alias = 'Omero DB'
+    label = 'Omero DB'
     icon = 'icon_omero.png'
 
     def __call__(self):
@@ -47,7 +47,7 @@ class OmeroClient(object):
 class TissueViewer(object):
 
     name = 'TissueViewer'
-    alias = '3D Viewer'
+    label = '3D Viewer'
     icon = 'icon_vtkviewer.png'
 
     def __call__(self):
@@ -59,7 +59,7 @@ class TissueViewer(object):
 class VtkControlPanel(object):
 
     name = 'VtkControlPanel'
-    alias = '3D Viewer controls'
+    label = '3D Viewer controls'
     icon = 'icon_vtkcontrolpanel.png'
 
     def __call__(self):
