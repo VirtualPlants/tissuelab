@@ -875,11 +875,11 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         subdivision = vtk.vtkButterflySubdivisionFilter()
         subdivision.SetInputConnection(self.sphere_propagation.GetOutputPort())
         subdivision.SetNumberOfSubdivisions(2)
-        cutter = vtk.vtkCutter()
-        cutter.SetInputConnection(subdivision.GetOutputPort())
-        cutter.SetCutFunction(self.plane)
+        self.cutter_sphere = vtk.vtkCutter()
+        self.cutter_sphere.SetInputConnection(subdivision.GetOutputPort())
+        self.cutter_sphere.SetCutFunction(self.plane)
         spheremap = vtk.vtkPolyDataMapper()
-        spheremap.SetInputConnection(cutter.GetOutputPort())
+        spheremap.SetInputConnection(self.cutter_sphere.GetOutputPort())
         self.sphere_actor = vtk.vtkActor()
         self.sphere_actor.SetMapper(spheremap)
         self.sphere_actor.VisibilityOff()
@@ -898,7 +898,8 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         normal[self.orientation] = 1
         self.plane.SetOrigin(origine)
         self.plane.SetNormal(normal)
-
+        
+        self.cutter_sphere.Update()
         self.refresh_poly()
         self.refresh_background()
         #self.GetCurrentRenderer().AddActor(self.move_actor)
@@ -925,11 +926,22 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
             else:
                 cutter.SetInputData(self.polyList[lab])
             cutter.SetCutFunction(self.plane)
+            
+            """cutter.Update()
+            cutplan = cutter.GetOutput()
+            verts = vtk.vtkCellArray()
+            for i in xrange(cutplan.GetNumberOfPoints()):
+                verts.InsertNextCell(1)
+                verts.InsertCellPoint(i)
+            cutplan.SetVerts(verts)"""
+            
             newmap = vtk.vtkPolyDataMapper()
             newmap.SetInputConnection(cutter.GetOutputPort())
+            
             newmap.ScalarVisibilityOff()
             newact = vtk.vtkActor()
             newact.SetMapper(newmap)
+            newact.GetProperty().SetPointSize(3)
             if lab == self.selectedLabel:
                 newact.GetProperty().SetColor(0, 1, 0)
             else:
@@ -996,17 +1008,14 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
                     self.consid_point = self.consid_cut.FindPoint(coord)
 
                     self.sphere_propagation.SetCenter(coord)
-                    self.sphere_propagation.SetRadius(self.propagation)
-                    #self.sphere_propagation.Update()
-                    self.sphere_actor.VisibilityOn()
+                    self.sphere_propagation.SetRadius(self.propagation) 
+                    self.sphere_actor.VisibilityOn()          
 
                     selectEnclosed = vtk.vtkSelectEnclosedPoints()
                     if vtk.VTK_MAJOR_VERSION <= 5:
                         selectEnclosed.SetInput(self.consid_cut)
-                        #selectEnclosed.SetSurface(self.sphere_propagation.GetOutput())
                     else:
                         selectEnclosed.SetInputData(self.consid_cut)
-                        #selectEnclosed.SetSurfaceData(self.sphere_propagation.GetOutput())
                     selectEnclosed.SetSurfaceConnection(self.sphere_propagation.GetOutputPort())
                     selectEnclosed.Update()
 
@@ -1019,6 +1028,7 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
                             self.points_to_move[i] = dist / self.propagation
 
                     self.grab_mode = True
+                    
                     self.GetCurrentRenderer().Render()
                     self.GetCurrentRenderer().GetRenderWindow().Render()
                 else:
@@ -1152,79 +1162,7 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
     def KeyPressEvent(self, obj, event):
         key = self.GetInteractor().GetKeyCode()
         if key == 'z':
-            for pol in self.polyList.values():
-                feat = vtk.vtkFeatureEdges()
-                feat.SetInputData(pol)
-                feat.BoundaryEdgesOn()
-                feat.FeatureEdgesOff()
-                feat.NonManifoldEdgesOff()
-                feat.ManifoldEdgesOff()
-                feat.Update()
-
-                if feat.GetOutput().GetNumberOfCells() > 0:
-                    print 'alerte'
-                    strip = vtk.vtkStripper()
-                    strip.SetInputConnection(feat.GetOutputPort())
-                    strip.Update()
-
-                    poly = vtk.vtkPolyData()
-                    poly.SetPoints(strip.GetOutput().GetPoints())
-                    poly.SetPolys(strip.GetOutput().GetLines())
-
-                    triangle = vtk.vtkTriangleFilter()
-                    if vtk.VTK_MAJOR_VERSION <= 5:
-                        triangle.SetInput(poly)
-                    else:
-                        triangle.SetInputData(poly)
-
-                    subdivisionFilter = vtk.vtkLinearSubdivisionFilter()
-                    subdivisionFilter.SetNumberOfSubdivisions(3)
-                    subdivisionFilter.SetInputConnection(triangle.GetOutputPort())
-
-                    append0 = vtk.vtkAppendPolyData()
-                    append0.AddInputData(pol)
-                    append0.AddInputConnection(subdivisionFilter.GetOutputPort())
-                    append0.Update()
-
-                    pol = append0.GetOutput()
-
-        feat = vtk.vtkFeatureEdges()
-        feat.SetInputData(self.consideredCell)
-
-        feat.BoundaryEdgesOn()
-        feat.FeatureEdgesOff()
-        feat.NonManifoldEdgesOff()
-        feat.ManifoldEdgesOff()
-        feat.Update()
-        if feat.GetOutput().GetNumberOfCells() > 0:
-            strip = vtk.vtkStripper()
-            strip.SetInputConnection(feat.GetOutputPort())
-            strip.Update()
-
-            po = vtk.vtkPolyData()
-            po.SetPoints(strip.GetOutput().GetPoints())
-            po.SetPolys(strip.GetOutput().GetLines())
-
-            triangle = vtk.vtkTriangleFilter()
-            if vtk.VTK_MAJOR_VERSION <= 5:
-                triangle.SetInput(po)
-            else:
-                triangle.SetInputData(po)
-
-            cleaning = vtk.vtkCleanPolyData()
-            cleaning.SetInputConnection(triangle.GetOutputPort())
-            cleaning.PointMergingOn()
-            cleaning.SetTolerance(0.0)
-
-            subdivisionFilter = vtk.vtkLinearSubdivisionFilter()
-            subdivisionFilter.SetNumberOfSubdivisions(3)
-            subdivisionFilter.SetInputConnection(cleaning.GetOutputPort())
-
-            append0 = vtk.vtkAppendPolyData()
-            append0.AddInputData(self.consideredCell)
-            append0.AddInputConnection(subdivisionFilter.GetOutputPort())
-            append0.Update()
-            self.consideredCell = append0.GetOutput()
+            print "wip"
 
     def fusion_consid_select_cells(self):
         """
@@ -1272,13 +1210,24 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
             self.consideredCell.GetBounds(box)
             return box
 
-    def split_considered_cell(self):
+    def split_considered_cell(self): 
+                 
         clipper = vtk.vtkClipPolyData()
         if vtk.VTK_MAJOR_VERSION <= 5:
+            origine = np.zeros(3)
+            origine[self.orientation] = self.position
+            normal = np.zeros(3)
+            normal[self.orientation] = 1          
+            plane2 = vtk.vtkPlane()
+            plane2.SetNormal(normal)
+            plane2.SetOrigin(origine) 
+            
             clipper.SetInput(self.consideredCell)
+            clipper.SetClipFunction(plane2)
         else:
             clipper.SetInputData(self.consideredCell)
-        clipper.SetClipFunction(self.plane)
+            clipper.SetClipFunction(self.plane)
+        
         clipper.GenerateClippedOutputOn()
         clipper.Update()
 
@@ -1308,25 +1257,39 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         cleaning.SetInputConnection(triangle.GetOutputPort())
         cleaning.PointMergingOn()
         cleaning.SetTolerance(0.0)
+        #cleaning.Update()
 
         subdivisionFilter = vtk.vtkLoopSubdivisionFilter()
         subdivisionFilter.SetNumberOfSubdivisions(3)
         subdivisionFilter.SetInputConnection(cleaning.GetOutputPort())
+        #subdivisionFilter.Update()
 
         append0 = vtk.vtkAppendPolyData()
         append0.AddInputConnection(clipper.GetOutputPort(0))
         append0.AddInputConnection(subdivisionFilter.GetOutputPort())
         append0.Update()
+        
+        cleaning0 = vtk.vtkCleanPolyData()
+        cleaning0.SetInputConnection(append0.GetOutputPort())
+        cleaning0.PointMergingOn()
+        cleaning0.SetTolerance(0.0)
+        cleaning0.Update()
 
         append1 = vtk.vtkAppendPolyData()
         append1.AddInputConnection(clipper.GetOutputPort(1))
         append1.AddInputConnection(subdivisionFilter.GetOutputPort())
         append1.Update()
-
-        del self.consideredCell
-        self.consideredCell = append0.GetOutput()
-        self.polyList[5000] = append1.GetOutput()
-
+        
+        cleaning1 = vtk.vtkCleanPolyData()
+        cleaning1.SetInputConnection(append1.GetOutputPort())
+        cleaning1.PointMergingOn()
+        cleaning1.SetTolerance(0.0)
+        cleaning1.Update()
+        
+        del self.consideredCell   
+        self.consideredCell = cleaning0.GetOutput()
+        self.polyList[5000] = cleaning1.GetOutput()
+        
         self.refresh()
         box = np.zeros(6)
         self.consideredCell.GetBounds(box)
