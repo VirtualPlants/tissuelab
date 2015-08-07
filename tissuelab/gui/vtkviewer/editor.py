@@ -1288,7 +1288,13 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         
         del self.consideredCell   
         self.consideredCell = cleaning0.GetOutput()
-        self.polyList[5000] = cleaning1.GetOutput()
+        label_in_matrix = np.setdiff1d(self.matrix,self.background_list)
+        for i in xrange(2,5000):
+            if i not in label_in_matrix:
+                new_label = i
+                break
+        print new_label
+        self.polyList[new_label] = cleaning1.GetOutput()
         
         self.refresh()
         box = np.zeros(6)
