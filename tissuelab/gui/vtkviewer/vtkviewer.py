@@ -32,7 +32,7 @@ from openalea.oalab.interface import IIntRange, IColormap
 # Do not import world related module in this module, see vtkworldviewer instead!
 
 from tissuelab.gui.vtkviewer.qvtkrenderwindowinteractor import QVTKRenderWindowInteractor
-from tissuelab.gui.vtkviewer.colormap_def import load_colormaps
+from openalea.oalab.colormap.colormap_def import load_colormaps
 from tissuelab.gui.vtkviewer.vtk_utils import (matrix_to_image_reader, define_lookuptable, get_polydata_cell_data,
                                                obj_extent, get_polydata_extent, vtk_clipped_polydata, vtk_sub_polydata)
 
@@ -50,48 +50,48 @@ cst_percent_range = dict(step=1, min=0, max=100)
 attribute_definition = {}
 attribute_definition['matrix'] = {}
 attribute_definition['matrix']['matrix_colormap'] = dict(
-    value=dict(name='grey', color_points=dict([(0, (0, 0, 0)), (1, (1, 1, 1))])), interface=IColormap, alias="Colormap")
+    value=dict(name='grey', color_points=dict([(0, (0, 0, 0)), (1, (1, 1, 1))])), interface=IColormap, label="Colormap")
 attribute_definition['matrix']['volume_alpha'] = dict(value=1.0, interface=IFloat, constraints=cst_proba,
-                                                      alias=u"Alpha (Volume)")
+                                                      label=u"Alpha (Volume)")
 attribute_definition['matrix']['alphamap'] = dict(value='linear', interface=IEnumStr, constraints=cst_alphamap,
-                                                  alias="Alpha Map")
-attribute_definition['matrix']['bg_id'] = dict(value=1, interface=IInt, alias="Background Id")
-attribute_definition['matrix']['intensity_range'] = dict(value=(0, 255), interface=IIntRange, alias="Intensity Range")
-attribute_definition['matrix']['volume'] = dict(value=True, interface=IBool, alias="Display Volume")
+                                                  label="Alpha Map")
+attribute_definition['matrix']['bg_id'] = dict(value=1, interface=IInt, label="Background Id")
+attribute_definition['matrix']['intensity_range'] = dict(value=(0, 255), interface=IIntRange, label="Intensity Range")
+attribute_definition['matrix']['volume'] = dict(value=True, interface=IBool, label="Display Volume")
 attribute_definition['matrix']['cut_planes_alpha'] = dict(value=1.0, interface=IFloat, constraints=cst_proba,
-                                                          alias=u"Alpha (Cut planes)")
+                                                          label=u"Alpha (Cut planes)")
 attribute_definition['matrix']['blending_factor'] = dict(value=0.5, interface=IFloat, constraints=cst_proba,
-                                                         alias=u"Blending factor")
-attribute_definition['matrix']['resolution'] = dict(value=(1.0, 1.0, 1.0), interface=ITuple, alias=u"Resolution")
-attribute_definition['matrix']['position'] = dict(value=(0.0, 0.0, 0.0), interface=ITuple, alias=u"Position")
+                                                         label=u"Blending factor")
+attribute_definition['matrix']['resolution'] = dict(value=(1.0, 1.0, 1.0), interface=ITuple, label=u"Resolution")
+attribute_definition['matrix']['position'] = dict(value=(0.0, 0.0, 0.0), interface=ITuple, label=u"Position")
 for axis in ['x', 'y', 'z']:
-    alias = u"Move " + axis + " plane"
-    attribute_definition['matrix'][axis + "_plane_position"] = dict(value=0, interface=IInt, alias=alias)
-attribute_definition['matrix']['cut_planes'] = dict(value=False, interface=IBool, alias=u"Display Cut planes")
+    label = u"Move " + axis + " plane"
+    attribute_definition['matrix'][axis + "_plane_position"] = dict(value=0, interface=IInt, label=label)
+attribute_definition['matrix']['cut_planes'] = dict(value=False, interface=IBool, label=u"Display Cut planes")
 attribute_definition['polydata'] = {}
 attribute_definition['polydata']['polydata_colormap'] = dict(
-    value=dict(name='grey', color_points=dict([(0, (0, 0, 0)), (1, (1, 1, 1))])), interface=IColormap, alias="Colormap")
+    value=dict(name='grey', color_points=dict([(0, (0, 0, 0)), (1, (1, 1, 1))])), interface=IColormap, label="Colormap")
 attribute_definition['polydata']['polydata_alpha'] = dict(value=1.0, interface=IFloat, constraints=cst_proba,
-                                                          alias=u"Alpha (Polydata)")
+                                                          label=u"Alpha (Polydata)")
 attribute_definition['polydata']['intensity_range'] = dict(
     value=(
         0,
         255),
     interface=IIntRange,
-    alias="Intensity Range")
-attribute_definition['polydata']['linewidth'] = dict(value=1, interface=IInt, alias="Linewidth", constraints=cst_width)
+    label="Intensity Range")
+attribute_definition['polydata']['linewidth'] = dict(value=1, interface=IInt, label="Linewidth", constraints=cst_width)
 attribute_definition[
     'polydata'][
     'point_radius'] = dict(
     value=1.0,
     interface=IFloat,
     constraints=cst_width,
-    alias=u"Point Size")
-attribute_definition['polydata']['resolution'] = dict(value=(1.0, 1.0, 1.0), interface=ITuple, alias=u"Resolution")
-attribute_definition['polydata']['position'] = dict(value=(0.0, 0.0, 0.0), interface=ITuple, alias=u"Position")
-attribute_definition['polydata']['display_polydata'] = dict(value=True, interface=IBool, alias=u"Display Polydata")
+    label=u"Point Size")
+attribute_definition['polydata']['resolution'] = dict(value=(1.0, 1.0, 1.0), interface=ITuple, label=u"Resolution")
+attribute_definition['polydata']['position'] = dict(value=(0.0, 0.0, 0.0), interface=ITuple, label=u"Position")
+attribute_definition['polydata']['display_polydata'] = dict(value=True, interface=IBool, label=u"Display Polydata")
 for axis in ['x', 'y', 'z']:
-    alias = u"Move " + axis + " slice"
+    label = u"Move " + axis + " slice"
     attribute_definition[
         'polydata'][
         axis + "_slice"] = dict(
@@ -100,8 +100,8 @@ for axis in ['x', 'y', 'z']:
             100),
         interface=IIntRange,
         constraints=cst_percent_range,
-        alias=alias)
-attribute_definition['polydata']['preserve_faces'] = dict(value=False, interface=IBool, alias=u"Preserve Faces")
+        label=label)
+attribute_definition['polydata']['preserve_faces'] = dict(value=False, interface=IBool, label=u"Preserve Faces")
 
 
 colormaps = load_colormaps()
@@ -109,7 +109,7 @@ colormaps = load_colormaps()
 
 def attribute_meta(dtype, attr_name):
     return dict(interface=attribute_definition[dtype][attr_name]['interface'],
-                alias=attribute_definition[dtype][attr_name]['alias'])
+                label=attribute_definition[dtype][attr_name]['label'])
 
 
 def attribute_args(dtype, attr_name, value=None, constraints=None):

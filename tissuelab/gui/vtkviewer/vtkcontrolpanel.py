@@ -109,7 +109,7 @@ class VtkControlPanel(QtGui.QWidget):
         #     colormap_names.sort()
         #     lut.interface.enum = colormap_names
         # else:
-        #     from tissuelab.gui.vtkviewer.colormap_def import colormap_names
+        #     from openalea.oalab.colormap.colormap_def import colormap_names
         #     lut.interface.enum = colormap_names
 
         cmap = manager.add('colormap', interface='IColormap', value=dict(name='grey', color_points=dict([(0, (0, 0, 0)), (1, (1, 1, 1))])), alias=u'Colormap')
