@@ -39,9 +39,7 @@ from vtk import VTK_DOUBLE
 
 #TODO : recalculer la box de l'editor quand un point est deplace en dehors
 #TODO : modifier le code pour le rendre plus expensif (laisser une place pour le choix de deplacement, de split, etc)
-#TODO : rajouter des subdivisions à la sphere de propagation
 #TODO : rajouter une méthode de déplacement en fonction de l'intensité ????
-#TODO : réparer bug de loopsubdivision
 #TODO : réparer bug qui fait crasher quand split puis fusion
 #TODO : garder les mêmes réglages pour les matrices quand on fait apply (affichage coupe/volume, intensity/segmented, même tranche....
 
@@ -66,14 +64,20 @@ class EditorWindow(QtGui.QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
 
         self.frame = QtGui.QFrame()
-        self.vl = QtGui.QVBoxLayout(self.frame)
+        self.vl = QtGui.QGridLayout(self.frame)
         self.vl.setContentsMargins(0, 0, 0, 0)
 
         self.viewer = ViewerEditor()
-        self.vl.addWidget(self.viewer)
+        self.vl.addWidget(self.viewer,0,0,10,3)
 
         self.control = ControlsEditor()
-        self.vl.addWidget(self.control)
+        self.control.setMaximumHeight(120)
+        self.vl.addWidget(self.control,10,0,1,2)        
+        
+        self.viewer3D = ViewerEditor3D()
+        self.viewer3D.setMaximumHeight(150)
+        self.viewer3D.setMaximumWidth(200)
+        self.vl.addWidget(self.viewer3D,10,2,1,1)
 
         expand(self)
         expand(self.frame)
@@ -122,7 +126,8 @@ class EditorWindow(QtGui.QWidget):
         """
         a method to pass the parameter needed by the viewer and his interactor
         """
-        self.viewer.set_data(intensity_mat, segmented_mat, label)
+        self.polydata = self.viewer.set_data(intensity_mat, segmented_mat, label)
+        self.viewer3D.set_poly(self.polydata)
         self.set_slider_spinbox()
         self.show()
 
@@ -144,6 +149,7 @@ class EditorWindow(QtGui.QWidget):
             self.control.slider_cut_plane.setValue(value)
             self.viewer.move_in_plane(value)
             self.block_cut_plane = False
+            self.viewer3D.set_plane(self.viewer.box, self.viewer.interactor.orientation, value)
 
     def switch_to_x_plan(self):
         """
@@ -189,6 +195,7 @@ class EditorWindow(QtGui.QWidget):
 
         self.block_cut_plane = False
         self.control.slider_cut_plane.setSliderPosition(value)
+        self.viewer3D.set_plane(self.viewer.box, cutplan, value)
 
     def set_mode(self, mode):
         self.viewer.interactor.mode = mode
@@ -215,12 +222,18 @@ class EditorWindow(QtGui.QWidget):
         """
         a method to connect the button 'fusion' to the 'fusion algo' of the interactor
         """
-        self.viewer.fusion_consid_select_cells()
+        self.polydata = self.viewer.fusion_consid_select_cells()
+        self.viewer3D.clear()
+        self.viewer3D.set_poly(self.polydata)
         self.set_slider_spinbox()
+        self.viewer3D.render()
 
     def split_considered_cell(self):
-        self.viewer.split_considered_cell()
+        self.polydata = self.viewer.split_considered_cell()
+        self.viewer3D.clear()
+        self.viewer3D.set_poly(self.polydata)
         self.set_slider_spinbox()
+        self.viewer3D.render()
 
     def set_propagation(self, value):
         """
@@ -264,11 +277,104 @@ class ControlsEditor(QtGui.QWidget, Ui_panel_control_editor):
         QtGui.QWidget.__init__(self)
         self.setupUi(self)
 
+class ViewerEditor3D(QtGui.QWidget):
+
+    def __init__(self):
+        QtGui.QWidget.__init__(self)
+
+        layout = QtGui.QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        self.frame = QtGui.QFrame()
+        self.vl = QtGui.QVBoxLayout(self.frame)
+        self.vl.setContentsMargins(0, 0, 0, 0)
+
+        self.vtkWidget = QVTKRenderWindowInteractor(self.frame)
+        self.vl.addWidget(self.vtkWidget)
+
+        expand(self)
+        expand(self.frame)
+        expand(self.vtkWidget)
+
+        self.ren = vtk.vtkRenderer()  # vtk renderer
+        self.vtkWidget.GetRenderWindow().SetSize(10,10)
+        self.vtkWidget.GetRenderWindow().AddRenderer(self.ren)
+        self.iren = self.vtkWidget.GetRenderWindow().GetInteractor()
+
+        layout.addWidget(self.frame)
+        
+        self.plane = vtk.vtkPlaneSource()
+        mapper_plan = vtk.vtkPolyDataMapper()
+        mapper_plan.ScalarVisibilityOff()
+        mapper_plan.SetInputConnection(self.plane.GetOutputPort())
+        actor = vtk.vtkActor()
+        actor.SetMapper(mapper_plan)
+        self.ren.AddActor(actor)
+        self.ren.ResetCamera()
+        
+        self.iren.Initialize()
+        self.iren.Start()
+        
+    def resizeEvent(self, *args, **kwargs):
+        self.render()
+        return QtGui.QWidget.resizeEvent(self, *args, **kwargs)
+
+    def render(self):
+        self.iren.Render()
+        
+    def clear(self):
+        self.ren.RemoveActor(self.actor)
+        
+    def set_poly(self, polydata):
+        mapper = vtk.vtkPolyDataMapper()
+        mapper.ScalarVisibilityOff()
+        if vtk.VTK_MAJOR_VERSION <= 5:
+            mapper.SetInput(polydata)
+        else:
+            mapper.SetInputData(polydata)
+        self.actor = vtk.vtkActor()
+        self.actor.SetMapper(mapper)
+        self.actor.GetProperty().SetColor(0,0,1)
+        self.ren.AddActor(self.actor)
+        self.ren.ResetCamera()
+        self.render()
+        
+    def set_plane(self, box, axis, position):
+        origin = np.zeros(3)
+        p1 = np.zeros(3)
+        p2 = np.zeros(3)
+        if axis == 0:
+            x = 1
+            y = 2
+        elif axis == 1:
+            x = 0
+            y = 2
+        else :
+            x = 0
+            y = 1
+        origin[x] = box[2*x] - 5
+        p1[x] = box[2*x] - 5
+        p2[x] = box[2*x+1] + 5
+        
+        origin[y] = box[2*y] - 5
+        p1[y] = box[2*y+1] + 5
+        p2[y] = box[2*y] - 5
+        
+        origin[axis] = position
+        p1[axis] = position
+        p2[axis] = position
+        self.plane.SetOrigin(origin)
+        self.plane.SetPoint1(p1)
+        self.plane.SetPoint2(p2)
+        self.plane.Update()
+        self.ren.ResetCamera()
+        self.ren.Render()
+        self.render()
 
 class ViewerEditor(QtGui.QWidget):
 
     """
-    class that implements the vtkviewer and pass information to the interactor
+    class that implements the vtkviewer of the editor and pass information to the interactor
     """
 
     def __init__(self):
@@ -351,6 +457,7 @@ class ViewerEditor(QtGui.QWidget):
         self.interactor.polyList.clear()
         self.interactor.polyList = {labs: compute_points(mat, labs) for labs in labels}
         self.interactor.deletedLabel[:] = []
+        return self.interactor.consideredCell
 
     def set_new_label(self, label):
         reader = matrix_to_image_reader('la', self.segmented_matrix, self.segmented_matrix.dtype)
@@ -379,10 +486,11 @@ class ViewerEditor(QtGui.QWidget):
     def set_data(self, intensity_mat, segmented_mat, label):
         self.set_segmented_matrix(segmented_mat)
         self.set_intensity_matrix(intensity_mat)
-        self.set_label(label)
+        polydata = self.set_label(label)
         self.iren.Initialize()
         self.iren.Start()
         self.interactor.refresh()
+        return polydata
 
     def edit_new_cell(self):
         self.set_new_label(self.interactor.selectedLabel)
@@ -395,9 +503,11 @@ class ViewerEditor(QtGui.QWidget):
 
     def fusion_consid_select_cells(self):
         self.box = self.interactor.fusion_consid_select_cells()
+        return self.interactor.consideredCell
 
     def split_considered_cell(self):
         self.box = self.interactor.split_considered_cell()
+        return self.interactor.consideredCell
 
     def set_propagation(self, value):
         self.interactor.propagation = value
@@ -1288,7 +1398,7 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         
         del self.consideredCell   
         self.consideredCell = cleaning0.GetOutput()
-        label_in_matrix = np.setdiff1d(self.matrix,self.background_list)
+        label_in_matrix = np.setdiff1d(self.matrix,[0])
         for i in xrange(2,5000):
             if i not in label_in_matrix:
                 new_label = i
