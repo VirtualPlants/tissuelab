@@ -985,11 +985,17 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         subdivision = vtk.vtkButterflySubdivisionFilter()
         subdivision.SetInputConnection(self.sphere_propagation.GetOutputPort())
         subdivision.SetNumberOfSubdivisions(2)
-        self.cutter_sphere = vtk.vtkCutter()
-        self.cutter_sphere.SetInputConnection(subdivision.GetOutputPort())
-        self.cutter_sphere.SetCutFunction(self.plane)
+        
         spheremap = vtk.vtkPolyDataMapper()
-        spheremap.SetInputConnection(self.cutter_sphere.GetOutputPort())
+        
+        if vtk.VTK_MAJOR_VERSION <= 5:
+            spheremap.SetInputConnection(subdivision.GetOutputPort())
+        else:            
+            self.cutter_sphere = vtk.vtkCutter()
+            self.cutter_sphere.SetInputConnection(subdivision.GetOutputPort())
+            self.cutter_sphere.SetCutFunction(self.plane)
+            spheremap.SetInputConnection(self.cutter_sphere.GetOutputPort())       
+        
         self.sphere_actor = vtk.vtkActor()
         self.sphere_actor.SetMapper(spheremap)
         self.sphere_actor.VisibilityOff()
@@ -1009,7 +1015,7 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         self.plane.SetOrigin(origine)
         self.plane.SetNormal(normal)
         
-        self.cutter_sphere.Update()
+        #self.cutter_sphere.Update()
         self.refresh_poly()
         self.refresh_background()
         #self.GetCurrentRenderer().AddActor(self.move_actor)
@@ -1118,7 +1124,8 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
                     self.consid_point = self.consid_cut.FindPoint(coord)
 
                     self.sphere_propagation.SetCenter(coord)
-                    self.sphere_propagation.SetRadius(self.propagation) 
+                    self.sphere_propagation.SetRadius(self.propagation)
+                    self.sphere_propagation.Update()
                     self.sphere_actor.VisibilityOn()          
 
                     selectEnclosed = vtk.vtkSelectEnclosedPoints()
