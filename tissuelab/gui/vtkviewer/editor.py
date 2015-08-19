@@ -941,6 +941,8 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
             polyList : dict for all neighboor : dict[label_neigh] = polydata_neigh
             background : imageactor of the intensity matrix
             matrix : matrix of the segmented image
+            select_neighboor_mode : string to choose the method use to select the points to deplace
+            select_move_mode : string to choose the method use to move the points
     """
 
     def __init__(self, parent=None):
@@ -956,6 +958,9 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         self.matrix = []
         self.background_list = list()
         self.consid_cut = vtk.vtkPolyData()
+        
+        self.select_neighboor_mode = 'propagationSphere'
+        self.select_move_mode = 'proportionality'
 
         self.x = 0
         self.y = 1
@@ -1122,8 +1127,10 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
                 if distance(co, coord) <= 1:
                     self.selectedPoint = fp
                     self.consid_point = self.consid_cut.FindPoint(coord)
+                    
+                    self.find_point_to_move(coord)
 
-                    self.sphere_propagation.SetCenter(coord)
+                    """self.sphere_propagation.SetCenter(coord)
                     self.sphere_propagation.SetRadius(self.propagation)
                     self.sphere_propagation.Update()
                     self.sphere_actor.VisibilityOn()          
@@ -1142,7 +1149,7 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
                         if selectEnclosed.IsInside(i):
                             coordi = self.consid_cut.GetPoint(i)
                             dist = distance(coord, coordi)
-                            self.points_to_move[i] = dist / self.propagation
+                            self.points_to_move[i] = dist / self.propagation"""
 
                     self.grab_mode = True
                     
@@ -1190,7 +1197,10 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
                 pos = self.GetInteractor().GetEventPosition()
                 self.GetInteractor().GetPicker().Pick(pos[0], pos[1], 0, self.GetCurrentRenderer())
                 pw = self.GetInteractor().GetPicker().GetPickPosition()
-                oldcoord = self.consideredCell.GetPoint(self.selectedPoint)
+                
+                self.move_point(pw)
+                
+                """oldcoord = self.consideredCell.GetPoint(self.selectedPoint)
 
                 newcoord = np.zeros(3)
                 newcoord[self.x] = pw[self.x]
@@ -1242,7 +1252,7 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
 
                                 new_coord[self.orientation] = coord[self.orientation]
                                 poly.GetPoints().SetPoint(i, new_coord)
-                                poly.Modified()
+                                poly.Modified()"""
                 #self.list_action.append(['translation',newcoord,transx,transy])
                 #self.move_actor.VisibilityOff()
                 self.sphere_actor.VisibilityOff()
@@ -1280,7 +1290,84 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         key = self.GetInteractor().GetKeyCode()
         if key == 'z':
             print "wip"
+    
+    def find_point_to_move(self, coord):
+        if self.select_neighboor_mode == 'propagationSphere':
+            self.sphere_propagation.SetCenter(coord)
+            self.sphere_propagation.SetRadius(self.propagation)
+            self.sphere_propagation.Update()
+            self.sphere_actor.VisibilityOn()          
 
+            selectEnclosed = vtk.vtkSelectEnclosedPoints()
+            if vtk.VTK_MAJOR_VERSION <= 5:
+                selectEnclosed.SetInput(self.consid_cut)
+            else:
+                selectEnclosed.SetInputData(self.consid_cut)
+            selectEnclosed.SetSurfaceConnection(self.sphere_propagation.GetOutputPort())
+            selectEnclosed.Update()
+
+            self.points_to_move.clear()
+
+            for i in xrange(self.consid_cut.GetNumberOfPoints()):
+                if selectEnclosed.IsInside(i):
+                    coordi = self.consid_cut.GetPoint(i)
+                    dist = distance(coord, coordi)
+                    self.points_to_move[i] = dist / self.propagation
+            
+    def move_point(self, pw):
+        if self.select_move_mode == 'proportionality':
+            oldcoord = self.consideredCell.GetPoint(self.selectedPoint)
+
+            newcoord = np.zeros(3)
+            newcoord[self.x] = pw[self.x]
+            newcoord[self.y] = pw[self.y]
+            newcoord[self.orientation] = self.position
+            transx = (oldcoord[self.x] - newcoord[self.x])
+            transy = (oldcoord[self.y] - newcoord[self.y])
+            selectEnclosed = vtk.vtkSelectEnclosedPoints()
+            if vtk.VTK_MAJOR_VERSION <= 5:
+                selectEnclosed.SetInput(self.consideredCell)
+                selectEnclosed.SetSurface(self.sphere_propagation.GetOutput())
+            else:
+                selectEnclosed.SetInputData(self.consideredCell)
+                selectEnclosed.SetSurfaceData(self.sphere_propagation.GetOutput())
+            selectEnclosed.Update()
+
+            for i in xrange(self.consideredCell.GetNumberOfPoints()):
+                if selectEnclosed.IsInside(i):
+                    coord = self.consideredCell.GetPoint(i)
+                    dist = distance(oldcoord, coord)
+                    new_coord = np.zeros(3)
+                    new_coord[self.x] = coord[self.x] - (transx - transx * dist / self.propagation)
+                    new_coord[self.y] = coord[self.y] - (transy - transy * dist / self.propagation)
+
+                    new_coord[self.orientation] = coord[self.orientation]
+                    self.consideredCell.GetPoints().SetPoint(i, new_coord)
+                    self.consideredCell.Modified()
+
+            for poly in self.polyList.values():
+                box = poly.GetBounds()
+                boxx = self.sphere_propagation.GetOutput().GetBounds()
+                if intersection(box, boxx):
+                    selectEnclosed = vtk.vtkSelectEnclosedPoints()
+                    if vtk.VTK_MAJOR_VERSION <= 5:
+                        selectEnclosed.SetInput(poly)
+                        selectEnclosed.SetSurface(self.sphere_propagation.GetOutput())
+                    else:
+                        selectEnclosed.SetInputData(poly)
+                        selectEnclosed.SetSurfaceData(self.sphere_propagation.GetOutput())
+                    selectEnclosed.Update()
+                    for i in xrange(poly.GetNumberOfPoints()):
+                        if selectEnclosed.IsInside(i):
+                            coord = poly.GetPoint(i)
+                            dist = distance(oldcoord, coord)
+                            new_coord = np.zeros(3)
+                            new_coord[self.x] = coord[self.x] - (transx - transx * dist / self.propagation)
+                            new_coord[self.y] = coord[self.y] - (transy - transy * dist / self.propagation)
+                            new_coord[self.orientation] = coord[self.orientation]
+                            poly.GetPoints().SetPoint(i, new_coord)
+                            poly.Modified()
+    
     def fusion_consid_select_cells(self):
         """
         append the consideredCell and the selectedLabel one together,
