@@ -20,9 +20,10 @@ from openalea.oalab.plugin.builtin.lab.default import DefaultLab
 
 
 class TissueLab(DefaultLab):
+    __plugin__ = True
     name = 'tissue'
     icon = 'icon_tissuelab.png'
-    alias = 'Tissue'
+    label = 'Tissue'
 
     applets = [
         'ProjectManager',

@@ -19,16 +19,14 @@
 
 
 import weakref
-from openalea.oalab.utils import qicon
 
-from openalea.vpltk.qt import QtGui
 from openalea.core.service.ipython import interpreter as get_interpreter
-
-from tissuelab.gui.vtkviewer.vtkworldviewer import VtkWorldViewer
 from openalea.oalab.service.drag_and_drop import add_drop_callback
-
-from tissuelab.gui.vtkviewer.vtk_viewer_select_mode import VtkviewerSelectMode
+from openalea.oalab.utils import qicon
+from openalea.vpltk.qt import QtGui
 from tissuelab.gui.vtkviewer.editor import SelectCellInteractorStyle
+from tissuelab.gui.vtkviewer.vtk_viewer_select_mode import VtkviewerSelectMode
+from tissuelab.gui.vtkviewer.vtkworldviewer import VtkWorldViewer
 
 
 class TissueViewer(QtGui.QWidget):
@@ -69,6 +67,14 @@ class TissueViewer(QtGui.QWidget):
         self.mode_selector.launch_popup.connect(self.launch_popup)
         self.mode_selector.mode_changed.connect(self.change_mode)
         self.mode_selector.matrix_changed.connect(self.matrix_changed)
+
+    def toolbars(self):
+        toolbar = QtGui.QToolBar("Tissue Viewer")
+        toolbar.addActions([
+            self.action_auto_focus,
+            self.action_save_screenshot,
+        ])
+        return [toolbar]
 
     def toolbar_actions(self):
         return [

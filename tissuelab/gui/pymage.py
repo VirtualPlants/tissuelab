@@ -18,17 +18,15 @@
 #
 ###############################################################################
 import sys
-from openalea.vpltk.qt import QtGui
 
 from openalea.core.path import path as Path
-from openalea.oalab.cli.parser import CommandLineParser
-from openalea.oalab.plugin.builtin.lab.minilab import MiniLab
-from openalea.oalab.main import launch_lab
-from openalea.core.world import World
-
 from openalea.core.service.plugin import plugin_instance
-
+from openalea.core.world import World
 from openalea.image.serial.basics import imread
+from openalea.oalab.cli.parser import CommandLineParser
+from openalea.oalab.main import launch_lab
+from openalea.oalab.plugin.builtin.lab.minilab import MiniLab
+from openalea.vpltk.qt import QtGui
 
 
 class PymageCommandLineParser(CommandLineParser):
@@ -73,7 +71,7 @@ class Pymage(MiniLab):
     }
 
     name = 'pymage'
-    alias = 'PyMage'
+    label = 'PyMage'
     icon = 'icon_tissuelab.png'
 
 
