@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>446</width>
+    <width>536</width>
     <height>82</height>
    </rect>
   </property>
@@ -14,23 +14,7 @@
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="1" column="4">
-    <widget class="QSpinBox" name="sb_cut_plane">
-     <property name="minimumSize">
-      <size>
-       <width>60</width>
-       <height>0</height>
-      </size>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>120</width>
-       <height>16777215</height>
-      </size>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="3">
+   <item row="2" column="3">
     <widget class="QPushButton" name="bp_moins">
      <property name="minimumSize">
       <size>
@@ -44,87 +28,34 @@
        <height>27</height>
       </size>
      </property>
+     <property name="toolTip">
+      <string>change the origine of the plane view</string>
+     </property>
      <property name="text">
       <string>-</string>
      </property>
     </widget>
    </item>
-   <item row="1" column="8">
-    <widget class="QPushButton" name="bp_save">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
+   <item row="2" column="4">
+    <widget class="QSpinBox" name="sb_cut_plane">
      <property name="minimumSize">
-      <size>
-       <width>50</width>
-       <height>27</height>
-      </size>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>80</width>
-       <height>27</height>
-      </size>
-     </property>
-     <property name="text">
-      <string>Save</string>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="7">
-    <widget class="QPushButton" name="bp_plus">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="minimumSize">
-      <size>
-       <width>30</width>
-       <height>27</height>
-      </size>
-     </property>
-     <property name="maximumSize">
       <size>
        <width>60</width>
-       <height>27</height>
-      </size>
-     </property>
-     <property name="text">
-      <string>+</string>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="2">
-    <widget class="QPushButton" name="bp_z">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="minimumSize">
-      <size>
-       <width>30</width>
-       <height>27</height>
+       <height>0</height>
       </size>
      </property>
      <property name="maximumSize">
       <size>
-       <width>50</width>
-       <height>27</height>
+       <width>120</width>
+       <height>16777215</height>
       </size>
      </property>
-     <property name="text">
-      <string>Z</string>
+     <property name="toolTip">
+      <string>change the origine of the plane view</string>
      </property>
     </widget>
    </item>
-   <item row="1" column="1">
+   <item row="2" column="1">
     <widget class="QPushButton" name="bp_y">
      <property name="sizePolicy">
       <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
@@ -144,12 +75,15 @@
        <height>27</height>
       </size>
      </property>
+     <property name="toolTip">
+      <string>change the normal of the plane view to the axis y</string>
+     </property>
      <property name="text">
       <string>Y</string>
      </property>
     </widget>
    </item>
-   <item row="1" column="0">
+   <item row="2" column="0">
     <widget class="QPushButton" name="bp_x">
      <property name="sizePolicy">
       <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
@@ -169,30 +103,11 @@
        <height>27</height>
       </size>
      </property>
+     <property name="toolTip">
+      <string>change the normal of the plane view to the axis x</string>
+     </property>
      <property name="text">
       <string>X</string>
-     </property>
-    </widget>
-   </item>
-   <item row="0" column="2" colspan="2">
-    <widget class="QPushButton" name="bp_select">
-     <property name="minimumSize">
-      <size>
-       <width>60</width>
-       <height>0</height>
-      </size>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>120</width>
-       <height>16777215</height>
-      </size>
-     </property>
-     <property name="toolTip">
-      <string>this mode allow you to select a cell</string>
-     </property>
-     <property name="text">
-      <string>Select</string>
      </property>
     </widget>
    </item>
@@ -240,7 +155,95 @@
      </property>
     </widget>
    </item>
-   <item row="0" column="5">
+   <item row="0" column="7">
+    <widget class="QPushButton" name="bp_new_edit">
+     <property name="minimumSize">
+      <size>
+       <width>80</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>120</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="toolTip">
+      <string>Switch from the considered cell to the selected one in the editor</string>
+     </property>
+     <property name="text">
+      <string>Edit select</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="2" colspan="2">
+    <widget class="QPushButton" name="bp_select">
+     <property name="minimumSize">
+      <size>
+       <width>60</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>120</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="toolTip">
+      <string>this mode allow you to select a cell</string>
+     </property>
+     <property name="text">
+      <string>Select</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="5">
+    <widget class="QSlider" name="slider_cut_plane">
+     <property name="minimumSize">
+      <size>
+       <width>90</width>
+       <height>29</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="toolTip">
+      <string>change the origine of the plane view</string>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="9">
+    <widget class="QSlider" name="slider_propagation">
+     <property name="minimumSize">
+      <size>
+       <width>60</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>120</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="toolTip">
+      <string>choose the propagation of the deplacement you want</string>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="8">
     <widget class="QSpinBox" name="sb_propagation">
      <property name="minimumSize">
       <size>
@@ -259,27 +262,36 @@
      </property>
     </widget>
    </item>
-   <item row="1" column="5" colspan="2">
-    <widget class="QSlider" name="slider_cut_plane">
+   <item row="2" column="2">
+    <widget class="QPushButton" name="bp_z">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
      <property name="minimumSize">
       <size>
-       <width>90</width>
-       <height>29</height>
+       <width>30</width>
+       <height>27</height>
       </size>
      </property>
      <property name="maximumSize">
       <size>
-       <width>16777215</width>
-       <height>16777215</height>
+       <width>50</width>
+       <height>27</height>
       </size>
      </property>
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+     <property name="toolTip">
+      <string>change the normal of the plane view to the axis z</string>
+     </property>
+     <property name="text">
+      <string>Z</string>
      </property>
     </widget>
    </item>
-   <item row="0" column="6">
-    <widget class="QSlider" name="slider_propagation">
+   <item row="0" column="5">
+    <widget class="QPushButton" name="bp_split">
      <property name="minimumSize">
       <size>
        <width>60</width>
@@ -292,8 +304,67 @@
        <height>16777215</height>
       </size>
      </property>
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+     <property name="toolTip">
+      <string>Split the considered cell in two, along the plane view</string>
+     </property>
+     <property name="text">
+      <string>Split cell</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="7">
+    <widget class="QPushButton" name="bp_plus">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>30</width>
+       <height>27</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>60</width>
+       <height>27</height>
+      </size>
+     </property>
+     <property name="toolTip">
+      <string>change the origine of the plane view</string>
+     </property>
+     <property name="text">
+      <string>+</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="8" colspan="2">
+    <widget class="QPushButton" name="bp_save">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>110</width>
+       <height>27</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>240</width>
+       <height>27</height>
+      </size>
+     </property>
+     <property name="toolTip">
+      <string>Apply changes to the segmented matrix</string>
+     </property>
+     <property name="text">
+      <string>Apply changes</string>
      </property>
     </widget>
    </item>

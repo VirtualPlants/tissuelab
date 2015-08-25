@@ -37,6 +37,11 @@ from vtk import VTK_UNSIGNED_LONG
 from vtk import VTK_FLOAT
 from vtk import VTK_DOUBLE
 
+#TODO : recalculer la box de l'editor quand un point est deplace en dehors
+#TODO : modifier le code pour le rendre plus expensif (laisser une place pour le choix de deplacement, de split, etc)
+#TODO : rajouter une méthode de déplacement en fonction de l'intensité ????
+#TODO : réparer bug qui fait crasher quand split puis fusion
+#TODO : garder les mêmes réglages pour les matrices quand on fait apply (affichage coupe/volume, intensity/segmented, même tranche....
 
 def expand(widget):
     p = QtGui.QSizePolicy
@@ -59,14 +64,20 @@ class EditorWindow(QtGui.QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
 
         self.frame = QtGui.QFrame()
-        self.vl = QtGui.QVBoxLayout(self.frame)
+        self.vl = QtGui.QGridLayout(self.frame)
         self.vl.setContentsMargins(0, 0, 0, 0)
 
         self.viewer = ViewerEditor()
-        self.vl.addWidget(self.viewer)
+        self.vl.addWidget(self.viewer,0,0,10,3)
 
         self.control = ControlsEditor()
-        self.vl.addWidget(self.control)
+        self.control.setMaximumHeight(120)
+        self.vl.addWidget(self.control,10,0,1,2)        
+        
+        self.viewer3D = ViewerEditor3D()
+        self.viewer3D.setMaximumHeight(150)
+        self.viewer3D.setMaximumWidth(200)
+        self.vl.addWidget(self.viewer3D,10,2,1,1)
 
         expand(self)
         expand(self.frame)
@@ -86,6 +97,7 @@ class EditorWindow(QtGui.QWidget):
         self.control.bp_z.setEnabled(False)
         self.control.bp_move.setEnabled(False)
         self.control.bp_fusion.setEnabled(False)
+        self.control.bp_new_edit.setEnabled(False)
 
         self._create_connections()
 
@@ -100,9 +112,12 @@ class EditorWindow(QtGui.QWidget):
         self.control.bp_move.pressed.connect(self.set_mode_to_move)
         self.control.bp_select.pressed.connect(self.set_mode_to_select)
         self.control.bp_fusion.pressed.connect(self.fusion_consid_select_cells)
+        self.control.bp_split.pressed.connect(self.split_considered_cell)
         self.control.slider_propagation.valueChanged.connect(self.set_propagation)
         self.control.sb_propagation.valueChanged.connect(self.set_propagation)
         self.control.bp_save.pressed.connect(self.apply_change_to_segmentation)
+        self.control.bp_new_edit.pressed.connect(self.edit_new_cell)
+        self.viewer.interactor.AddObserver("CellSelected", self.cell_selected)
 
     def resizeEvent(self, *args, **kwargs):
         return QtGui.QWidget.resizeEvent(self, *args, **kwargs)
@@ -111,7 +126,8 @@ class EditorWindow(QtGui.QWidget):
         """
         a method to pass the parameter needed by the viewer and his interactor
         """
-        self.viewer.set_data(intensity_mat, segmented_mat, label)
+        self.polydata = self.viewer.set_data(intensity_mat, segmented_mat, label)
+        self.viewer3D.set_poly(self.polydata)
         self.set_slider_spinbox()
         self.show()
 
@@ -133,6 +149,7 @@ class EditorWindow(QtGui.QWidget):
             self.control.slider_cut_plane.setValue(value)
             self.viewer.move_in_plane(value)
             self.block_cut_plane = False
+            self.viewer3D.set_plane(self.viewer.box, self.viewer.interactor.orientation, value)
 
     def switch_to_x_plan(self):
         """
@@ -178,6 +195,7 @@ class EditorWindow(QtGui.QWidget):
 
         self.block_cut_plane = False
         self.control.slider_cut_plane.setSliderPosition(value)
+        self.viewer3D.set_plane(self.viewer.box, cutplan, value)
 
     def set_mode(self, mode):
         self.viewer.interactor.mode = mode
@@ -189,7 +207,7 @@ class EditorWindow(QtGui.QWidget):
         self.set_mode(0)
         self.control.bp_move.setEnabled(False)
         self.control.bp_select.setEnabled(True)
-        self.control.bp_fusion.setEnabled(False)
+        #self.control.bp_fusion.setEnabled(False)
 
     def set_mode_to_select(self):
         """
@@ -197,15 +215,25 @@ class EditorWindow(QtGui.QWidget):
         """
         self.set_mode(1)
         self.control.bp_select.setEnabled(False)
-        self.control.bp_fusion.setEnabled(True)
+        #self.control.bp_fusion.setEnabled(True)
         self.control.bp_move.setEnabled(True)
 
     def fusion_consid_select_cells(self):
         """
         a method to connect the button 'fusion' to the 'fusion algo' of the interactor
         """
-        self.viewer.fusion_consid_select_cells()
+        self.polydata = self.viewer.fusion_consid_select_cells()
+        self.viewer3D.clear()
+        self.viewer3D.set_poly(self.polydata)
         self.set_slider_spinbox()
+        self.viewer3D.render()
+
+    def split_considered_cell(self):
+        self.polydata = self.viewer.split_considered_cell()
+        self.viewer3D.clear()
+        self.viewer3D.set_poly(self.polydata)
+        self.set_slider_spinbox()
+        self.viewer3D.render()
 
     def set_propagation(self, value):
         """
@@ -225,6 +253,19 @@ class EditorWindow(QtGui.QWidget):
         array = self.viewer.apply_change_to_segmentation()
         self.segmentation_changed.emit(array)
 
+    def cell_selected(self, obj, event):
+        if self.viewer.interactor.selectedLabel == -1:
+            self.control.bp_fusion.setEnabled(False)
+            self.control.bp_new_edit.setEnabled(False)
+        else:
+            self.control.bp_fusion.setEnabled(True)
+            self.control.bp_new_edit.setEnabled(True)
+
+    def edit_new_cell(self):
+        self.viewer.edit_new_cell()
+        self.control.bp_fusion.setEnabled(False)
+        self.control.bp_new_edit.setEnabled(False)
+
 
 class ControlsEditor(QtGui.QWidget, Ui_panel_control_editor):
 
@@ -236,11 +277,104 @@ class ControlsEditor(QtGui.QWidget, Ui_panel_control_editor):
         QtGui.QWidget.__init__(self)
         self.setupUi(self)
 
+class ViewerEditor3D(QtGui.QWidget):
+
+    def __init__(self):
+        QtGui.QWidget.__init__(self)
+
+        layout = QtGui.QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        self.frame = QtGui.QFrame()
+        self.vl = QtGui.QVBoxLayout(self.frame)
+        self.vl.setContentsMargins(0, 0, 0, 0)
+
+        self.vtkWidget = QVTKRenderWindowInteractor(self.frame)
+        self.vl.addWidget(self.vtkWidget)
+
+        expand(self)
+        expand(self.frame)
+        expand(self.vtkWidget)
+
+        self.ren = vtk.vtkRenderer()  # vtk renderer
+        self.vtkWidget.GetRenderWindow().SetSize(10,10)
+        self.vtkWidget.GetRenderWindow().AddRenderer(self.ren)
+        self.iren = self.vtkWidget.GetRenderWindow().GetInteractor()
+
+        layout.addWidget(self.frame)
+        
+        self.plane = vtk.vtkPlaneSource()
+        mapper_plan = vtk.vtkPolyDataMapper()
+        mapper_plan.ScalarVisibilityOff()
+        mapper_plan.SetInputConnection(self.plane.GetOutputPort())
+        actor = vtk.vtkActor()
+        actor.SetMapper(mapper_plan)
+        self.ren.AddActor(actor)
+        self.ren.ResetCamera()
+        
+        self.iren.Initialize()
+        self.iren.Start()
+        
+    def resizeEvent(self, *args, **kwargs):
+        self.render()
+        return QtGui.QWidget.resizeEvent(self, *args, **kwargs)
+
+    def render(self):
+        self.iren.Render()
+        
+    def clear(self):
+        self.ren.RemoveActor(self.actor)
+        
+    def set_poly(self, polydata):
+        mapper = vtk.vtkPolyDataMapper()
+        mapper.ScalarVisibilityOff()
+        if vtk.VTK_MAJOR_VERSION <= 5:
+            mapper.SetInput(polydata)
+        else:
+            mapper.SetInputData(polydata)
+        self.actor = vtk.vtkActor()
+        self.actor.SetMapper(mapper)
+        self.actor.GetProperty().SetColor(0,0,1)
+        self.ren.AddActor(self.actor)
+        self.ren.ResetCamera()
+        self.render()
+        
+    def set_plane(self, box, axis, position):
+        origin = np.zeros(3)
+        p1 = np.zeros(3)
+        p2 = np.zeros(3)
+        if axis == 0:
+            x = 1
+            y = 2
+        elif axis == 1:
+            x = 0
+            y = 2
+        else :
+            x = 0
+            y = 1
+        origin[x] = box[2*x] - 5
+        p1[x] = box[2*x] - 5
+        p2[x] = box[2*x+1] + 5
+        
+        origin[y] = box[2*y] - 5
+        p1[y] = box[2*y+1] + 5
+        p2[y] = box[2*y] - 5
+        
+        origin[axis] = position
+        p1[axis] = position
+        p2[axis] = position
+        self.plane.SetOrigin(origin)
+        self.plane.SetPoint1(p1)
+        self.plane.SetPoint2(p2)
+        self.plane.Update()
+        self.ren.ResetCamera()
+        self.ren.Render()
+        self.render()
 
 class ViewerEditor(QtGui.QWidget):
 
     """
-    class that implements the vtkviewer and pass information to the interactor
+    class that implements the vtkviewer of the editor and pass information to the interactor
     """
 
     def __init__(self):
@@ -310,7 +444,6 @@ class ViewerEditor(QtGui.QWidget):
         self.label = lab
         self.interactor.label = lab
         reader = matrix_to_image_reader('la', self.segmented_matrix, self.segmented_matrix.dtype)
-
         mat = reader.GetOutput()
         cellule = compute_points(mat, lab)
         box = cellule.GetBounds()
@@ -324,14 +457,43 @@ class ViewerEditor(QtGui.QWidget):
         self.interactor.polyList.clear()
         self.interactor.polyList = {labs: compute_points(mat, labs) for labs in labels}
         self.interactor.deletedLabel[:] = []
+        return self.interactor.consideredCell
+
+    def set_new_label(self, label):
+        reader = matrix_to_image_reader('la', self.segmented_matrix, self.segmented_matrix.dtype)
+        mat = reader.GetOutput()
+        cellule = self.interactor.polyList[label]
+        box = cellule.GetBounds()
+        plan = [int((box[i * 2] + box[i * 2 + 1]) / 2) for i in xrange(3)]
+        self.plan = plan
+        self.interactor.position = plan[2]
+        self.box = box
+        labels = voisinage(self.segmented_matrix, cellule, label, self.background_list)
+        for labs in labels:
+            if labs == self.label:
+                self.interactor.polyList[labs] = self.interactor.consideredCell
+            elif labs not in self.interactor.polyList.keys():
+                self.interactor.polyList[labs] = compute_points(mat, labs)
+        self.label = label
+        self.interactor.label = label
+        self.interactor.consideredCell = cellule
+        del self.interactor.polyList[label]
+        for la in self.interactor.polyList.keys():
+            if la not in labels:
+                del self.interactor.polyList[la]
+        self.interactor.deletedLabel[:] = []
 
     def set_data(self, intensity_mat, segmented_mat, label):
         self.set_segmented_matrix(segmented_mat)
         self.set_intensity_matrix(intensity_mat)
-        self.set_label(label)
+        polydata = self.set_label(label)
         self.iren.Initialize()
         self.iren.Start()
-        #self.render()
+        self.interactor.refresh()
+        return polydata
+
+    def edit_new_cell(self):
+        self.set_new_label(self.interactor.selectedLabel)
         self.interactor.refresh()
 
     def move_in_plane(self, value):
@@ -341,6 +503,11 @@ class ViewerEditor(QtGui.QWidget):
 
     def fusion_consid_select_cells(self):
         self.box = self.interactor.fusion_consid_select_cells()
+        return self.interactor.consideredCell
+
+    def split_considered_cell(self):
+        self.box = self.interactor.split_considered_cell()
+        return self.interactor.consideredCell
 
     def set_propagation(self, value):
         self.interactor.propagation = value
@@ -774,6 +941,8 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
             polyList : dict for all neighboor : dict[label_neigh] = polydata_neigh
             background : imageactor of the intensity matrix
             matrix : matrix of the segmented image
+            select_neighboor_mode : string to choose the method use to select the points to deplace
+            select_move_mode : string to choose the method use to move the points
     """
 
     def __init__(self, parent=None):
@@ -782,23 +951,6 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         self.AddObserver("MouseMoveEvent", self.MouseMoveEvent)
         self.AddObserver("KeyPressEvent", self.KeyPressEvent)
 
-        self.grab_mode = False
-        self.move_point = vtk.vtkPolyData()
-        points = vtk.vtkPoints()
-        lines = vtk.vtkCellArray()
-
-        points.InsertNextPoint([0, 0, 0])
-        points.InsertNextPoint([0, 0, 0])
-        points.InsertNextPoint([0, 0, 0])
-
-        lines.InsertNextCell(2)
-        lines.InsertCellPoint(0)
-        lines.InsertCellPoint(1)
-
-        lines.InsertNextCell(2)
-        lines.InsertCellPoint(0)
-        lines.InsertCellPoint(2)
-
         self.consideredCell = vtk.vtkPolyData()
         self.polyList = dict()
         self.background = vtk.vtkImageActor()
@@ -806,6 +958,9 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         self.matrix = []
         self.background_list = list()
         self.consid_cut = vtk.vtkPolyData()
+        
+        self.select_neighboor_mode = 'propagationSphere'
+        self.select_move_mode = 'proportionality'
 
         self.x = 0
         self.y = 1
@@ -817,6 +972,7 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         self.selectedLabel = -1
         self.label = -1
         self.deletedLabel = list()
+        self.consid_point = -1
 
         origine = np.zeros(3)
         origine[self.orientation] = self.position
@@ -827,27 +983,29 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         self.plane.SetOrigin(origine)
         self.plane.SetNormal(normal)
 
-        self.move_point.SetPoints(points)
-        self.move_point.SetLines(lines)
-
-        move_map = vtk.vtkPolyDataMapper()
-        if vtk.VTK_MAJOR_VERSION <= 5:
-            move_map.SetInput(self.move_point)
-        else:
-            move_map.SetInputData(self.move_point)
-        self.move_actor = vtk.vtkActor()
-        self.move_actor.SetMapper(move_map)
-        self.move_actor.GetProperty().SetColor(1, 1, 1)
-        self.move_actor.GetProperty().SetPointSize(3)
-        self.move_actor.VisibilityOff()
+        self.grab_mode = False
 
         self.sphere_propagation = vtk.vtkSphereSource()
         self.sphere_propagation.SetRadius(self.propagation)
+        subdivision = vtk.vtkButterflySubdivisionFilter()
+        subdivision.SetInputConnection(self.sphere_propagation.GetOutputPort())
+        subdivision.SetNumberOfSubdivisions(2)
+        
         spheremap = vtk.vtkPolyDataMapper()
-        spheremap.SetInputConnection(self.sphere_propagation.GetOutputPort())
+        
+        if vtk.VTK_MAJOR_VERSION <= 5:
+            spheremap.SetInputConnection(subdivision.GetOutputPort())
+        else:            
+            self.cutter_sphere = vtk.vtkCutter()
+            self.cutter_sphere.SetInputConnection(subdivision.GetOutputPort())
+            self.cutter_sphere.SetCutFunction(self.plane)
+            spheremap.SetInputConnection(self.cutter_sphere.GetOutputPort())       
+        
         self.sphere_actor = vtk.vtkActor()
         self.sphere_actor.SetMapper(spheremap)
         self.sphere_actor.VisibilityOff()
+
+        self.points_to_move = dict()
 
     def refresh(self):
         """
@@ -861,10 +1019,11 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         normal[self.orientation] = 1
         self.plane.SetOrigin(origine)
         self.plane.SetNormal(normal)
-
+        
+        #self.cutter_sphere.Update()
         self.refresh_poly()
         self.refresh_background()
-        self.GetCurrentRenderer().AddActor(self.move_actor)
+        #self.GetCurrentRenderer().AddActor(self.move_actor)
         self.GetCurrentRenderer().AddActor(self.sphere_actor)
         self.GetCurrentRenderer().ResetCamera()
         self.GetCurrentRenderer().Render()
@@ -888,24 +1047,27 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
             else:
                 cutter.SetInputData(self.polyList[lab])
             cutter.SetCutFunction(self.plane)
+            
+            """cutter.Update()
+            cutplan = cutter.GetOutput()
+            verts = vtk.vtkCellArray()
+            for i in xrange(cutplan.GetNumberOfPoints()):
+                verts.InsertNextCell(1)
+                verts.InsertCellPoint(i)
+            cutplan.SetVerts(verts)"""
+            
             newmap = vtk.vtkPolyDataMapper()
             newmap.SetInputConnection(cutter.GetOutputPort())
+            
             newmap.ScalarVisibilityOff()
             newact = vtk.vtkActor()
             newact.SetMapper(newmap)
+            newact.GetProperty().SetPointSize(3)
             if lab == self.selectedLabel:
                 newact.GetProperty().SetColor(0, 1, 0)
             else:
                 newact.GetProperty().SetColor(0, 0, 1)
             self.GetCurrentRenderer().AddActor(newact)
-        consid_cutter = vtk.vtkCutter()
-        if vtk.VTK_MAJOR_VERSION <= 5:
-            consid_cutter.SetInput(self.consideredCell)
-        else:
-            consid_cutter.SetInputData(self.consideredCell)
-        consid_cutter.SetCutFunction(self.plane)
-        consid_cutter.Update()
-        self.consid_cut = consid_cutter.GetOutput()
         cons = vtk.vtkCutter()
         if vtk.VTK_MAJOR_VERSION <= 5:
             cons.SetInput(self.consideredCell)
@@ -919,11 +1081,12 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
             verts.InsertNextCell(1)
             verts.InsertCellPoint(i)
         cut_point_line.SetVerts(verts)
+        self.consid_cut = cut_point_line
         considmap = vtk.vtkPolyDataMapper()
         if vtk.VTK_MAJOR_VERSION <= 5:
-            considmap.SetInput(cut_point_line)
+            considmap.SetInput(self.consid_cut)
         else:
-            considmap.SetInputData(cut_point_line)
+            considmap.SetInputData(self.consid_cut)
 
         considmap.ScalarVisibilityOff()
         considact = vtk.vtkActor()
@@ -963,71 +1126,38 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
                 co = self.consideredCell.GetPoint(fp)
                 if distance(co, coord) <= 1:
                     self.selectedPoint = fp
-                    consid_point = self.consid_cut.FindPoint(coord)
+                    self.consid_point = self.consid_cut.FindPoint(coord)
+                    
+                    self.find_point_to_move(coord)
 
-                    coord1 = np.zeros(3)
-                    coord2 = np.zeros(3)
-
-                    consid_cell = vtk.vtkIdList()
-                    plist1 = vtk.vtkIdList()
-                    plist2 = vtk.vtkIdList()
-                    self.consid_cut.GetPointCells(consid_point, consid_cell)
-                    self.consid_cut.GetCellPoints(consid_cell.GetId(0), plist1)
-                    self.consid_cut.GetCellPoints(consid_cell.GetId(1), plist2)
-                    if plist1.GetId(0) == consid_point:
-                        point1 = plist1.GetId(1)
-                    else:
-                        point1 = plist1.GetId(0)
-
-                    if plist2.GetId(0) == consid_point:
-                        point2 = plist2.GetId(1)
-                    else:
-                        point2 = plist2.GetId(0)
-                    self.consid_cut.GetPoint(point1, coord1)
-                    dist = 0
-                    p0 = point1
-                    p1 = consid_point
-                    while dist <= self.propagation:
-                        self.consid_cut.GetPoint(p0, coord1)
-                        pnext = find_point_next(self.consid_cut, p0, p1)
-                        if pnext == -1:
-                            break
-                        coord_next = np.zeros(3)
-                        self.consid_cut.GetPoint(pnext, coord_next)
-                        dist = distance(coord, coord_next)
-                        p1 = p0
-                        p0 = pnext
-
-                    dist = 0
-                    p0 = point2
-                    p1 = consid_point
-                    while dist <= self.propagation:
-                        self.consid_cut.GetPoint(p0, coord2)
-                        pnext = find_point_next(self.consid_cut, p0, p1)
-                        if pnext == -1:
-                            break
-                        coord_next = np.zeros(3)
-                        self.consid_cut.GetPoint(pnext, coord_next)
-                        dist = distance(coord, coord_next)
-                        p1 = p0
-                        p0 = pnext
-
-                    self.move_point.GetPoints().SetPoint(0, coord)
-                    self.move_point.GetPoints().SetPoint(1, coord1)
-                    self.move_point.GetPoints().SetPoint(2, coord2)
-                    self.move_point.Modified()
-                    self.grab_mode = True
-                    self.move_actor.VisibilityOn()
-
-                    self.sphere_propagation.SetCenter(coord)
+                    """self.sphere_propagation.SetCenter(coord)
                     self.sphere_propagation.SetRadius(self.propagation)
                     self.sphere_propagation.Update()
-                    self.sphere_actor.VisibilityOn()
+                    self.sphere_actor.VisibilityOn()          
 
+                    selectEnclosed = vtk.vtkSelectEnclosedPoints()
+                    if vtk.VTK_MAJOR_VERSION <= 5:
+                        selectEnclosed.SetInput(self.consid_cut)
+                    else:
+                        selectEnclosed.SetInputData(self.consid_cut)
+                    selectEnclosed.SetSurfaceConnection(self.sphere_propagation.GetOutputPort())
+                    selectEnclosed.Update()
+
+                    self.points_to_move.clear()
+
+                    for i in xrange(self.consid_cut.GetNumberOfPoints()):
+                        if selectEnclosed.IsInside(i):
+                            coordi = self.consid_cut.GetPoint(i)
+                            dist = distance(coord, coordi)
+                            self.points_to_move[i] = dist / self.propagation"""
+
+                    self.grab_mode = True
+                    
                     self.GetCurrentRenderer().Render()
                     self.GetCurrentRenderer().GetRenderWindow().Render()
                 else:
                     self.selectedPoint = -1
+                    self.consid_point = -1
             elif self.mode == 1:
                 for label, poly in self.polyList.items():
                     points = vtk.vtkPoints()
@@ -1048,6 +1178,7 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
                     else:
                         self.selectedLabel = -1
                 print self.selectedLabel
+                self.InvokeEvent("CellSelected")
                 self.refresh()
 
     # TODO : trouver une meilleure formule de deplacement que la proportionnalite
@@ -1066,7 +1197,10 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
                 pos = self.GetInteractor().GetEventPosition()
                 self.GetInteractor().GetPicker().Pick(pos[0], pos[1], 0, self.GetCurrentRenderer())
                 pw = self.GetInteractor().GetPicker().GetPickPosition()
-                oldcoord = self.consideredCell.GetPoint(self.selectedPoint)
+                
+                self.move_point(pw)
+                
+                """oldcoord = self.consideredCell.GetPoint(self.selectedPoint)
 
                 newcoord = np.zeros(3)
                 newcoord[self.x] = pw[self.x]
@@ -1118,9 +1252,9 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
 
                                 new_coord[self.orientation] = coord[self.orientation]
                                 poly.GetPoints().SetPoint(i, new_coord)
-                                poly.Modified()
+                                poly.Modified()"""
                 #self.list_action.append(['translation',newcoord,transx,transy])
-                self.move_actor.VisibilityOff()
+                #self.move_actor.VisibilityOff()
                 self.sphere_actor.VisibilityOff()
                 self.refresh()
 
@@ -1130,23 +1264,118 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
                 pos = self.GetInteractor().GetEventPosition()
                 self.GetInteractor().GetPicker().Pick(pos[0], pos[1], 0, self.GetCurrentRenderer())
                 pw = self.GetInteractor().GetPicker().GetPickPosition()
-                self.move_point.GetPoints().SetPoint(0, pw)
-                self.move_point.Modified()
+
+                oldcoord = self.consid_cut.GetPoint(self.consid_point)
+
+                newcoord = np.zeros(3)
+                newcoord[self.x] = pw[self.x]
+                newcoord[self.y] = pw[self.y]
+                newcoord[self.orientation] = self.position
+                transx = (oldcoord[self.x] - newcoord[self.x])
+                transy = (oldcoord[self.y] - newcoord[self.y])
+
+                for i, ratio in self.points_to_move.items():
+                    coord = self.consid_cut.GetPoint(i)
+                    new_coord = np.zeros(3)
+                    new_coord[self.x] = coord[self.x] - (transx - transx * ratio)
+                    new_coord[self.y] = coord[self.y] - (transy - transy * ratio)
+                    new_coord[self.orientation] = coord[self.orientation]
+                    self.consid_cut.GetPoints().SetPoint(i, new_coord)
+                    self.consid_cut.Modified()
+
                 self.GetCurrentRenderer().Render()
                 self.GetCurrentRenderer().GetRenderWindow().Render()
 
     def KeyPressEvent(self, obj, event):
         key = self.GetInteractor().GetKeyCode()
-        if key == z:
-            print "work in progress"
+        if key == 'z':
+            print "wip"
+    
+    def find_point_to_move(self, coord):
+        if self.select_neighboor_mode == 'propagationSphere':
+            self.sphere_propagation.SetCenter(coord)
+            self.sphere_propagation.SetRadius(self.propagation)
+            self.sphere_propagation.Update()
+            self.sphere_actor.VisibilityOn()          
 
+            selectEnclosed = vtk.vtkSelectEnclosedPoints()
+            if vtk.VTK_MAJOR_VERSION <= 5:
+                selectEnclosed.SetInput(self.consid_cut)
+            else:
+                selectEnclosed.SetInputData(self.consid_cut)
+            selectEnclosed.SetSurfaceConnection(self.sphere_propagation.GetOutputPort())
+            selectEnclosed.Update()
+
+            self.points_to_move.clear()
+
+            for i in xrange(self.consid_cut.GetNumberOfPoints()):
+                if selectEnclosed.IsInside(i):
+                    coordi = self.consid_cut.GetPoint(i)
+                    dist = distance(coord, coordi)
+                    self.points_to_move[i] = dist / self.propagation
+            
+    def move_point(self, pw):
+        if self.select_move_mode == 'proportionality':
+            oldcoord = self.consideredCell.GetPoint(self.selectedPoint)
+
+            newcoord = np.zeros(3)
+            newcoord[self.x] = pw[self.x]
+            newcoord[self.y] = pw[self.y]
+            newcoord[self.orientation] = self.position
+            transx = (oldcoord[self.x] - newcoord[self.x])
+            transy = (oldcoord[self.y] - newcoord[self.y])
+            selectEnclosed = vtk.vtkSelectEnclosedPoints()
+            if vtk.VTK_MAJOR_VERSION <= 5:
+                selectEnclosed.SetInput(self.consideredCell)
+                selectEnclosed.SetSurface(self.sphere_propagation.GetOutput())
+            else:
+                selectEnclosed.SetInputData(self.consideredCell)
+                selectEnclosed.SetSurfaceData(self.sphere_propagation.GetOutput())
+            selectEnclosed.Update()
+
+            for i in xrange(self.consideredCell.GetNumberOfPoints()):
+                if selectEnclosed.IsInside(i):
+                    coord = self.consideredCell.GetPoint(i)
+                    dist = distance(oldcoord, coord)
+                    new_coord = np.zeros(3)
+                    new_coord[self.x] = coord[self.x] - (transx - transx * dist / self.propagation)
+                    new_coord[self.y] = coord[self.y] - (transy - transy * dist / self.propagation)
+
+                    new_coord[self.orientation] = coord[self.orientation]
+                    self.consideredCell.GetPoints().SetPoint(i, new_coord)
+                    self.consideredCell.Modified()
+
+            for poly in self.polyList.values():
+                box = poly.GetBounds()
+                boxx = self.sphere_propagation.GetOutput().GetBounds()
+                if intersection(box, boxx):
+                    selectEnclosed = vtk.vtkSelectEnclosedPoints()
+                    if vtk.VTK_MAJOR_VERSION <= 5:
+                        selectEnclosed.SetInput(poly)
+                        selectEnclosed.SetSurface(self.sphere_propagation.GetOutput())
+                    else:
+                        selectEnclosed.SetInputData(poly)
+                        selectEnclosed.SetSurfaceData(self.sphere_propagation.GetOutput())
+                    selectEnclosed.Update()
+                    for i in xrange(poly.GetNumberOfPoints()):
+                        if selectEnclosed.IsInside(i):
+                            coord = poly.GetPoint(i)
+                            dist = distance(oldcoord, coord)
+                            new_coord = np.zeros(3)
+                            new_coord[self.x] = coord[self.x] - (transx - transx * dist / self.propagation)
+                            new_coord[self.y] = coord[self.y] - (transy - transy * dist / self.propagation)
+                            new_coord[self.orientation] = coord[self.orientation]
+                            poly.GetPoints().SetPoint(i, new_coord)
+                            poly.Modified()
+    
     def fusion_consid_select_cells(self):
         """
         append the consideredCell and the selectedLabel one together,
         remove the bounderies between them,
         and add the selectedLabel's neighboords to the polyList
         """
-        if self.mode == 1 and self.selectedLabel != -1 and self.selectedLabel not in self.deletedLabel:
+        #if self.mode == 1 and self.selectedLabel != -1 and self.selectedLabel not in self.deletedLabel:
+        if self.selectedLabel != -1 and self.selectedLabel not in self.deletedLabel:
             fusionPoly = self.polyList[self.selectedLabel]
             delete_shared_borders_mieux(self.consideredCell, fusionPoly)
             labels = voisinage(self.matrix, fusionPoly, self.selectedLabel, self.background_list)
@@ -1175,6 +1404,7 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
             cleaning.SetTolerance(0.0)
             cleaning.Update()
 
+            del self.consideredCell
             self.consideredCell = cleaning.GetOutput()
             del self.polyList[self.selectedLabel]
             self.deletedLabel.append(self.selectedLabel)
@@ -1184,12 +1414,105 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
             self.consideredCell.GetBounds(box)
             return box
 
+    def split_considered_cell(self): 
+                 
+        clipper = vtk.vtkClipPolyData()
+        if vtk.VTK_MAJOR_VERSION <= 5:
+            origine = np.zeros(3)
+            origine[self.orientation] = self.position
+            normal = np.zeros(3)
+            normal[self.orientation] = 1          
+            plane2 = vtk.vtkPlane()
+            plane2.SetNormal(normal)
+            plane2.SetOrigin(origine) 
+            
+            clipper.SetInput(self.consideredCell)
+            clipper.SetClipFunction(plane2)
+        else:
+            clipper.SetInputData(self.consideredCell)
+            clipper.SetClipFunction(self.plane)
+        
+        clipper.GenerateClippedOutputOn()
+        clipper.Update()
+
+        feat = vtk.vtkFeatureEdges()
+        feat.SetInputConnection(clipper.GetOutputPort())
+
+        feat.BoundaryEdgesOn()
+        feat.FeatureEdgesOff()
+        feat.NonManifoldEdgesOff()
+        feat.ManifoldEdgesOff()
+
+        strip = vtk.vtkStripper()
+        strip.SetInputConnection(feat.GetOutputPort())
+        strip.Update()
+
+        poly = vtk.vtkPolyData()
+        poly.SetPoints(strip.GetOutput().GetPoints())
+        poly.SetPolys(strip.GetOutput().GetLines())
+
+        triangle = vtk.vtkTriangleFilter()
+        if vtk.VTK_MAJOR_VERSION <= 5:
+            triangle.SetInput(poly)
+        else:
+            triangle.SetInputData(poly)
+
+        cleaning = vtk.vtkCleanPolyData()
+        cleaning.SetInputConnection(triangle.GetOutputPort())
+        cleaning.PointMergingOn()
+        cleaning.SetTolerance(0.0)
+        #cleaning.Update()
+
+        subdivisionFilter = vtk.vtkLoopSubdivisionFilter()
+        subdivisionFilter.SetNumberOfSubdivisions(3)
+        subdivisionFilter.SetInputConnection(cleaning.GetOutputPort())
+        #subdivisionFilter.Update()
+
+        append0 = vtk.vtkAppendPolyData()
+        append0.AddInputConnection(clipper.GetOutputPort(0))
+        append0.AddInputConnection(subdivisionFilter.GetOutputPort())
+        append0.Update()
+        
+        cleaning0 = vtk.vtkCleanPolyData()
+        cleaning0.SetInputConnection(append0.GetOutputPort())
+        cleaning0.PointMergingOn()
+        cleaning0.SetTolerance(0.0)
+        cleaning0.Update()
+
+        append1 = vtk.vtkAppendPolyData()
+        append1.AddInputConnection(clipper.GetOutputPort(1))
+        append1.AddInputConnection(subdivisionFilter.GetOutputPort())
+        append1.Update()
+        
+        cleaning1 = vtk.vtkCleanPolyData()
+        cleaning1.SetInputConnection(append1.GetOutputPort())
+        cleaning1.PointMergingOn()
+        cleaning1.SetTolerance(0.0)
+        cleaning1.Update()
+        
+        del self.consideredCell   
+        self.consideredCell = cleaning0.GetOutput()
+        label_in_matrix = np.setdiff1d(self.matrix,[0])
+        for i in xrange(2,5000):
+            if i not in label_in_matrix:
+                new_label = i
+                break
+        print new_label
+        self.polyList[new_label] = cleaning1.GetOutput()
+        
+        self.refresh()
+        box = np.zeros(6)
+        self.consideredCell.GetBounds(box)
+        return box
+
     def apply_change_to_segmentation(self):
+
         reader = matrix_to_image_reader('la', self.matrix, self.matrix.dtype)
         img = reader.GetOutput()
 
         for lab, poly in self.polyList.items():
             pol2stenc = vtk.vtkPolyDataToImageStencil()
+            pol2stenc.SetTolerance(0)
             if vtk.VTK_MAJOR_VERSION <= 5:
                 pol2stenc.SetInput(poly)
             else:
@@ -1208,6 +1531,8 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
             img = imgstenc.GetOutput()
 
         pol2stenc = vtk.vtkPolyDataToImageStencil()
+        pol2stenc.SetTolerance(0)
+
         if vtk.VTK_MAJOR_VERSION <= 5:
             pol2stenc.SetInput(self.consideredCell)
         else:
@@ -1224,6 +1549,7 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
         imgstenc.ReverseStencilOn()
         imgstenc.SetBackgroundValue(self.label)
         imgstenc.Update()
+
         typee = img.GetScalarType()
         if typee == VTK_SIGNED_CHAR:
             ty = 'b'
