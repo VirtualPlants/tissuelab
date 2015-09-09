@@ -42,57 +42,24 @@ class TissueLab(DefaultLab):
 
     connections = []
 
-    layout = {
-        'children': {0: [1, 2], 2: [3, 4], 3: [5, 6], 4: [7, 8], 7: [11, 12], 8: [9, 10]},
-        'parents': {0: None, 1: 0, 2: 0, 3: 2, 4: 2, 5: 3, 6: 3, 7: 4, 8: 4, 9: 8, 10: 8, 11: 7, 12: 7},
-        'properties': {
-            0: {'amount': 0.04774535809018567, 'splitDirection': 2},
-            1: {'widget':
-                {'applets': [
-                    {'name': u'ContextualMenu'}],
-                 'properties': {'position': 0}
-                 }},
-            2: {'amount': 0.1609375, 'splitDirection': 1},
-            3: {'amount': 0.4850467289719626, 'splitDirection': 2},
-            4: {'amount': 0.6540136901057871, 'splitDirection': 1},
-            5: {'widget':
-                {'applets': [
-                    {'name': u'ProjectManager'}],
-                 'properties': {'position': 0, 'title': '<b>Project</b>'}
-                 }},
-            6: {'widget':
-                {'applets': [
-                    {'name': u'WorldControl'},
-                    {'name': u'ControlManager'},
-                    {'name': u'World'},
-                    {'name': u'PkgManagerWidget'}],
-                 'properties': {'position': 0}
-                 }},
-            7: {'amount': 0.7252336448598131, 'splitDirection': 2},
-            8: {'amount': 0.4803738317757009, 'splitDirection': 2},
-            9: {'widget':
-                {'applets': [
-                    {'name': u'LineageViewer'},
-                    {'name': u'FigureWidget'}
-                ],
-                    'properties': {'position': 2, 'title': '<b>2D</b> Viewers'}
-                }},
-            10: {'widget':
-                 {'applets': [{'name': u'TissueViewer'}],
-                  'properties': {'position': 2, 'title': '<b>3D</b> Viewer'}}},
-            11: {'widget':
-                 {'applets': [
-                     {'name': u'EditorManager'}],
-                  'properties': {'position': 0}}},
-            12: {'widget':
-                 {'applets': [
-                     {'name': u'ShellWidget'},
-                     {'name': u'HistoryWidget'},
-                     {'name': u'HelpWidget'},
-                     {'name': u'Logger'}],
-                  'properties': {'position': 2}
-                  }}
-        }}
+    layout = {'parents': {0: None, 13: 0, 14: 0, 15: 14, 16: 14, 17: 16, 18: 16, 19: 13, 20: 13, 21: 15, 22: 15},
+              'properties': {
+        0: {u'amount': 0.24132492113564669, u'splitDirection': 1},
+        13: {u'amount': 0.46854460093896716, u'splitDirection': 2},
+        14: {u'amount': 0.5823488533703961, u'splitDirection': 1},
+        15: {u'amount': 0.7474178403755869, u'splitDirection': 2},
+        16: {u'amount': 0.49107981220657276, u'splitDirection': 2},
+        17: {u'widget': {'applets': [{'name': u'FigureWidget', 'properties': {'num': 3}}]}},
+        18: {u'widget': {'applets': [{'name': u'TissueViewer'}], 'properties': {}}},
+        19: {u'widget': {'applets': [{'name': u'ProjectManager'}], 'properties': {}}},
+        20: {u'widget': {'applets': [
+            {'name': u'WorldControl'},
+            {'name': u'ControlManager', 'properties': {'position': 2, 'icon': None}},
+            {'name': u'PkgManagerWidget'}
+        ], 'properties': {}}},
+        21: {u'widget': {'applets': [{'name': u'EditorManager'}]}},
+        22: {u'widget': {'applets': [{'name': u'ShellWidget'}]}}},
+        'children': {0: [13, 14], 16: [17, 18], 13: [19, 20], 14: [15, 16], 15: [21, 22]}}
 
     def __call__(self, mainwin=None):
         if mainwin is None:
