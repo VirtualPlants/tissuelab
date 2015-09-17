@@ -42,7 +42,7 @@ def expand(widget):
     widget.setSizePolicy(p(p.MinimumExpanding, p.MinimumExpanding))
 
 # Define constraints
-cst_proba = dict(step=0.1, min=0, max=1)
+cst_proba = dict(step=0.01, min=0, max=1)
 cst_alphamap = dict(enum=['constant', 'linear'])
 cst_width = dict(min=0, max=10)
 cst_percent_range = dict(step=1, min=0, max=100)
@@ -404,6 +404,8 @@ class VtkViewer(QtGui.QWidget):
         polydata_actor = vtk.vtkActor()
         polydata_actor.SetMapper(mapper)
         polydata_actor.GetProperty().SetPointSize(1)
+        polydata_actor.GetProperty().SetInterpolationToPhong()
+
         self.polydata[name] = polydata
 
         polydata_actor.SetScale(resolution[0], resolution[1], resolution[2])
