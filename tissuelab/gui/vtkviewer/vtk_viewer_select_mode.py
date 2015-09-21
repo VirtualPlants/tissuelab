@@ -1,4 +1,3 @@
-from tissuelab.gui.vtkviewer.designer._vtk_viewer_select_mode import Ui_vtk_viewer_select_mode, _translate
 from tissuelab.gui.vtkviewer.editor import get_contours
 from tissuelab.gui.vtkviewer.vtkworldviewer import ImageBlending
 from openalea.vpltk.qt import QtGui, QtCore
@@ -6,6 +5,13 @@ from openalea.core.observer import AbstractListener
 
 from openalea.core.world import World
 import numpy as np
+
+
+from openalea.vpltk.qt.designer import generate_pyfile_from_uifile
+
+
+generate_pyfile_from_uifile(__name__)
+from tissuelab.gui.vtkviewer.designer._vtk_viewer_select_mode import Ui_vtk_viewer_select_mode
 
 
 class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractListener):
@@ -58,44 +64,68 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
 
         if index == 1: # Edtion
             self.action_launch_button.setToolTip(
-                _translate("vtk_viewer_select_mode",
-                           "Start the selected cell edition",
-                           None))
-            self.action_launch_button.setText(_translate("vtk_viewer_select_mode", "Edit Cell", None))
+                QtGui.QApplication.translate("vtk_viewer_select_mode",
+                                             "Start the selected cell edition",
+                                             None))
+            self.action_launch_button.setText(
+                QtGui.QApplication.translate(
+                    "vtk_viewer_select_mode",
+                    "Edit Cell",
+                    None))
             self.action_launch_button.show()
-            self.image1_label.setToolTip(_translate("vtk_viewer_select_mode", "choose your segmented matrix", None))
+            self.image1_label.setToolTip(
+                QtGui.QApplication.translate(
+                    "vtk_viewer_select_mode",
+                    "choose your segmented matrix",
+                    None))
             self.image1_label.setText(
-                _translate("vtk_viewer_select_mode",
-                           "<html><head/><body><p>Segmented</p></body></html>",
-                           None))
+                QtGui.QApplication.translate("vtk_viewer_select_mode",
+                                             "<html><head/><body><p>Segmented</p></body></html>",
+                                             None))
             self.image1_label.show()
             self.image1_cb.show()
-            self.image2_label.setToolTip(_translate("vtk_viewer_select_mode", "choose your intensity matrix", None))
+            self.image2_label.setToolTip(
+                QtGui.QApplication.translate(
+                    "vtk_viewer_select_mode",
+                    "choose your intensity matrix",
+                    None))
             self.image2_label.setText(
-                _translate("vtk_viewer_select_mode",
-                           "<html><head/><body><p>Intensity</p></body></html>",
-                           None))
+                QtGui.QApplication.translate("vtk_viewer_select_mode",
+                                             "<html><head/><body><p>Intensity</p></body></html>",
+                                             None))
             self.image2_label.show()
             self.image2_cb.show()
         elif index == 2: # Blending
             self.action_launch_button.setToolTip(
-                _translate("vtk_viewer_select_mode",
-                           "Blend the two selected images",
-                           None))
-            self.action_launch_button.setText(_translate("vtk_viewer_select_mode", "Blend Images", None))
+                QtGui.QApplication.translate("vtk_viewer_select_mode",
+                                             "Blend the two selected images",
+                                             None))
+            self.action_launch_button.setText(
+                QtGui.QApplication.translate(
+                    "vtk_viewer_select_mode",
+                    "Blend Images",
+                    None))
             self.action_launch_button.show()
-            self.image1_label.setToolTip(_translate("vtk_viewer_select_mode", "choose your first image matrix", None))
+            self.image1_label.setToolTip(
+                QtGui.QApplication.translate(
+                    "vtk_viewer_select_mode",
+                    "choose your first image matrix",
+                    None))
             self.image1_label.setText(
-                _translate("vtk_viewer_select_mode",
-                           "<html><head/><body><p>Image 1</p></body></html>",
-                           None))
+                QtGui.QApplication.translate("vtk_viewer_select_mode",
+                                             "<html><head/><body><p>Image 1</p></body></html>",
+                                             None))
             self.image1_label.show()
             self.image1_cb.show()
-            self.image2_label.setToolTip(_translate("vtk_viewer_select_mode", "choose your second image matrix", None))
+            self.image2_label.setToolTip(
+                QtGui.QApplication.translate(
+                    "vtk_viewer_select_mode",
+                    "choose your second image matrix",
+                    None))
             self.image2_label.setText(
-                _translate("vtk_viewer_select_mode",
-                           "<html><head/><body><p>Image 2</p></body></html>",
-                           None))
+                QtGui.QApplication.translate("vtk_viewer_select_mode",
+                                             "<html><head/><body><p>Image 2</p></body></html>",
+                                             None))
             self.image2_label.show()
             self.image2_cb.show()
         else: # Default (Visualisation)
