@@ -97,8 +97,8 @@ for axis in ['x', 'y', 'z']:
         'polydata'][
         axis + "_slice"] = dict(
         value=(
-            0,
-            100),
+            -1,
+            101),
         interface=IIntRange,
         constraints=cst_extent_range,
         label=label)
