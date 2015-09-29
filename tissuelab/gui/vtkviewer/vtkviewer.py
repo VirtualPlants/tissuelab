@@ -46,6 +46,7 @@ cst_proba = dict(step=0.01, min=0, max=1)
 cst_alphamap = dict(enum=['constant', 'linear'])
 cst_width = dict(min=0, max=10)
 cst_percent_range = dict(step=1, min=0, max=100)
+cst_extent_range = dict(step=1, min=-1, max=101)
 
 attribute_definition = {}
 attribute_definition['matrix'] = {}
@@ -99,7 +100,7 @@ for axis in ['x', 'y', 'z']:
             0,
             100),
         interface=IIntRange,
-        constraints=cst_percent_range,
+        constraints=cst_extent_range,
         label=label)
 attribute_definition['polydata']['preserve_faces'] = dict(value=False, interface=IBool, label=u"Preserve Faces")
 
