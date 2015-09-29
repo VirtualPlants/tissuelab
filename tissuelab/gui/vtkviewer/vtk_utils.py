@@ -75,17 +75,17 @@ def define_lookuptable(data, colormap_points, colormap_name, intensity_range=Non
                 lut.AddRGBPoint(i, * colormap_points.values()[i])
         else:
 
-            from time import time
-            start_time = time()
+            # from time import time
+            # start_time = time()
             points = np.unique(data)
-            end_time = time()
-            print "Unique time : ", end_time - start_time, " s"
+            # end_time = time()
+            # print "Unique time : ", end_time - start_time, " s"
 
-            start_time = time()
+            # start_time = time()
             for i in points:
                 lut.AddRGBPoint(i, *colormap_points.values()[int(i) % 256])
-            end_time = time()
-            print "RGBPoint time : ", end_time - start_time, " s"
+            # end_time = time()
+            # print "RGBPoint time : ", end_time - start_time, " s"
     else:
         for value in colormap_points.keys():
             lut.AddRGBPoint(

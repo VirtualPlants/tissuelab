@@ -42,10 +42,11 @@ def expand(widget):
     widget.setSizePolicy(p(p.MinimumExpanding, p.MinimumExpanding))
 
 # Define constraints
-cst_proba = dict(step=0.1, min=0, max=1)
+cst_proba = dict(step=0.01, min=0, max=1)
 cst_alphamap = dict(enum=['constant', 'linear'])
 cst_width = dict(min=0, max=10)
 cst_percent_range = dict(step=1, min=0, max=100)
+cst_extent_range = dict(step=1, min=-1, max=101)
 
 attribute_definition = {}
 attribute_definition['matrix'] = {}
@@ -96,10 +97,10 @@ for axis in ['x', 'y', 'z']:
         'polydata'][
         axis + "_slice"] = dict(
         value=(
-            0,
-            100),
+            -1,
+            101),
         interface=IIntRange,
-        constraints=cst_percent_range,
+        constraints=cst_extent_range,
         label=label)
 attribute_definition['polydata']['preserve_faces'] = dict(value=False, interface=IBool, label=u"Preserve Faces")
 
@@ -404,6 +405,8 @@ class VtkViewer(QtGui.QWidget):
         polydata_actor = vtk.vtkActor()
         polydata_actor.SetMapper(mapper)
         polydata_actor.GetProperty().SetPointSize(1)
+        polydata_actor.GetProperty().SetInterpolationToPhong()
+
         self.polydata[name] = polydata
 
         polydata_actor.SetScale(resolution[0], resolution[1], resolution[2])
@@ -507,8 +510,8 @@ class VtkViewer(QtGui.QWidget):
             slicing_function = vtk_clipped_polydata
 
         displayed_polydata = self.polydata[name]
-        if polydata_name in self.object_repr:
-            object_polydata = self.object_repr[polydata_name]
+        if name in self.object_repr:
+            object_polydata = self.object_repr[name]
         else:
             object_polydata = displayed_polydata
 
@@ -724,6 +727,8 @@ class VtkViewer(QtGui.QWidget):
         dtype = 'matrix'
 
         self.matrix[name] = data_matrices[0]
+
+        self.reader[name] = matrix_to_image_reader(name, self.matrix[name], datatype=np.uint16, decimate=1)
 
         resolution = default_value(dtype, 'resolution', **kwargs)
         position = default_value(dtype, 'position', **kwargs)

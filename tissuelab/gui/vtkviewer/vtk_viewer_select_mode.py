@@ -5,6 +5,7 @@ from openalea.core.observer import AbstractListener
 
 from openalea.core.world import World
 import numpy as np
+import vtk
 
 
 from openalea.vpltk.qt.designer import generate_pyfile_from_uifile
@@ -44,11 +45,13 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
         self.image2_label.hide()
         self.image1_cb.hide()
         self.image2_cb.hide()
+        self.polydata_label.hide()
+        self.polydata_cb.hide()
 
         self.selected_mode_index = 0
         self._label = None
 
-        self.list_interactor_choice = ['visualisation', 'edition', 'blending']
+        self.list_interactor_choice = ['visualisation', 'edition', 'blending', 'point edition']
         for choice in self.list_interactor_choice:
             self.cb_interactor_choice.addItem(choice)
         self._create_connections()
@@ -95,6 +98,8 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
                                              None))
             self.image2_label.show()
             self.image2_cb.show()
+            self.polydata_label.hide()
+            self.polydata_cb.hide()
         elif index == 2: # Blending
             self.action_launch_button.setToolTip(
                 QtGui.QApplication.translate("vtk_viewer_select_mode",
@@ -128,11 +133,32 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
                                              None))
             self.image2_label.show()
             self.image2_cb.show()
+            self.polydata_label.hide()
+            self.polydata_cb.hide()
+        elif index == 3: # Nuclei edition
+            self.action_launch_button.hide()
+            self.image1_label.hide()
+            self.image1_cb.hide()
+            self.image2_label.hide()
+            self.image2_cb.hide()
+            self.polydata_label.setToolTip(
+                QtGui.QApplication.translate(
+                    "vtk_viewer_select_mode",
+                    "choose your points",
+                    None))
+            self.polydata_label.setText(
+                QtGui.QApplication.translate("vtk_viewer_select_mode",
+                                             "<html><head/><body><p>Points</p></body></html>",
+                                             None))
+            self.polydata_label.show()
+            self.polydata_cb.show()
         else: # Default (Visualisation)
             self.image1_label.hide()
             self.image1_cb.hide()
             self.image2_label.hide()
             self.image2_cb.hide()
+            self.polydata_label.hide()
+            self.polydata_cb.hide()
             self.action_launch_button.hide()
         self.enable_button()
         self.mode_changed.emit(index)
@@ -184,6 +210,8 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
                 if isinstance(new.data, np.ndarray):
                     self.image1_cb.addItem(new.name)
                     self.image2_cb.addItem(new.name)
+                elif "TriangularMesh" in str(new.data.__class__):
+                    self.polydata_cb.addItem(new.name)
             elif isinstance(old.data, np.ndarray):
                 if not isinstance(new.data, np.ndarray):
                     index = self.image1_cb.findText(old.name)
@@ -199,6 +227,13 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
                 if not isinstance(old.data, np.ndarray):
                     self.image1_cb.addItem(new.name)
                     self.image2_cb.addItem(new.name)
+            elif "TriangularMesh" in str(old.data.__class__):
+                if not "TriangularMesh" in str(new.data.__class__):
+                    index = self.polydata_cb.findText(old.name)
+                    self.polydata_cb.removeItem(index)
+            elif "TriangularMesh" in str(new.data.__class__):
+                self.polydata_cb.addItem(new.name)
+
         elif signal == 'world_object_item_changed':
             world, obj, item, old, new = data
             obj_data = obj.data
@@ -212,6 +247,9 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
                 self.image1_cb.removeItem(index)
                 index = self.image2_cb.findText(old.name)
                 self.image2_cb.removeItem(index)
+            elif "TriangularMesh" in str(old.data.__class__):
+                index = self.polydata_cb.findText(old.name)
+                self.polydata_cb.removeItem(index)
 
             """elif new['name'] != old['name'] :
                 self.update_world_object_name(old, new)"""
@@ -224,6 +262,8 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
             if isinstance(object_data, np.ndarray):
                 self.image1_cb.addItem(obj_name)
                 self.image2_cb.addItem(obj_name)
+            elif "TriangularMesh" in str(world_object.data.__class__):
+                self.polydata_cb.addItem(obj_name)
 
     def update_world_object_name(self, old, new):
         index = self.image1_cb.findText(old.name)
