@@ -141,11 +141,15 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
             self.image1_cb.hide()
             self.image2_label.hide()
             self.image2_cb.hide()
-            self.polydata_label.setToolTip(_translate("vtk_viewer_select_mode", "choose your points", None))
+            self.polydata_label.setToolTip(
+                QtGui.QApplication.translate(
+                    "vtk_viewer_select_mode",
+                    "choose your points",
+                    None))
             self.polydata_label.setText(
-                _translate("vtk_viewer_select_mode",
-                           "<html><head/><body><p>Points</p></body></html>",
-                           None))
+                QtGui.QApplication.translate("vtk_viewer_select_mode",
+                                             "<html><head/><body><p>Points</p></body></html>",
+                                             None))
             self.polydata_label.show()
             self.polydata_cb.show()
         else: # Default (Visualisation)
@@ -228,7 +232,7 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
                     index = self.polydata_cb.findText(old.name)
                     self.polydata_cb.removeItem(index)
             elif "TriangularMesh" in str(new.data.__class__):
-                    self.polydata_cb.addItem(new.name)
+                self.polydata_cb.addItem(new.name)
 
         elif signal == 'world_object_item_changed':
             world, obj, item, old, new = data
