@@ -35,7 +35,7 @@ class TissueViewer(QtGui.QWidget):
     MODE_VISUALISATION = 0
     MODE_EDITION = 1
     MODE_BLENDING = 2
-    MODE_POINT_EDITION = 3 
+    MODE_POINT_EDITION = 3
 
     def __init__(self):
         QtGui.QWidget.__init__(self)
@@ -58,10 +58,23 @@ class TissueViewer(QtGui.QWidget):
         add_drop_callback(self, 'IImage', self.drop_image)
 
     def _create_actions(self):
-        self.action_auto_focus = QtGui.QAction(
-            QtGui.QIcon(":/images/resources/resetzoom.png"), 'Auto focus', self)
-        self.action_save_screenshot = QtGui.QAction(
-            qicon("Crystal_Clear_app_camera.png"), 'Screenshot', self)
+        self.action_auto_focus = QtGui.QAction(qicon("paraview/pqResetCamera32.png"), 'Auto focus', self)
+        self.action_save_screenshot = QtGui.QAction(qicon("Crystal_Clear_app_camera.png"), 'Screenshot', self)
+
+        self._reset_view_actions = []
+        for direction in list('xyz'):
+            for sign, vtk_sign, symbol in (['positive', 'plus', '+'], ['negative', 'minus', '-']):
+                icon = 'paraview/pq%s%s32.png' % (direction.upper(), vtk_sign.capitalize())
+                reset_func_name = 'reset_%s_%s' % (direction, sign)
+                action = QtGui.QAction(qicon(icon), 'Set view %s%s' % (symbol, direction.upper()), self)
+                reset_func = getattr(self.vtk, reset_func_name)
+                action.triggered.connect(reset_func)
+                #self._reset_view_actions['action_%s' % reset_func_name] = action
+                self._reset_view_actions.append(action)
+
+        self.action_parallel_projection = QtGui.QAction(qicon("paraview/pqRotate32.png"), 'Parallel Projection', self)
+        self.action_parallel_projection.setCheckable(True)
+        self.action_parallel_projection.toggled.connect(self.vtk.set_parallel_projection)
 
     def _create_connections(self):
         self.action_auto_focus.triggered.connect(self.vtk.auto_focus)
@@ -73,16 +86,19 @@ class TissueViewer(QtGui.QWidget):
     def toolbars(self):
         toolbar = QtGui.QToolBar("Tissue Viewer")
         toolbar.addActions([
-            self.action_auto_focus,
             self.action_save_screenshot,
+            self.action_auto_focus,
+            self.action_parallel_projection,
         ])
+        toolbar.addActions(self._reset_view_actions)
         return [toolbar]
 
     def toolbar_actions(self):
         return [
-            self.action_auto_focus,
             self.action_save_screenshot,
-        ]
+            self.action_auto_focus,
+            self.action_parallel_projection,
+        ] + self._reset_view_actions
 
     def local_toolbar_actions(self):
         return self.toolbar_actions() + [self.mode_selector]

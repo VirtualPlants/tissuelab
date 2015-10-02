@@ -234,6 +234,40 @@ class VtkViewer(QtGui.QWidget):
     # PURE VTK METHODS, NO MORE Qt AFTER THIS LINE #
     ################################################
 
+    def set_parallel_projection(self, parallel=True):
+        cam = self.ren.GetActiveCamera()
+        if parallel:
+            cam.ParallelProjectionOn()
+        else:
+            cam.ParallelProjectionOff()
+        self.render()
+
+    def reset_view(self, look_x, look_y, look_z, up_x, up_y, up_z):
+        cam = self.ren.GetActiveCamera()
+        cam.SetPosition(0, 0, 0)
+        cam.SetFocalPoint(look_x, look_y, look_z)
+        cam.SetViewUp(up_x, up_y, up_z)
+        self.ren.ResetCamera()
+        self.render()
+
+    def reset_x_positive(self):
+        self.reset_view(1, 0, 0, 0, 0, 1)
+
+    def reset_x_negative(self):
+        self.reset_view(-1, 0, 0, 0, 0, 1)
+
+    def reset_y_positive(self):
+        self.reset_view(0, 1, 0, 0, 0, 1)
+
+    def reset_y_negative(self):
+        self.reset_view(0, -1, 0, 0, 0, 1)
+
+    def reset_z_positive(self):
+        self.reset_view(0, 0, 1, 0, 1, 0)
+
+    def reset_z_negative(self):
+        self.reset_view(0, 0, -1, 0, 1, 0)
+
     def display_volume(self, name=None, disp=True):
         self._display_volume(name, disp)
         self.compute()
@@ -314,7 +348,7 @@ class VtkViewer(QtGui.QWidget):
     def refresh(self):
         self.compute()
 
-    def compute(self):
+    def compute(self, autofocus=False):
         for name, prop in self.view_prop.items():
             if self.property[name]['disp']:
                 if not self.ren.HasViewProp(prop):
@@ -325,7 +359,10 @@ class VtkViewer(QtGui.QWidget):
 
         self.iren.Initialize()
         self.iren.Start()
-        self.render()
+        if autofocus:
+            self.auto_focus()
+        else:
+            self.render()
 
     def _remove_view_prop(self, name):
         if name in self.view_prop:
@@ -375,6 +412,7 @@ class VtkViewer(QtGui.QWidget):
 
     def auto_focus(self):
         self.ren.ResetCamera()
+        self.render()
 
     def render(self):
         self.iren.Render()
