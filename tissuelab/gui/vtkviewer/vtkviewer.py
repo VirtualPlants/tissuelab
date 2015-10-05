@@ -423,7 +423,10 @@ class VtkViewer(QtGui.QWidget):
             self.ren.RemoveActor(old_view_prop)
             del old_view_prop
         self.view_prop[name] = actor
-        self.property[name] = dict(disp=True)
+        # disp attribute is required, never remove it
+        prop_kwargs = dict(disp=True)
+        prop_kwargs.update(kwargs)
+        self.property[name] = prop_kwargs
 
     def add_polydata(self, name, polydata, **kwargs):
         dtype = 'polydata'
@@ -667,6 +670,7 @@ class VtkViewer(QtGui.QWidget):
             colors.Update()
 
         for orientation in [1, 2, 3]:
+            cut_plane_name = '%s_cut_plane_%d' % (name, orientation)
             imgactor = vtk.vtkImageActor()
             if vtk.VTK_MAJOR_VERSION <= 5:
                 colors = vtk.vtkImageMapToColors()
@@ -696,7 +700,7 @@ class VtkViewer(QtGui.QWidget):
 
             self.vtkdata['%s_cut_plane_colors_%d' %
                          (name, orientation)] = colors
-            self.add_actor('%s_cut_plane_%d' % (name, orientation), imgactor)
+            self.add_actor(cut_plane_name, imgactor, disp=kwargs.get('cut_planes', True))
 
         self.set_cut_planes_alpha(name, alpha=alpha)
         return imgactor
@@ -736,8 +740,7 @@ class VtkViewer(QtGui.QWidget):
         volume_property.SetScalarOpacity(alphaChannelFunc)
 
         volume_name = name_volume(name)
-        self.property[volume_name] = dict(
-            vtkVolumeProperty=volume_property, disp=True)
+        self.property[volume_name] = dict(vtkVolumeProperty=volume_property, disp=kwargs.get('volume', True))
 
         volume = vtk.vtkVolume()
         volume.SetMapper(volumeMapper)

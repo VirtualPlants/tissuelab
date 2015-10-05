@@ -1193,7 +1193,6 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
                         break
                     else:
                         self.selectedLabel = -1
-                print self.selectedLabel
                 self.InvokeEvent("CellSelected")
                 self.refresh()
 
@@ -1305,7 +1304,7 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
     def KeyPressEvent(self, obj, event):
         key = self.GetInteractor().GetKeyCode()
         if key == 'z':
-            print "wip"
+            raise NotImplementedError
 
     def find_point_to_move(self, coord):
         if self.select_neighboor_mode == 'propagationSphere':
@@ -1513,7 +1512,6 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
             if i not in label_in_matrix:
                 new_label = i
                 break
-        print new_label
         self.polyList[new_label] = cleaning1.GetOutput()
 
         self.refresh()

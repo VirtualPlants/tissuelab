@@ -518,8 +518,8 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
 
         setdefault(world_object, dtype, 'cut_planes', **kwargs)
 
-        # self._display_volume(name, display_volume)
-        # self._display_cut_planes(name, display_cut_planes)
+        #self._display_volume(name, world_object.attribute('volume'))
+        #self._display_cut_planes(name, world_object.attribute('cut_planes'))
 
     def add_matrix_cut_planes(self, world_object, data_matrix, datatype=np.uint16, decimate=1, **kwargs):
         name = world_object.name
@@ -575,6 +575,13 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
 
         obj_kwargs = world_kwargs(world_object)
         super(VtkWorldViewer, self).add_blending(world_object.name, names, data_matrices, **obj_kwargs)
+
+        #w1, w2 = world_object.dat.data_matrices
+        #self.set_matrix_lookuptable(
+        #    w1.name,
+        #    colormap=w1.attribute('colormap')['value'],
+        #    intensity_range=w1.attribute('intensity_range'))
+
         world_object.silent = False
 
         setdefault(world_object, dtype, 'cut_planes', **kwargs)
