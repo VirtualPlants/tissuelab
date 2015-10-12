@@ -187,6 +187,8 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         self.world.register_listener(self)
         self.setAcceptDrops(True)
 
+        self._first_object = True
+
     def notify(self, sender, event=None):
         signal, data = event
         if signal == 'world_sync':
@@ -204,8 +206,9 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
 
     def set_world(self, world):
         self.clear()
+        self._first_object = True
         for obj_name, world_object in world.items():
-            self.set_world_object(world, world_object)
+            self.set_world_object(world, world_object, compute=False)
             # if hasattr(world_object, "transform"):
             #     object_data = world_object.transform()
             # elif hasattr(world_object, "_repr_vtk_"):
@@ -221,9 +224,9 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
             #     self.add_polydata(world_object, object_data, **world_object.kwargs)
             # elif isinstance(object_data, vtk.vtkActor):
             #     self.add_actor(obj_name, object_data, **world_object.kwargs)
-        self.compute()
+        self.compute(autofocus=True)
 
-    def set_world_object(self, world, world_object):
+    def set_world_object(self, world, world_object, compute=True):
         """
         Add a world object in the viewer's scene
         """
@@ -250,7 +253,9 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
             self.add_blending(world_object, object_data, **world_object.kwargs)
         elif isinstance(object_data, vtk.vtkActor):
             self.add_actor(object_name, object_data, **world_object.kwargs)
-        self.compute()
+        if compute is True:
+            self.compute(autofocus=self._first_object)
+            self._first_object = False
 
     def remove_world_object(self, world, world_object):
         """
@@ -268,6 +273,8 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         elif isinstance(object_data, vtk.vtkActor):
             self.remove_actor(object_name)
         self.compute()
+        if len(world) == 0:
+            self._first_object = True
 
     def update_world_object(self, world, world_object, attribute):
         object_name = world_object.name
@@ -511,8 +518,8 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
 
         setdefault(world_object, dtype, 'cut_planes', **kwargs)
 
-        # self._display_volume(name, display_volume)
-        # self._display_cut_planes(name, display_cut_planes)
+        #self._display_volume(name, world_object.attribute('volume'))
+        #self._display_cut_planes(name, world_object.attribute('cut_planes'))
 
     def add_matrix_cut_planes(self, world_object, data_matrix, datatype=np.uint16, decimate=1, **kwargs):
         name = world_object.name
@@ -568,6 +575,13 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
 
         obj_kwargs = world_kwargs(world_object)
         super(VtkWorldViewer, self).add_blending(world_object.name, names, data_matrices, **obj_kwargs)
+
+        #w1, w2 = world_object.dat.data_matrices
+        #self.set_matrix_lookuptable(
+        #    w1.name,
+        #    colormap=w1.attribute('colormap')['value'],
+        #    intensity_range=w1.attribute('intensity_range'))
+
         world_object.silent = False
 
         setdefault(world_object, dtype, 'cut_planes', **kwargs)
