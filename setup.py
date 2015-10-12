@@ -81,6 +81,7 @@ setup(
 
     zip_safe=False,
     include_package_data=True,
+    package_data={'tissuelab':get_package_data('tissuelab', data_ext)},
 
     # Declare src and wralea as entry_points (extensions) of your package
     entry_points={
