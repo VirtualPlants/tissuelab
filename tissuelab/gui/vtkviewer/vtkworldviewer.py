@@ -67,10 +67,6 @@ def attribute_value(world_object, dtype, attr_name, **kwargs):
 
 
 def setdefault(world_object, dtype, attr_name, obj_attr_name=None, conv=None, **kwargs):
-    print attr_name
-    print "kwargs : ",kwargs
-    print "world_object",world_object.get(attr_name, None)
-
 
     if obj_attr_name is None:
         obj_attr_name = attr_name
@@ -263,6 +259,8 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         if compute is True:
             self.compute(autofocus=self._first_object)
             self._first_object = False
+
+        world_object.clear_kwargs()
 
     def remove_world_object(self, world, world_object):
         """

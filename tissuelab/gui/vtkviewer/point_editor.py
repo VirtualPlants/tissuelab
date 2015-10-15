@@ -344,7 +344,8 @@ class SelectPointInteractorStyle (vtk.vtkInteractorStyleTrackballCamera):
             elif key == 's':
                 # self.data.points[self.selected_cell] = self.world['selected_cell'].data.points[self.selected_cell]
                 self.data.points[self.selected_cell] = np.array(self.cell_sphere.GetCenter())
-                self.world.add(self.data, self.world_object.name)
+                #self.world.add(self.data, self.world_object.name)
+                self.world[self.world_object.name].data = self.data
                 self.world.remove('selected_cell')
                 self.world.remove('axes')
                 self.grab_mode = False
@@ -356,7 +357,8 @@ class SelectPointInteractorStyle (vtk.vtkInteractorStyleTrackballCamera):
             elif key == 'd':
                 if self.selected_cell in self.data.points:
                     del self.data.points[self.selected_cell]
-                    self.world.add(self.data, self.world_object.name, **world_kwargs(self.world_object))
+                    #self.world.add(self.data, self.world_object.name, **world_kwargs(self.world_object))
+                    self.world[self.world_object.name].data = self.data
                 self.world.remove('selected_cell')
                 self.world.remove('axes')
                 self.grab_mode = False
