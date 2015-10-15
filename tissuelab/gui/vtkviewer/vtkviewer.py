@@ -654,14 +654,19 @@ class VtkViewer(QtGui.QWidget):
         # bwLut = define_lookuptable(data_matrix, colormap=self.colormaps["grey"])
         # colorLut = define_lookuptable(data_matrix, colormap=self.colormaps["glasbey"])
         # lut = define_lookuptable(data_matrix, colormap=self.colormaps[cmap])
+        irange = default_value(dtype, 'intensity_range', **kwargs)
 
-        lut = define_lookuptable(data_matrix, colormap_points=cmap['color_points'], colormap_name=cmap['name'])
+        lut = define_lookuptable(data_matrix, colormap_points=cmap['color_points'], colormap_name=cmap['name'], intensity_range=irange)
 
         x_min, x_max, y_min, y_max, z_min, z_max = obj_extent(reader)
 
-        x = int(np.round((x_max - x_min) / 2))
-        y = int(np.round((y_max - y_min) / 2))
-        z = int(np.round((z_max - z_min) / 2))
+        #x = int(np.round((x_max - x_min) / 2))
+        #y = int(np.round((y_max - y_min) / 2))
+        #z = int(np.round((z_max - z_min) / 2))
+
+        x = default_value(dtype, ['x_plane_position'], **kwargs)
+        y = default_value(dtype, ['y_plane_position'], **kwargs)
+        z = default_value(dtype, ['z_plane_position'], **kwargs)
 
         if vtk.VTK_MAJOR_VERSION >= 6:
             colors = vtk.vtkImageMapToColors()

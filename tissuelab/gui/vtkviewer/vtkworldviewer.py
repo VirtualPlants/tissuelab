@@ -67,6 +67,11 @@ def attribute_value(world_object, dtype, attr_name, **kwargs):
 
 
 def setdefault(world_object, dtype, attr_name, obj_attr_name=None, conv=None, **kwargs):
+    print attr_name
+    print "kwargs : ",kwargs
+    print "world_object",world_object.get(attr_name, None)
+
+
     if obj_attr_name is None:
         obj_attr_name = attr_name
     if isinstance(attr_name, basestring):
@@ -86,7 +91,9 @@ def setdefault(world_object, dtype, attr_name, obj_attr_name=None, conv=None, **
 
     #    2. world object
     if value is None:
-        value = world_object.get(attr_name, None)
+        for attr_name in attr_names:
+            if value is None:
+                value = world_object.get(attr_name, None)
 
     # If a conversion has been defined, apply it
     attribute = None
@@ -533,6 +540,8 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
 
         kwargs = world_kwargs(world_object)
         super(VtkWorldViewer, self).add_matrix_cut_planes(name, data_matrix, datatype=datatype, **kwargs)
+
+
 
     def add_matrix_as_volume(self, world_object, data_matrix, datatype=np.uint16, decimate=1, **kwargs):
         dtype = 'matrix'
