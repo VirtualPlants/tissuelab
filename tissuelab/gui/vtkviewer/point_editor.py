@@ -89,7 +89,7 @@ class SelectPointInteractorStyle (vtk.vtkInteractorStyleTrackballCamera):
         self.cell_actor.GetProperty().SetColor(1.0, 1.0, 1.0)
         self.cell_actor.GetProperty().SetOpacity(0.3)
 
-        self.world.add(self.cell_actor, "selected_cell")
+        self.world.add(self.cell_actor, "selected_cell", position=self.world_object.get('position'))
 
     def add_axes(self):
         cell_center = np.array(self.cell_sphere.GetCenter())
@@ -156,7 +156,7 @@ class SelectPointInteractorStyle (vtk.vtkInteractorStyleTrackballCamera):
             axis_mapper.SetInputData(self.axis_polydata)
 
         self.axis_polydata_actor.SetMapper(axis_mapper)
-        self.world.add(self.axis_polydata_actor, "axes")
+        self.world.add(self.axis_polydata_actor, "axes", position=self.world_object.get('position'))
         #self.GetCurrentRenderer().AddActor(axis_polydata_actor)
 
     def add_selected_axis(self):
@@ -222,7 +222,7 @@ class SelectPointInteractorStyle (vtk.vtkInteractorStyleTrackballCamera):
 
         self.selected_axis_polydata_actor.SetMapper(selected_axis_mapper)
         self.selected_axis_polydata_actor.GetProperty().SetLineWidth(3)
-        self.world.add(self.selected_axis_polydata_actor, "selected_axis")
+        self.world.add(self.selected_axis_polydata_actor, "selected_axis", position=self.world_object.get('position'))
 
     def update_motion_plane(self):
         camera_center = np.array(self.GetCurrentRenderer().GetActiveCamera().GetPosition())
@@ -247,7 +247,7 @@ class SelectPointInteractorStyle (vtk.vtkInteractorStyleTrackballCamera):
 
             if (self.GetInteractor().GetPicker().GetPointId() != -1):
                 if len(self.data.points) > 0:
-                    pick_cell_matching = vq(np.array([coord]), np.array(self.data.points.values()))
+                    pick_cell_matching = vq(np.array([coord]+np.array(self.world_object.get('position'))), np.array(self.data.points.values()))
                     label = self.data.points.keys()[pick_cell_matching[0][0]]
                     self.selected_cell = label
 
@@ -341,6 +341,7 @@ class SelectPointInteractorStyle (vtk.vtkInteractorStyleTrackballCamera):
                 self.selected_cell == -1
                 self.GetInteractor().GetPicker().DeletePickList(self.motion_plane_actor)
                 self.GetInteractor().GetPicker().PickFromListOff()
+
             elif key == 's':
                 # self.data.points[self.selected_cell] = self.world['selected_cell'].data.points[self.selected_cell]
                 self.data.points[self.selected_cell] = np.array(self.cell_sphere.GetCenter())
@@ -354,8 +355,10 @@ class SelectPointInteractorStyle (vtk.vtkInteractorStyleTrackballCamera):
                 self.selected_cell == -1
                 self.GetInteractor().GetPicker().DeletePickList(self.motion_plane_actor)
                 self.GetInteractor().GetPicker().PickFromListOff()
+
             elif key == 'd':
-                if self.selected_cell in self.data.points:
+                print self.selected_cell
+                if self.selected_cell in self.data.points.keys():
                     del self.data.points[self.selected_cell]
                     #self.world.add(self.data, self.world_object.name, **world_kwargs(self.world_object))
                     self.world[self.world_object.name].data = self.data
@@ -367,6 +370,18 @@ class SelectPointInteractorStyle (vtk.vtkInteractorStyleTrackballCamera):
                 self.selected_cell == -1
                 self.GetInteractor().GetPicker().DeletePickList(self.motion_plane_actor)
                 self.GetInteractor().GetPicker().PickFromListOff()
+
+            elif key == 'a':
+                added_cell = np.sort(list(set(np.arange(np.max(self.data.points.keys()))+2).difference(set(self.data.points.keys()))))[0]
+                print "Add cell : ",added_cell
+                self.selected_cell = added_cell
+                self.grab_mode = True
+                self.selected_axis = 'x'
+                self.add_selected_axis()
+                self.update_motion_plane()
+                # self.GetInteractor().GetPicker().InitializePickList()
+                self.GetInteractor().GetPicker().AddPickList(self.motion_plane_actor)
+                self.GetInteractor().GetPicker().PickFromListOn()
 
     def MouseMoved(self, obj, event):
         if self.grab_mode:

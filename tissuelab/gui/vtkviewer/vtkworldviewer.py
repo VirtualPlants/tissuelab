@@ -247,7 +247,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         self.object_repr[object_name] = object_data
 
         if isinstance(object_data, np.ndarray):
-            if hasattr(object_data, 'resolution') and 'resolution' not in world_object.kwargs:
+            if hasattr(object_data, 'resolution') and 'resolution' not in world_object.kwargs and 'resolution' not in [a['name'] for a in world_object.attributes]:
                 world_object.kwargs['resolution'] = object_data.resolution
             self.add_matrix(world_object, object_data, datatype=object_data.dtype, **world_object.kwargs)
         elif isinstance(object_data, vtk.vtkPolyData):
@@ -255,7 +255,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         elif isinstance(object_data, ImageBlending):
             self.add_blending(world_object, object_data, **world_object.kwargs)
         elif isinstance(object_data, vtk.vtkActor):
-            self.add_actor(object_name, object_data, **world_object.kwargs)
+            self.add_world_object_actor(world_object, object_data, **world_object.kwargs)
         if compute is True:
             self.compute(autofocus=self._first_object)
             self._first_object = False
@@ -412,6 +412,17 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                         if attribute['name'] == axis + '_plane_position':
                             self.move_cut_plane(name=world_object.name, position=attribute['value'], orientation=i + 1)
         self.render()
+
+    def add_world_object_actor(self, world_object, actor, **kwargs):
+        world_object.silent = True
+        dtype = 'actor'
+
+        setdefault(world_object, dtype, 'position', conv=_tuple, **kwargs)
+        
+        obj_kwargs = world_kwargs(world_object)
+        super(VtkWorldViewer, self).add_actor(world_object.name, actor, **obj_kwargs)
+
+        world_object.silent = False
 
     def add_polydata(self, world_object, polydata, **kwargs):
         world_object.silent = True

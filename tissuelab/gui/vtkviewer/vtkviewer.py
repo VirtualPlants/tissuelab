@@ -104,6 +104,9 @@ for axis in ['x', 'y', 'z']:
         label=label)
 attribute_definition['polydata']['preserve_faces'] = dict(value=False, interface=IBool, label=u"Preserve Faces")
 
+attribute_definition['actor'] = {}
+attribute_definition['actor']['position'] = dict(value=(0.0, 0.0, 0.0), interface=ITuple, label=u"Position")
+
 
 colormaps = load_colormaps()
 
@@ -418,6 +421,15 @@ class VtkViewer(QtGui.QWidget):
         self.iren.Render()
 
     def add_actor(self, name, actor, **kwargs):
+        dtype = 'actor'
+        position = tuple(default_value(dtype, 'position', **kwargs))
+
+        print name," position = ",position
+
+        if position is not None:
+            actor.SetOrigin(position[0], position[1], position[2])
+            actor.SetPosition(-position[0], -position[1], -position[2])
+
         if name in self.view_prop:
             old_view_prop = self.view_prop[name]
             self.ren.RemoveActor(old_view_prop)
@@ -451,12 +463,12 @@ class VtkViewer(QtGui.QWidget):
         self.polydata[name] = polydata
 
         polydata_actor.SetScale(resolution[0], resolution[1], resolution[2])
-        if position is not None:
-            polydata_actor.SetOrigin(position[0], position[1], position[2])
-            # imgactor.SetPosition(-(nx - 1) / 2., -(ny - 1) / 2., -(nz - 1) / 2.)
-            polydata_actor.SetPosition(-position[0], -position[1], -position[2])
+        # if position is not None:
+        #     polydata_actor.SetOrigin(position[0], position[1], position[2])
+        #     # imgactor.SetPosition(-(nx - 1) / 2., -(ny - 1) / 2., -(nz - 1) / 2.)
+        #     polydata_actor.SetPosition(-position[0], -position[1], -position[2])
 
-        self.add_actor(name_polydata(name), polydata_actor)
+        self.add_actor(name_polydata(name), polydata_actor, **kwargs)
 
         x_slice = default_value(dtype, 'x_slice', **kwargs)
         y_slice = default_value(dtype, 'y_slice', **kwargs)
@@ -631,7 +643,7 @@ class VtkViewer(QtGui.QWidget):
         outline_actor.SetPosition(- nx / 2., -ny / 2., -nz / 2.)
         outline_actor.SetMapper(outline_mapper)
         outline_actor.GetProperty().SetColor(color)
-        self.add_actor('%s_outline' % (name), outline_actor)
+        self.add_actor('%s_outline' % (name), outline_actor, **kwargs)
 
     def add_matrix_cut_planes(self, name, data_matrix, datatype=np.uint16, decimate=1, **kwargs):
         """
@@ -699,13 +711,13 @@ class VtkViewer(QtGui.QWidget):
             # imgactor, blend = blend_funct(data_matrix, reader, lut, reader, lut, orientation)
             # self.vtkdata['%s_blend_cut_plane_%d' % (name, orientation)] = blend
 
-            if position is not None:
-                imgactor.SetOrigin(position[0], position[1], position[2])
-                imgactor.SetPosition(-position[0], -position[1], -position[2])
+            # if position is not None:
+                # imgactor.SetOrigin(position[0], position[1], position[2])
+                # imgactor.SetPosition(-position[0], -position[1], -position[2])
 
             self.vtkdata['%s_cut_plane_colors_%d' %
                          (name, orientation)] = colors
-            self.add_actor(cut_plane_name, imgactor, disp=kwargs.get('cut_planes', True))
+            self.add_actor(cut_plane_name, imgactor, disp=kwargs.get('cut_planes', True), **kwargs)
 
         self.set_cut_planes_alpha(name, alpha=alpha)
         return imgactor
@@ -821,11 +833,11 @@ class VtkViewer(QtGui.QWidget):
 
             blend_actor.SetScale(resolution[0], resolution[1], resolution[2])
 
-            if position is not None:
-                blend_actor.SetOrigin(position[0], position[1], position[2])
-                blend_actor.SetPosition(-position[0], -position[1], -position[2])
+            # if position is not None:
+            #     blend_actor.SetOrigin(position[0], position[1], position[2])
+            #     blend_actor.SetPosition(-position[0], -position[1], -position[2])
 
-            self.add_actor('%s_cut_plane_%d' % (name, orientation), blend_actor)
+            self.add_actor('%s_cut_plane_%d' % (name, orientation), blend_actor, **kwargs)
 
     def set_cut_planes_alpha(self, name, alpha):
         alpha = default_value('matrix', 'cut_planes_alpha', cut_planes_alpha=alpha)
