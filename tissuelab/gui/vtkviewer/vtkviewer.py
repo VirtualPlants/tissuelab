@@ -424,8 +424,6 @@ class VtkViewer(QtGui.QWidget):
         dtype = 'actor'
         position = tuple(default_value(dtype, 'position', **kwargs))
 
-        print name," position = ",position
-
         if position is not None:
             actor.SetOrigin(position[0], position[1], position[2])
             actor.SetPosition(-position[0], -position[1], -position[2])
