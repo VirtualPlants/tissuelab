@@ -133,7 +133,7 @@ class TissueViewer(QtGui.QWidget):
             interactor_style.AddObserver("LabelSelectedEvent", self.label_selected)
             self.vtk.set_interactor_style(interactor_style)
         elif mode == self.MODE_BLENDING:
-            self.vtk.set_interactor_style(interactor_style)
+            self.vtk.set_interactor_style()
         elif mode == self.MODE_POINT_EDITION:
             world_object = self.vtk.world[self.mode_selector.polydata_cb.currentText()]
             interactor_style = SelectPointInteractorStyle(world_object=world_object)

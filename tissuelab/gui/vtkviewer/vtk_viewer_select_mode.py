@@ -41,6 +41,7 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
         self.action_launch_button.setEnabled(False)
 
         self.action_launch_button.hide()
+        self.synchro_cb.hide()
         self.image1_label.hide()
         self.image2_label.hide()
         self.image1_cb.hide()
@@ -50,6 +51,7 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
 
         self.selected_mode_index = 0
         self._label = None
+        self.point_image_synchronized = False
 
         self.list_interactor_choice = ['visualisation', 'edition', 'blending', 'point edition']
         for choice in self.list_interactor_choice:
@@ -61,6 +63,7 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
         self.action_launch_button.pressed.connect(self.button_pressed_launch_popup)
         self.image1_cb.currentIndexChanged.connect(self.matrix1_changed)
         self.image2_cb.currentIndexChanged.connect(self.matrix2_changed)
+        self.synchro_cb.stateChanged.connect(self.synchro_changed)
 
     def select_mode(self, index):
         self.selected_mode_index = index
@@ -76,6 +79,7 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
                     "Edit Cell",
                     None))
             self.action_launch_button.show()
+            self.synchro_cb.hide()
             self.image1_label.setToolTip(
                 QtGui.QApplication.translate(
                     "vtk_viewer_select_mode",
@@ -100,6 +104,7 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
             self.image2_cb.show()
             self.polydata_label.hide()
             self.polydata_cb.hide()
+
         elif index == 2: # Blending
             self.action_launch_button.setToolTip(
                 QtGui.QApplication.translate("vtk_viewer_select_mode",
@@ -111,6 +116,7 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
                     "Blend Images",
                     None))
             self.action_launch_button.show()
+            self.synchro_cb.hide()
             self.image1_label.setToolTip(
                 QtGui.QApplication.translate(
                     "vtk_viewer_select_mode",
@@ -135,12 +141,24 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
             self.image2_cb.show()
             self.polydata_label.hide()
             self.polydata_cb.hide()
-        elif index == 3: # Nuclei edition
+
+        elif index == 3: # Nuclei edition            
+
             self.action_launch_button.hide()
+            self.synchro_cb.show()
             self.image1_label.hide()
             self.image1_cb.hide()
-            self.image2_label.hide()
-            self.image2_cb.hide()
+            self.image2_label.setToolTip(
+                QtGui.QApplication.translate(
+                    "vtk_viewer_select_mode",
+                    "choose the image on which to synchronize",
+                    None))
+            self.image2_label.setText(
+                QtGui.QApplication.translate("vtk_viewer_select_mode",
+                                             "<html><head/><body><p>Sync. Image</p></body></html>",
+                                             None))
+            self.image2_label.show()
+            self.image2_cb.show()
             self.polydata_label.setToolTip(
                 QtGui.QApplication.translate(
                     "vtk_viewer_select_mode",
@@ -159,6 +177,7 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
             self.image2_cb.hide()
             self.polydata_label.hide()
             self.polydata_cb.hide()
+            self.synchro_cb.hide()
             self.action_launch_button.hide()
         self.enable_button()
         self.mode_changed.emit(index)
@@ -173,6 +192,11 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
                 self.action_launch_button.setEnabled(False)
             else:
                 self.action_launch_button.setEnabled(True)
+        elif self.selected_mode_index == 3:
+            if self.polydata_cb.count() == 0:
+                self.synchro_cb.setEnabled(False)
+            else:
+                self.synchro_cb.setEnabled(True)
         else:
             self.action_launch_button.setEnabled(True)
 
@@ -198,6 +222,29 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
             blending = ImageBlending([self.world[name1], self.world[name2]])
             self.world.add(blending, name1 + "_" + name2 + "_blending")
 
+    def synchro_changed(self):
+        if self.selected_mode_index == 3:
+            if self.synchro_cb.isChecked():
+                points_name = str(self.polydata_cb.currentText())
+                image_name = str(self.image2_cb.currentText())
+                self.cut_points(points_name,image_name)
+            else:
+                points_name = str(self.polydata_cb.currentText())
+                self.world[points_name].set_attribute('z_slice',(-1,101))
+
+
+    def cut_points(self, points_name, image_name):
+        self.world[image_name].set_attribute('cut_planes',True)
+        self.world[image_name].set_attribute('volume',False)
+        self.world[image_name].set_attribute('cut_planes_alpha',0.7)
+        z_level = self.world[image_name].get('z_plane_position')*self.world[image_name].get('resolution')[2]
+        # print z_level," (",np.min(self.world[points_name].data.points.values()[:,2]),";",np.max(self.world[points_name].data.points.values()[:,2]),")"
+        z_min = np.array(self.world[points_name].data.points.values())[:,2].min()
+        z_max = np.array(self.world[points_name].data.points.values())[:,2].max()
+        z_level = float(z_level-z_min)/(z_max-z_min)
+        self.world[points_name].set_attribute('z_slice',(int(100*z_level-10),int(100*z_level+10)))
+
+
     def notify(self, sender, event=None):
         signal, data = event
         if signal == 'world_sync':
@@ -208,10 +255,13 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
             world, old, new = data
             if old is None:
                 if isinstance(new.data, np.ndarray):
-                    self.image1_cb.addItem(new.name)
-                    self.image2_cb.addItem(new.name)
+                    if new.name not in [self.image1_cb.itemText(i) for i in xrange(self.image1_cb.count())]:
+                        self.image1_cb.addItem(new.name)
+                    if new.name not in [self.image2_cb.itemText(i) for i in xrange(self.image2_cb.count())]:
+                        self.image2_cb.addItem(new.name)
                 elif "TriangularMesh" in str(new.data.__class__):
-                    self.polydata_cb.addItem(new.name)
+                    if new.name not in [self.polydata_cb.itemText(i) for i in xrange(self.polydata_cb.count())]:
+                        self.polydata_cb.addItem(new.name)
             elif isinstance(old.data, np.ndarray):
                 if not isinstance(new.data, np.ndarray):
                     index = self.image1_cb.findText(old.name)
@@ -240,6 +290,14 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
             if item == 'name':
                 if isinstance(obj_data, np.ndarray):
                     self.update_world_object_name(old, new)
+            if item == 'attribute':
+                if self.selected_mode_index == 3:
+                    if self.synchro_cb.isChecked():
+                        if obj.name == str(self.image2_cb.currentText()):
+                            if new['name'] == 'z_plane_position':
+                                if self.polydata_cb.count() > 0:
+                                    self.cut_points(str(self.polydata_cb.currentText()),str(self.image2_cb.currentText()))
+
         elif signal == 'world_object_removed':
             world, old = data
             if isinstance(old.data, np.ndarray):
@@ -276,6 +334,8 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
             self.image1_cb.removeItem(0)
         for i in xrange(self.image2_cb.count()):
             self.image2_cb.removeItem(0)
+        for i in xrange(self.polydata_cb.count()):
+            self.polydata_cb.removeItem(0)
 
     def set_label(self, label, res, pos):
         if self._label is not None:
