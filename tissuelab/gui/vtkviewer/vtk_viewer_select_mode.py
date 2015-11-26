@@ -242,7 +242,7 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
         z_min = np.array(self.world[points_name].data.points.values())[:,2].min()
         z_max = np.array(self.world[points_name].data.points.values())[:,2].max()
         z_level = float(z_level-z_min)/(z_max-z_min)
-        self.world[points_name].set_attribute('z_slice',(int(100*z_level-10),int(100*z_level+10)))
+        self.world[points_name].set_attribute('z_slice',(int(100*z_level-5),int(100*z_level+5)))
 
 
     def notify(self, sender, event=None):
