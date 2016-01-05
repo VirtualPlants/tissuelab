@@ -155,7 +155,6 @@ def _irange(world_object, attr_name, irange, **kwargs):
 
     return dict(value=irange, constraints=constraints)
 
-
 def _plane_position(world_object, attr_name, plane_position, **kwargs):
     lst = list('xyz')
     i = lst.index(attr_name[0])

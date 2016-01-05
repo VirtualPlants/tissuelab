@@ -135,8 +135,9 @@ class TissueViewer(QtGui.QWidget):
         elif mode == self.MODE_BLENDING:
             self.vtk.set_interactor_style()
         elif mode == self.MODE_POINT_EDITION:
-            world_object = self.vtk.world[self.mode_selector.polydata_cb.currentText()]
-            interactor_style = SelectPointInteractorStyle(world_object=world_object)
+            points_name = self.mode_selector.polydata_cb.currentText()
+            image_name = self.mode_selector.image2_cb.currentText()
+            interactor_style = SelectPointInteractorStyle(points_name=points_name, image_name=image_name)
             self.vtk.set_interactor_style(interactor_style)
         else:
             raise NotImplementedError('Edit mode %d is not implemented' % mode)

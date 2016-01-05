@@ -30,7 +30,7 @@ from tissuelab.gui.vtkviewer.vtkworldviewer import world_kwargs
 
 class SelectPointInteractorStyle (vtk.vtkInteractorStyleTrackballCamera):
 
-    def __init__(self, parent=None, world=None, world_object=None):
+    def __init__(self, parent=None, world=None, points_name=None, image_name=None):
         #vtk.vtkInteractorStyleTrackballCamera.__init__(self,parent=parent)
         self.AddObserver("LeftButtonPressEvent", self.LeftButtonPressed)
         self.AddObserver("KeyPressEvent", self.KeyPressed)
@@ -40,8 +40,15 @@ class SelectPointInteractorStyle (vtk.vtkInteractorStyleTrackballCamera):
         self.selected_axis = 'x'
         self.grab_mode = False
 
-        self.world_object = world_object
-        self.data = deepcopy(world_object.data)
+        if world is None:
+            self.world = World()
+        else:
+            self.world = world
+
+        self.world_object = self.world[points_name]
+        self.data = deepcopy(self.world[points_name].data)
+
+        self.image_world_object = self.world[image_name]
 
         self.cell_sphere = vtk.vtkSphereSource()
         self.cell_actor = vtk.vtkActor()
@@ -71,10 +78,6 @@ class SelectPointInteractorStyle (vtk.vtkInteractorStyleTrackballCamera):
         self.motion_plane_actor.GetProperty().SetColor(1.0, 0.0, 1.0)
         self.motion_plane_actor.GetProperty().SetOpacity(0.3)
 
-        if world is None:
-            self.world = World()
-        else:
-            self.world = world
 
     def add_selected_cell(self):
         self.cell_sphere.SetRadius(2.0)
@@ -274,20 +277,16 @@ class SelectPointInteractorStyle (vtk.vtkInteractorStyleTrackballCamera):
     def KeyPressed(self, obj, event):
         #key = obj.GetKeySym()
         #key = self.GetInteractor().GetKeySym()
-        key = self.GetInteractor().GetKeyCode()
+        key = self.GetInteractor().GetKeyCode().lower()
         motion_step = 0.5
 
         if self.selected_cell != -1:
 
-            if key in ['x', 'y', 'z']:
-                if self.grab_mode:
-                    if self.selected_axis != key:
-                        self.selected_axis = key
-                        self.add_selected_axis()
-                        self.update_motion_plane()
-                    else:
-                        self.selected_axis = None
-                        self.world.remove("selected_axis")
+            if key == 'f':
+                position = np.array(self.cell_sphere.GetCenter())/np.array(self.image_world_object.get('resolution'))
+                self.image_world_object.set_attribute('x_plane_position',int(np.round(position[0])))
+                self.image_world_object.set_attribute('y_plane_position',int(np.round(position[1])))
+                self.image_world_object.set_attribute('z_plane_position',int(np.round(position[2])))
 
             elif key == 'g':
                 if self.grab_mode:
@@ -304,6 +303,17 @@ class SelectPointInteractorStyle (vtk.vtkInteractorStyleTrackballCamera):
                     # self.GetInteractor().GetPicker().InitializePickList()
                     self.GetInteractor().GetPicker().AddPickList(self.motion_plane_actor)
                     self.GetInteractor().GetPicker().PickFromListOn()
+
+
+            elif key in ['x', 'y', 'z']:
+                if self.grab_mode:
+                    if self.selected_axis != key:
+                        self.selected_axis = key
+                        self.add_selected_axis()
+                        self.update_motion_plane()
+                    else:
+                        self.selected_axis = None
+                        self.world.remove("selected_axis")
 
             elif key == 'q':
                 for name in self.world.keys():
@@ -360,7 +370,7 @@ class SelectPointInteractorStyle (vtk.vtkInteractorStyleTrackballCamera):
                 self.GetInteractor().GetPicker().PickFromListOff()
 
             elif key == 'a':
-                added_cell = np.sort(list(set(np.arange(np.max(self.data.points.keys()))+2).difference(set(self.data.points.keys()))))[0]
+                added_cell = np.sort(list(set(np.arange(np.max(self.data.points.keys())+2)).difference(set(self.data.points.keys()))))[0]
                 if added_cell != self.selected_cell:
                     print "Add cell : ",added_cell
                     self.selected_cell = added_cell

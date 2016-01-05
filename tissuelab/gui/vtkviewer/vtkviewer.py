@@ -47,6 +47,7 @@ cst_alphamap = dict(enum=['constant', 'linear'])
 cst_width = dict(min=0, max=10)
 cst_percent_range = dict(step=1, min=0, max=100)
 cst_extent_range = dict(step=1, min=-1, max=101)
+cst_degree = dict(step=1,min=0,max=3)
 
 attribute_definition = {}
 attribute_definition['matrix'] = {}
@@ -107,6 +108,13 @@ attribute_definition['polydata']['preserve_faces'] = dict(value=False, interface
 attribute_definition['actor'] = {}
 attribute_definition['actor']['position'] = dict(value=(0.0, 0.0, 0.0), interface=ITuple, label=u"Position")
 
+attribute_definition['topomesh'] = {}
+element_names = dict(zip(range(4),['vertices','edges','faces','cells']))
+for degree in xrange(4):
+    attribute_definition['topomesh']["display_"+str(degree)] = dict(value=False,interface="IBool",constraints={},label="Display "+element_names[degree])
+    attribute_definition['topomesh']["property_degree_"+str(degree)] = dict(value=degree,interface="IInt",constraints=cst_degree,label="Degree") 
+    attribute_definition['topomesh']["property_name_"+str(degree)] = dict(value="",interface="IEnumStr",constraints=dict(enum=[""]),label="Property")     
+    attribute_definition['topomesh']["coef_"+str(degree)] = dict(value=1,interface="IFloat",constraints=cst_proba,label="Coef") 
 
 colormaps = load_colormaps()
 

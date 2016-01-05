@@ -49,6 +49,12 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
         self.polydata_label.hide()
         self.polydata_cb.hide()
 
+        self.axis_cb.hide()
+        self.axis_label.hide()
+        # self.focus_cb.hide()
+        self.slice_label.hide()
+        self.slice_slider.hide()
+
         self.selected_mode_index = 0
         self._label = None
         self.point_image_synchronized = False
@@ -63,7 +69,10 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
         self.action_launch_button.pressed.connect(self.button_pressed_launch_popup)
         self.image1_cb.currentIndexChanged.connect(self.matrix1_changed)
         self.image2_cb.currentIndexChanged.connect(self.matrix2_changed)
+
         self.synchro_cb.stateChanged.connect(self.synchro_changed)
+        self.axis_cb.currentIndexChanged.connect(self.synchro_changed)
+        self.slice_slider.valueChanged.connect(self.synchro_changed)
 
     def select_mode(self, index):
         self.selected_mode_index = index
@@ -105,6 +114,12 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
             self.polydata_label.hide()
             self.polydata_cb.hide()
 
+            self.axis_cb.hide()
+            self.axis_label.hide()
+            # self.focus_cb.hide()
+            self.slice_label.hide()
+            self.slice_slider.hide()
+
         elif index == 2: # Blending
             self.action_launch_button.setToolTip(
                 QtGui.QApplication.translate("vtk_viewer_select_mode",
@@ -142,6 +157,12 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
             self.polydata_label.hide()
             self.polydata_cb.hide()
 
+            self.axis_cb.hide()
+            self.axis_label.hide()
+            # self.focus_cb.hide()
+            self.slice_label.hide()
+            self.slice_slider.hide()
+
         elif index == 3: # Nuclei edition            
 
             self.action_launch_button.hide()
@@ -170,6 +191,20 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
                                              None))
             self.polydata_label.show()
             self.polydata_cb.show()
+
+            if self.synchro_cb.isChecked():
+                self.axis_cb.show()
+                self.axis_label.show()
+                # self.focus_cb.show()
+                self.slice_label.show()
+                self.slice_slider.show()
+            else:
+                self.axis_cb.hide()
+                self.axis_label.hide()
+                # self.focus_cb.hide()
+                self.slice_label.hide()
+                self.slice_slider.hide()
+
         else: # Default (Visualisation)
             self.image1_label.hide()
             self.image1_cb.hide()
@@ -179,6 +214,13 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
             self.polydata_cb.hide()
             self.synchro_cb.hide()
             self.action_launch_button.hide()
+
+            self.axis_cb.hide()
+            self.axis_label.hide()
+            # self.focus_cb.hide()
+            self.slice_label.hide()
+            self.slice_slider.hide()
+
         self.enable_button()
         self.mode_changed.emit(index)
 
@@ -225,24 +267,56 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
     def synchro_changed(self):
         if self.selected_mode_index == 3:
             if self.synchro_cb.isChecked():
+                self.axis_cb.show()
+                self.axis_label.show()
+                # self.focus_cb.show()
+                self.slice_label.show()
+                self.slice_slider.show()
                 points_name = str(self.polydata_cb.currentText())
                 image_name = str(self.image2_cb.currentText())
                 self.cut_points(points_name,image_name)
             else:
+                self.axis_cb.hide()
+                self.axis_label.hide()
+                # self.focus_cb.hide()
+                self.slice_label.hide()
+                self.slice_slider.hide()
                 points_name = str(self.polydata_cb.currentText())
+                self.world[points_name].set_attribute('x_slice',(-1,101))
+                self.world[points_name].set_attribute('y_slice',(-1,101))
                 self.world[points_name].set_attribute('z_slice',(-1,101))
+
 
 
     def cut_points(self, points_name, image_name):
         self.world[image_name].set_attribute('cut_planes',True)
         self.world[image_name].set_attribute('volume',False)
-        self.world[image_name].set_attribute('cut_planes_alpha',0.7)
-        z_level = self.world[image_name].get('z_plane_position')*self.world[image_name].get('resolution')[2]
-        # print z_level," (",np.min(self.world[points_name].data.points.values()[:,2]),";",np.max(self.world[points_name].data.points.values()[:,2]),")"
-        z_min = np.array(self.world[points_name].data.points.values())[:,2].min()
-        z_max = np.array(self.world[points_name].data.points.values())[:,2].max()
-        z_level = float(z_level-z_min)/(z_max-z_min)
-        self.world[points_name].set_attribute('z_slice',(int(100*z_level-5),int(100*z_level+5)))
+        # self.world[image_name].set_attribute('cut_planes_alpha',0.7)
+        slice_width = int(self.slice_slider.value())
+        if self.axis_cb.currentText() == 'X':
+            x_level = self.world[image_name].get('x_plane_position')*self.world[image_name].get('resolution')[0]
+            x_min = np.array(self.world[points_name].data.points.values())[:,0].min()
+            x_max = np.array(self.world[points_name].data.points.values())[:,0].max()
+            x_level = float(x_level-x_min)/(x_max-x_min)
+            self.world[points_name].set_attribute('x_slice',(100*x_level-slice_width,100*x_level+slice_width))
+            self.world[points_name].set_attribute('y_slice',(-1,101))
+            self.world[points_name].set_attribute('z_slice',(-1,101))
+        if self.axis_cb.currentText() == 'Y':
+            y_level = self.world[image_name].get('y_plane_position')*self.world[image_name].get('resolution')[1]
+            y_min = np.array(self.world[points_name].data.points.values())[:,1].min()
+            y_max = np.array(self.world[points_name].data.points.values())[:,1].max()
+            y_level = float(y_level-y_min)/(y_max-y_min)
+            self.world[points_name].set_attribute('y_slice',(100*y_level-slice_width,100*y_level+slice_width))
+            self.world[points_name].set_attribute('x_slice',(-1,101))
+            self.world[points_name].set_attribute('z_slice',(-1,101))
+        if self.axis_cb.currentText() == 'Z':
+            z_level = self.world[image_name].get('z_plane_position')*self.world[image_name].get('resolution')[2]
+            z_min = np.array(self.world[points_name].data.points.values())[:,2].min()
+            z_max = np.array(self.world[points_name].data.points.values())[:,2].max()
+            z_level = float(z_level-z_min)/(z_max-z_min)
+            self.world[points_name].set_attribute('z_slice',(100*z_level-slice_width,100*z_level+slice_width))
+            self.world[points_name].set_attribute('x_slice',(-1,101))
+            self.world[points_name].set_attribute('y_slice',(-1,101))
 
 
     def notify(self, sender, event=None):
@@ -293,9 +367,11 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
             if item == 'attribute':
                 if self.selected_mode_index == 3:
                     if self.synchro_cb.isChecked():
-                        if obj.name == str(self.image2_cb.currentText()):
-                            if new['name'] == 'z_plane_position':
-                                if self.polydata_cb.count() > 0:
+                        if self.polydata_cb.count() > 0:
+                            if obj.name == str(self.image2_cb.currentText()):
+                                if ((new['name'] == 'x_plane_position' and  self.axis_cb.currentText() == 'X') or 
+                                    (new['name'] == 'y_plane_position' and  self.axis_cb.currentText() == 'Y') or 
+                                    (new['name'] == 'z_plane_position' and  self.axis_cb.currentText() == 'Z')) :
                                     self.cut_points(str(self.polydata_cb.currentText()),str(self.image2_cb.currentText()))
 
         elif signal == 'world_object_removed':
