@@ -535,25 +535,57 @@ class VtkViewer(QtGui.QWidget):
 
         if (object_polydata.GetNumberOfCells() == 0) and (object_polydata.GetNumberOfPoints() > 0):
             # print "Setting Glyph Radius : ",point_radius
-            sphere = vtk.vtkSphereSource()
-            sphere.SetRadius(point_radius)
-            sphere.SetThetaResolution(12)
-            sphere.SetPhiResolution(12)
-            glyph = vtk.vtkGlyph3D()
-            glyph.SetScaleModeToDataScalingOff()
-            glyph.SetColorModeToColorByScalar()
-            glyph.SetSource(sphere.GetOutput())
-            glyph.SetInput(displayed_polydata)
+
+            if object_polydata.GetPointData().GetNumberOfComponents() < 3:
+                sphere = vtk.vtkSphereSource()
+                sphere.SetRadius(point_radius)
+                sphere.SetThetaResolution(12)
+                sphere.SetPhiResolution(12)
+                glyph = vtk.vtkGlyph3D()
+                glyph.SetScaleModeToDataScalingOff()
+                glyph.SetColorModeToColorByScalar()
+                glyph.SetSource(sphere.GetOutput())
+                glyph.SetInput(displayed_polydata)
+            elif object_polydata.GetPointData().GetNumberOfComponents() == 3:
+                arrow = vtk.vtkArrowSource()
+                arrow.SetTipLength(0.2)
+                arrow.SetTipRadius(0.08)
+                arrow.SetShaftRadius(0.05)
+                arrow.SetShaftResolution(8)
+                arrow.Update()
+                glyph = vtk.vtkGlyph3D()
+                glyph.SetSourceConnection(arrow.GetOutputPort())
+                glyph.SetInput(displayed_polydata)
+                glyph.SetVectorModeToUseVector()
+                glyph.SetColorModeToColorByVector()
+                glyph.SetScaleModeToScaleByVector()
+                glyph.SetScaleFactor(point_radius)
+            elif object_polydata.GetPointData().GetNumberOfComponents() == 9:
+                sphere = vtk.vtkSphereSource()
+                sphere.SetThetaResolution(12)
+                sphere.SetPhiResolution(8)
+                sphere.Update()
+                glyph = vtk.vtkTensorGlyph()
+                glyph.SetSourceConnection(sphere.GetOutputPort())
+                glyph.SetInput(displayed_polydata)
+                glyph.ColorGlyphsOn()
+                glyph.ThreeGlyphsOff()
+                glyph.SetColorModeToEigenvalues()
+                glyph.SymmetricOn()
+                glyph.SetScaleFactor(10.*point_radius)
+                glyph.ExtractEigenvaluesOn()
             glyph.Update()
             polydata = glyph.GetOutput()
+
         else:
             polydata = displayed_polydata
 
-        mapper = self.view_prop[name_polydata(name)].GetMapper()
-        if vtk.VTK_MAJOR_VERSION <= 5:
-            mapper.SetInput(polydata)
-        else:
-            mapper.SetInputData(polydata)
+        if self.view_prop.has_key(name_polydata(name)):
+            mapper = self.view_prop[name_polydata(name)].GetMapper()
+            if vtk.VTK_MAJOR_VERSION <= 5:
+                mapper.SetInput(polydata)
+            else:
+                mapper.SetInputData(polydata)
 
     def slice_polydata(self, name, **kwargs):
         dtype = 'polydata'
