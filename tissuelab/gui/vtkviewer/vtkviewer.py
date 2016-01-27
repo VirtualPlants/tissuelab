@@ -545,7 +545,10 @@ class VtkViewer(QtGui.QWidget):
                 glyph.SetScaleModeToDataScalingOff()
                 glyph.SetColorModeToColorByScalar()
                 glyph.SetSource(sphere.GetOutput())
-                glyph.SetInput(displayed_polydata)
+                if vtk.VTK_MAJOR_VERSION <= 5:
+                    glyph.SetInput(displayed_polydata)
+                else:
+                    glyph.SetInputData(displayed_polydata)
             elif object_polydata.GetPointData().GetNumberOfComponents() == 3:
                 arrow = vtk.vtkArrowSource()
                 arrow.SetTipLength(0.2)
@@ -555,7 +558,10 @@ class VtkViewer(QtGui.QWidget):
                 arrow.Update()
                 glyph = vtk.vtkGlyph3D()
                 glyph.SetSourceConnection(arrow.GetOutputPort())
-                glyph.SetInput(displayed_polydata)
+                if vtk.VTK_MAJOR_VERSION <= 5:
+                    glyph.SetInput(displayed_polydata)
+                else:
+                    glyph.SetInputData(displayed_polydata)
                 glyph.SetVectorModeToUseVector()
                 glyph.SetColorModeToColorByVector()
                 glyph.SetScaleModeToScaleByVector()
@@ -567,7 +573,10 @@ class VtkViewer(QtGui.QWidget):
                 sphere.Update()
                 glyph = vtk.vtkTensorGlyph()
                 glyph.SetSourceConnection(sphere.GetOutputPort())
-                glyph.SetInput(displayed_polydata)
+                if vtk.VTK_MAJOR_VERSION <= 5:
+                    glyph.SetInput(displayed_polydata)
+                else:
+                    glyph.SetInputData(displayed_polydata)
                 glyph.ColorGlyphsOn()
                 glyph.ThreeGlyphsOff()
                 glyph.SetColorModeToEigenvalues()
