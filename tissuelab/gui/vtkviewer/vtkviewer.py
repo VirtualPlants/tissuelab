@@ -549,40 +549,60 @@ class VtkViewer(QtGui.QWidget):
                     glyph.SetInput(displayed_polydata)
                 else:
                     glyph.SetInputData(displayed_polydata)
+
             elif object_polydata.GetPointData().GetNumberOfComponents() == 3:
+
                 arrow = vtk.vtkArrowSource()
                 arrow.SetTipLength(0.2)
                 arrow.SetTipRadius(0.08)
                 arrow.SetShaftRadius(0.05)
-                arrow.SetShaftResolution(8)
+                arrow.SetShaftResolution(16)
                 arrow.Update()
+
+                line = vtk.vtkLineSource()
+                line.SetPoint1(0,0,0)
+                line.SetPoint2(1,0,0)
+                line.Update()
+
                 glyph = vtk.vtkGlyph3D()
-                glyph.SetSourceConnection(arrow.GetOutputPort())
+                glyph.SetSourceConnection(line.GetOutputPort())
+                # glyph.SetSourceConnection(arrow.GetOutputPort())
                 if vtk.VTK_MAJOR_VERSION <= 5:
                     glyph.SetInput(displayed_polydata)
                 else:
                     glyph.SetInputData(displayed_polydata)
+                
                 glyph.SetVectorModeToUseVector()
                 glyph.SetColorModeToColorByVector()
                 glyph.SetScaleModeToScaleByVector()
                 glyph.SetScaleFactor(point_radius)
+
+
             elif object_polydata.GetPointData().GetNumberOfComponents() == 9:
+                
                 sphere = vtk.vtkSphereSource()
                 sphere.SetThetaResolution(12)
                 sphere.SetPhiResolution(8)
                 sphere.Update()
+                
+                line = vtk.vtkLineSource()
+                line.Update()
+
                 glyph = vtk.vtkTensorGlyph()
-                glyph.SetSourceConnection(sphere.GetOutputPort())
+                # glyph.SetSourceConnection(sphere.GetOutputPort())
+                glyph.SetSourceConnection(line.GetOutputPort())
                 if vtk.VTK_MAJOR_VERSION <= 5:
                     glyph.SetInput(displayed_polydata)
                 else:
                     glyph.SetInputData(displayed_polydata)
                 glyph.ColorGlyphsOn()
-                glyph.ThreeGlyphsOff()
+                # glyph.ThreeGlyphsOff()
+                glyph.ThreeGlyphsOn()
                 glyph.SetColorModeToEigenvalues()
                 glyph.SymmetricOn()
                 glyph.SetScaleFactor(10.*point_radius)
                 glyph.ExtractEigenvaluesOn()
+
             glyph.Update()
             polydata = glyph.GetOutput()
 
