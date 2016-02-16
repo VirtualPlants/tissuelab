@@ -11,6 +11,7 @@
 #                            Guillaume Cerutti <guillaume.cerutti@inria.fr>
 #                            Pierre Fernique <pierre.fernique@inria.fr>
 #                            Sophie Ribes <sophie.ribes@inria.fr>
+#			     Hadrien Oliveri <hadrien.oliveri@inria.fr>
 #
 #       Distributed under the Cecill-C License.
 #       See accompanying file LICENSE.txt or copy at
@@ -579,13 +580,15 @@ class VtkViewer(QtGui.QWidget):
 
 
             elif object_polydata.GetPointData().GetNumberOfComponents() == 9:
-                
+      
                 sphere = vtk.vtkSphereSource()
                 sphere.SetThetaResolution(12)
                 sphere.SetPhiResolution(8)
                 sphere.Update()
                 
                 line = vtk.vtkLineSource()
+          	line.SetPoint1(0,0,0)
+                line.SetPoint2(1,0,0)
                 line.Update()
 
                 glyph = vtk.vtkTensorGlyph()
