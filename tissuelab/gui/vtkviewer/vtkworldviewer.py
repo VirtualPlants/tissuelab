@@ -357,7 +357,8 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                 elif attribute['name'] == 'linewidth':
                     self.set_polydata_linewidth(world_object.name, linewidth=attribute['value'])
                 elif attribute['name'] == 'point_radius':
-                    self.set_polydata_point_radius(world_object.name, point_radius=attribute['value'])
+                    glyph_size =  world_object.data.characteristic_dimension()*attribute['value']/(10.*world_object.data.mean())
+                    self.set_polydata_point_radius(world_object.name, point_radius=glyph_size)
                 elif attribute['name'] == 'polydata_colormap':
                     self.set_polydata_lookuptable(world_object.name, colormap=attribute['value'], alpha=alpha,
                                                   intensity_range=irange)
@@ -437,6 +438,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         setdefault(world_object, dtype, 'point_radius', **kwargs)
 
         obj_kwargs = world_kwargs(world_object)
+        obj_kwargs['point_radius'] *= world_object.data.characteristic_dimension()/(10.*world_object.data.mean())
         super(VtkWorldViewer, self).add_polydata(world_object.name, polydata, **obj_kwargs)
 
         world_object.silent = False

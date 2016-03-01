@@ -456,16 +456,34 @@ class VtkViewer(QtGui.QWidget):
         irange = default_value(dtype, 'intensity_range', **kwargs)
         linewidth = default_value(dtype, 'linewidth', **kwargs)
 
+        normal_generator = vtk.vtkPolyDataNormals() 
+        if vtk.VTK_MAJOR_VERSION <= 5:
+            normal_generator.SetInput(polydata)
+        else:
+            normal_generator.SetInputData(polydata)
+        normal_generator.ConsistencyOn()
+        normal_generator.SplittingOff()
+        # normal_generator.AutoOrientNormalsOn()
+        normal_generator.ComputePointNormalsOn()
+        normal_generator.ComputeCellNormalsOn()
+        normal_generator.Update()
+
         mapper = vtk.vtkPolyDataMapper()
         if vtk.VTK_MAJOR_VERSION <= 5:
-            mapper.SetInput(polydata)
+            # mapper.SetInput(polydata)
+            mapper.SetInput(normal_generator.GetOutput())
         else:
-            mapper.SetInputData(polydata)
+            # mapper.SetInputData(polydata)
+            mapper.SetInputData(normal_generator.GetOutput())
 
         polydata_actor = vtk.vtkActor()
         polydata_actor.SetMapper(mapper)
         polydata_actor.GetProperty().SetPointSize(1)
+        polydata_actor.GetProperty().SetSpecular(0.0)
+        polydata_actor.GetProperty().LightingOn()
+        polydata_actor.GetProperty().ShadingOn()
         polydata_actor.GetProperty().SetInterpolationToPhong()
+        polydata_actor.GetProperty().BackfaceCullingOff()
 
         self.polydata[name] = polydata
 
@@ -587,7 +605,7 @@ class VtkViewer(QtGui.QWidget):
                 sphere.Update()
                 
                 line = vtk.vtkLineSource()
-          	line.SetPoint1(0,0,0)
+                line.SetPoint1(0,0,0)
                 line.SetPoint2(1,0,0)
                 line.Update()
 
@@ -603,7 +621,7 @@ class VtkViewer(QtGui.QWidget):
                 glyph.ThreeGlyphsOn()
                 glyph.SetColorModeToEigenvalues()
                 glyph.SymmetricOn()
-                glyph.SetScaleFactor(10.*point_radius)
+                glyph.SetScaleFactor(point_radius)
                 glyph.ExtractEigenvaluesOn()
 
             glyph.Update()
