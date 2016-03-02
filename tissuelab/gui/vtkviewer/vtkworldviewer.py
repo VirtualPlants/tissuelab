@@ -348,6 +348,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                 irange = attribute_value(world_object, dtype, 'intensity_range')
                 linewidth = attribute_value(world_object, dtype, 'linewidth')
                 point_radius = attribute_value(world_object, dtype, 'point_radius')
+                glyph_size =  world_object.data.characteristic_dimension()*point_radius/(10.*world_object.data.mean())
                 preserve_faces = attribute_value(world_object, dtype, 'preserve_faces')
                 x_slice = attribute_value(world_object, dtype, 'x_slice')
                 y_slice = attribute_value(world_object, dtype, 'y_slice')
@@ -357,7 +358,6 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                 elif attribute['name'] == 'linewidth':
                     self.set_polydata_linewidth(world_object.name, linewidth=attribute['value'])
                 elif attribute['name'] == 'point_radius':
-                    glyph_size =  world_object.data.characteristic_dimension()*attribute['value']/(10.*world_object.data.mean())
                     self.set_polydata_point_radius(world_object.name, point_radius=glyph_size)
                 elif attribute['name'] == 'polydata_colormap':
                     self.set_polydata_lookuptable(world_object.name, colormap=attribute['value'], alpha=alpha,
@@ -374,7 +374,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                         y_slice=y_slice,
                         z_slice=z_slice,
                         preserve_faces=preserve_faces,
-                        point_radius=point_radius)
+                        point_radius=glyph_size)
                 elif attribute['name'] == 'y_slice':
                     self.slice_polydata(
                         name=world_object.name,
@@ -382,7 +382,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                         y_slice=attribute['value'],
                         z_slice=z_slice,
                         preserve_faces=preserve_faces,
-                        point_radius=point_radius)
+                        point_radius=glyph_size)
                 elif attribute['name'] == 'z_slice':
                     self.slice_polydata(
                         name=world_object.name,
@@ -390,7 +390,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                         y_slice=y_slice,
                         z_slice=attribute['value'],
                         preserve_faces=preserve_faces,
-                        point_radius=point_radius)
+                        point_radius=glyph_size)
                 elif attribute['name'] == 'preserve_faces':
                     self.slice_polydata(
                         name=world_object.name,
@@ -398,7 +398,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                         y_slice=y_slice,
                         z_slice=z_slice,
                         preserve_faces=attribute['value'],
-                        point_radius=point_radius)
+                        point_radius=glyph_size)
 
             elif isinstance(object_data, ImageBlending):
                 if attribute['name'] == 'blending_factor':
