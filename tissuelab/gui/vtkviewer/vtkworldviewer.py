@@ -144,14 +144,16 @@ def _irange(world_object, attr_name, irange, **kwargs):
         if irange is None:
             i_min = kwargs.get('i_min', None)
             i_max = kwargs.get('i_max', None)
-            irange = (i_min, i_max) if (i_min is not None) and (i_max is not None) else None
-        constraints = None
+            irange = (np.floor(i_min), np.ceil(i_max)) if (i_min is not None) and (i_max is not None) else None
+        constraints = dict(min=np.floor(i_min)-1, max=np.ceil(i_max-1)) if (i_min is not None) and (i_max is not None) else None
     else:
         if irange is None:
             i_min = kwargs.get('i_min', object_min)
             i_max = kwargs.get('i_max', object_max)
-            irange = (i_min, i_max)
-        constraints = dict(min=object_min, max=object_max)
+            if np.floor(i_min) == np.ceil(i_max):
+                i_max += 1
+            irange = (np.floor(i_min), np.ceil(i_max))
+        constraints = dict(min=np.floor(object_min)-1, max=np.ceil(object_max-1))
 
     return dict(value=irange, constraints=constraints)
 
@@ -353,8 +355,15 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                 x_slice = attribute_value(world_object, dtype, 'x_slice')
                 y_slice = attribute_value(world_object, dtype, 'y_slice')
                 z_slice = attribute_value(world_object, dtype, 'z_slice')
+                colorbar = attribute_value(world_object, dtype, 'display_colorbar')
                 if attribute['name'] == 'display_polydata':
                     self.display_polydata(name=world_object.name, disp=attribute['value'])
+                    if not attribute['value']:
+                        self.display_colorbar(name=world_object.name, disp=attribute['value'])
+                    else:
+                        self.display_colorbar(name=world_object.name, disp=colorbar)
+                if attribute['name'] == 'display_colorbar':
+                    self.display_colorbar(name=world_object.name, disp=attribute['value'])
                 elif attribute['name'] == 'linewidth':
                     self.set_polydata_linewidth(world_object.name, linewidth=attribute['value'])
                 elif attribute['name'] == 'point_radius':
@@ -443,6 +452,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
 
         world_object.silent = False
         setdefault(world_object, dtype, 'display_polydata', **kwargs)
+        setdefault(world_object, dtype, 'display_colorbar', **kwargs)
 
         world_object.silent = True
         for axis in ['x', 'y', 'z']:

@@ -105,6 +105,7 @@ for axis in ['x', 'y', 'z']:
         constraints=cst_extent_range,
         label=label)
 attribute_definition['polydata']['preserve_faces'] = dict(value=False, interface=IBool, label=u"Preserve Faces")
+attribute_definition['polydata']['display_colorbar'] = dict(value=True, interface=IBool, label=u"Display Colorbar")
 
 attribute_definition['actor'] = {}
 attribute_definition['actor']['position'] = dict(value=(0.0, 0.0, 0.0), interface=ITuple, label=u"Position")
@@ -172,6 +173,10 @@ def name_polydata(name):
     return '%s_polydata' % name
 
 
+def name_colorbar(name):
+    return '%s_colorbar' % name
+
+
 class VtkViewer(QtGui.QWidget):
 
     """
@@ -234,6 +239,7 @@ class VtkViewer(QtGui.QWidget):
         self.reader = {}
         self.view_prop = {}
         self.polydata = {}
+        self.colorbar = {}
         self.property = {}
         self.vtkdata = {}
         self.blend = {}
@@ -292,6 +298,10 @@ class VtkViewer(QtGui.QWidget):
         self._display_polydata(name, disp)
         self.compute()
 
+    def display_colorbar(self, name=None, disp=True):
+        self._display_colorbar(name,disp)
+        self.compute()
+
     def _display_volume(self, name, disp=True):
         if name is None:
             for name in self.matrix:
@@ -317,6 +327,10 @@ class VtkViewer(QtGui.QWidget):
         else:
             self.property[name_polydata(name)]['disp'] = disp
 
+    def _display_colorbar(self, name, disp=True):
+        self.property[name_colorbar(name)]['disp'] = disp
+        self.compute()
+
     def initialize(self):
         pass
 
@@ -324,10 +338,17 @@ class VtkViewer(QtGui.QWidget):
         for view_prop in self.view_prop.values():
             self.ren.RemoveViewProp(view_prop)
 
+        for col in self.colorbar.values():
+            self.ren.RemoveActor2D(col)
+
     def clear(self):
         for name, view_prop in self.view_prop.items():
             self.ren.RemoveViewProp(view_prop)
             del self.view_prop[name]
+
+        for name, col in self.colorbar.items():
+            self.ren.RemoveActor2D(self.colorbar[name])
+            del self.colorbar[name]
 
         self.object_repr = {}
         self.matrix = {}
@@ -336,6 +357,7 @@ class VtkViewer(QtGui.QWidget):
         self.polydata = {}
         self.blend = {}
         self.vtkdata = {}
+        self.colorbar = {}
 
     def save_screenshot(self, filename):
         mimetype = mimetypes.guess_type(filename)[0]
@@ -369,6 +391,15 @@ class VtkViewer(QtGui.QWidget):
                 if self.ren.HasViewProp(prop):
                     self.ren.RemoveViewProp(prop)
 
+        for name, col in self.colorbar.items():
+            if self.property[name]['disp']:
+                self.ren.AddActor2D(col)
+            else:
+                for act in xrange(self.ren.GetActors2D().GetNumberOfItems()):
+                    if col == self.ren.GetActors2D().GetItemAsObject(act):
+                        self.ren.RemoveActor2D(col)
+
+
         self.iren.Initialize()
         self.iren.Start()
         if autofocus:
@@ -384,6 +415,11 @@ class VtkViewer(QtGui.QWidget):
             del self.property[name]
         if name in self.view_prop:
             del self.object_repr[name]
+
+    def _remove_colorbar(self, name):
+        if name in self.colorbar:
+            self.ren.RemoveActor2D(self.colorbar[name])
+            del self.colorbar[name]
 
     def remove_matrix(self, name):
         names = [name_volume(name)]
@@ -405,6 +441,7 @@ class VtkViewer(QtGui.QWidget):
 
     def remove_polydata(self, name):
         self._remove_view_prop(name_polydata(name))
+        self._remove_colorbar(name_colorbar(name))
 
     def remove_blending(self, name):
         names = [name_volume(name)]
@@ -446,6 +483,38 @@ class VtkViewer(QtGui.QWidget):
         prop_kwargs = dict(disp=True)
         prop_kwargs.update(kwargs)
         self.property[name] = prop_kwargs
+
+    def add_colorbar(self, name, **kwargs):
+        if name in self.colorbar:
+            old_colorbar = self.colorbar[name]
+            self.ren.RemoveActor2D(old_colorbar)
+            del old_colorbar
+
+        scalar_bar = vtk.vtkScalarBarActor()
+        scalar_bar_title_text = vtk.vtkTextProperty()
+        scalar_bar_title_text.ItalicOn()
+        scalar_bar_title_text.SetColor(0.,0.,0.)
+        scalar_bar.SetTitleTextProperty(scalar_bar_title_text)
+        scalar_bar.SetTitle("")
+        scalar_bar_label_text = vtk.vtkTextProperty()
+        scalar_bar_label_text.ItalicOff()
+        scalar_bar_label_text.SetColor(0.,0.,0.)
+        scalar_bar_label_text.SetFontSize(1)
+        scalar_bar.SetLabelTextProperty(scalar_bar_label_text)
+        scalar_bar.SetNumberOfLabels(5)
+        #scalar_bar.SetTitleRatio(0.3)
+        #scalar_bar.SetBarRatio(0.15)
+        # scalar_bar.DrawTickLabelsOn(0.5)
+        # scalar_bar.SetLabelFormat("%0.0")
+        scalar_bar.SetWidth(0.1)
+        scalar_bar.SetHeight(0.5)
+        scalar_bar.SetPosition(0.9,0.15)
+        self.colorbar[name] = scalar_bar
+
+        prop_kwargs = dict(disp=True)
+        prop_kwargs.update(kwargs)
+        self.property[name] = prop_kwargs
+
 
     def add_polydata(self, name, polydata, **kwargs):
         dtype = 'polydata'
@@ -495,6 +564,8 @@ class VtkViewer(QtGui.QWidget):
 
         self.add_actor(name_polydata(name), polydata_actor, **kwargs)
 
+        self.add_colorbar(name_colorbar(name))
+
         x_slice = default_value(dtype, 'x_slice', **kwargs)
         y_slice = default_value(dtype, 'y_slice', **kwargs)
         z_slice = default_value(dtype, 'z_slice', **kwargs)
@@ -520,6 +591,7 @@ class VtkViewer(QtGui.QWidget):
         self.set_polydata_alpha(name, alpha=alpha)
         self.set_polydata_linewidth(name, linewidth=linewidth)
 
+
     def set_polydata_lookuptable(self, name, colormap, **kwargs):
 
         irange = kwargs.pop('intensity_range', None)
@@ -531,6 +603,8 @@ class VtkViewer(QtGui.QWidget):
             colormap_name=colormap['name'],
             intensity_range=irange)
         self.view_prop[name_polydata(name)].GetMapper().SetLookupTable(lut)
+        self.colorbar[name_colorbar(name)].SetLookupTable(lut)
+
 
     def set_polydata_alpha(self, name, **kwargs):
         alpha = kwargs.get('alpha', self.view_prop[name_polydata(name)].GetProperty().GetOpacity())
