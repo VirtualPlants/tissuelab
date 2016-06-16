@@ -48,7 +48,7 @@ def expand(widget):
     widget.setSizePolicy(p(p.MinimumExpanding, p.MinimumExpanding))
 
 
-def attribute_value(world_object, dtype, attr_name, **kwargs):
+def attribute_value(world_object, dtype, attr_name, attribute_definition=attribute_definition, **kwargs):
     """
     Return a value for attr_name. Try to get value in this order:
         1. kwargs
@@ -66,7 +66,7 @@ def attribute_value(world_object, dtype, attr_name, **kwargs):
         return world_object.get(attr_name, attribute_definition[dtype][attr_name]['value'])
 
 
-def setdefault(world_object, dtype, attr_name, obj_attr_name=None, conv=None, **kwargs):
+def setdefault(world_object, dtype, attr_name, obj_attr_name=None, conv=None, attribute_definition=attribute_definition, **kwargs):
 
     if obj_attr_name is None:
         obj_attr_name = attr_name
@@ -110,7 +110,7 @@ def setdefault(world_object, dtype, attr_name, obj_attr_name=None, conv=None, **
                 break
 
     # Set as attribute
-    world_object.set_attribute(**attribute_args(dtype, obj_attr_name, **attribute))
+    world_object.set_attribute(**attribute_args(dtype, obj_attr_name, attribute_definition, **attribute))
 
     # And clear from kwargs
     world_object.kwargs.pop(obj_attr_name, None)
@@ -145,6 +145,9 @@ def _irange(world_object, attr_name, irange, **kwargs):
             i_min = kwargs.get('i_min', None)
             i_max = kwargs.get('i_max', None)
             irange = (np.floor(i_min), np.ceil(i_max)) if (i_min is not None) and (i_max is not None) else None
+        else:
+            i_min = irange[0]
+            i_max = irange[1]
         constraints = dict(min=np.floor(i_min)-1, max=np.ceil(i_max-1)) if (i_min is not None) and (i_max is not None) else None
     else:
         if irange is None:
@@ -156,6 +159,7 @@ def _irange(world_object, attr_name, irange, **kwargs):
         constraints = dict(min=np.floor(object_min)-1, max=np.ceil(object_max-1))
 
     return dict(value=irange, constraints=constraints)
+
 
 def _plane_position(world_object, attr_name, plane_position, **kwargs):
     lst = list('xyz')
@@ -350,7 +354,10 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                 irange = attribute_value(world_object, dtype, 'intensity_range')
                 linewidth = attribute_value(world_object, dtype, 'linewidth')
                 point_radius = attribute_value(world_object, dtype, 'point_radius')
-                glyph_size =  world_object.data.characteristic_dimension()*point_radius/(10.*world_object.data.mean())
+                try:
+                    glyph_size =  world_object.data.characteristic_dimension()*point_radius/(10.*world_object.data.mean())
+                except AttributeError:
+                    glyph_size = point_radius
                 preserve_faces = attribute_value(world_object, dtype, 'preserve_faces')
                 x_slice = attribute_value(world_object, dtype, 'x_slice')
                 y_slice = attribute_value(world_object, dtype, 'y_slice')
@@ -447,7 +454,10 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         setdefault(world_object, dtype, 'point_radius', **kwargs)
 
         obj_kwargs = world_kwargs(world_object)
-        obj_kwargs['point_radius'] *= world_object.data.characteristic_dimension()/(10.*world_object.data.mean())
+        try:
+            obj_kwargs['point_radius'] *= world_object.data.characteristic_dimension()/(10.*world_object.data.mean())
+        except AttributeError:
+            pass
         super(VtkWorldViewer, self).add_polydata(world_object.name, polydata, **obj_kwargs)
 
         world_object.silent = False
@@ -455,12 +465,16 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         setdefault(world_object, dtype, 'display_colorbar', **kwargs)
 
         world_object.silent = True
+
         for axis in ['x', 'y', 'z']:
             attr_name = axis + '_slice'
             setdefault(world_object, dtype, attr_name, **kwargs)
         world_object.silent = False
 
+        # print "preserve_faces"
         setdefault(world_object, dtype, 'preserve_faces', **kwargs)
+
+        
 
     def set_polydata_property(self, name, property=None, **kwargs):
         cmap = kwargs.get('colormap', 'grey')

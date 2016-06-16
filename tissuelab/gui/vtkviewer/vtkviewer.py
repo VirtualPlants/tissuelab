@@ -110,23 +110,16 @@ attribute_definition['polydata']['display_colorbar'] = dict(value=True, interfac
 attribute_definition['actor'] = {}
 attribute_definition['actor']['position'] = dict(value=(0.0, 0.0, 0.0), interface=ITuple, label=u"Position")
 
-attribute_definition['topomesh'] = {}
-element_names = dict(zip(range(4),['vertices','edges','faces','cells']))
-for degree in xrange(4):
-    attribute_definition['topomesh']["display_"+str(degree)] = dict(value=False,interface="IBool",constraints={},label="Display "+element_names[degree])
-    attribute_definition['topomesh']["property_degree_"+str(degree)] = dict(value=degree,interface="IInt",constraints=cst_degree,label="Degree") 
-    attribute_definition['topomesh']["property_name_"+str(degree)] = dict(value="",interface="IEnumStr",constraints=dict(enum=[""]),label="Property")     
-    attribute_definition['topomesh']["coef_"+str(degree)] = dict(value=1,interface="IFloat",constraints=cst_proba,label="Coef") 
 
 colormaps = load_colormaps()
 
 
-def attribute_meta(dtype, attr_name):
+def attribute_meta(dtype, attr_name, attribute_definition=attribute_definition):
     return dict(interface=attribute_definition[dtype][attr_name]['interface'],
                 label=attribute_definition[dtype][attr_name]['label'])
 
 
-def attribute_args(dtype, attr_name, value=None, constraints=None):
+def attribute_args(dtype, attr_name, attribute_definition=attribute_definition, value=None, constraints=None):
     """
     Return an attribute {'value':..., 'name':...}
     """
@@ -139,7 +132,7 @@ def attribute_args(dtype, attr_name, value=None, constraints=None):
     return attribute
 
 
-def default_value(dtype, attr_name, **kwargs):
+def default_value(dtype, attr_name, attribute_definition=attribute_definition, **kwargs):
     """
     Returns attribute in kwargs if defined else viewer's default
     """
@@ -564,7 +557,7 @@ class VtkViewer(QtGui.QWidget):
 
         self.add_actor(name_polydata(name), polydata_actor, **kwargs)
 
-        self.add_colorbar(name_colorbar(name))
+        self.add_colorbar(name_colorbar(name), **kwargs)
 
         x_slice = default_value(dtype, 'x_slice', **kwargs)
         y_slice = default_value(dtype, 'y_slice', **kwargs)
