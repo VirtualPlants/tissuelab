@@ -355,7 +355,10 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                 linewidth = attribute_value(world_object, dtype, 'linewidth')
                 point_radius = attribute_value(world_object, dtype, 'point_radius')
                 try:
-                    glyph_size =  world_object.data.characteristic_dimension()*point_radius/(10.*world_object.data.mean())
+                    if world_object.data.data().ndim > 1:
+                        glyph_size =  world_object.data.characteristic_dimension()*point_radius/(10.*world_object.data.mean())
+                    else:
+                        glyph_size = point_radius
                 except AttributeError:
                     glyph_size = point_radius
                 preserve_faces = attribute_value(world_object, dtype, 'preserve_faces')
@@ -455,7 +458,8 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
 
         obj_kwargs = world_kwargs(world_object)
         try:
-            obj_kwargs['point_radius'] *= world_object.data.characteristic_dimension()/(10.*world_object.data.mean())
+            if world_object.data.data().ndim > 1:
+                obj_kwargs['point_radius'] *= world_object.data.characteristic_dimension()/(10.*world_object.data.mean())
         except AttributeError:
             pass
         super(VtkWorldViewer, self).add_polydata(world_object.name, polydata, **obj_kwargs)

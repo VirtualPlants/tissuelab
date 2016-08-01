@@ -620,7 +620,7 @@ class VtkViewer(QtGui.QWidget):
             object_polydata = displayed_polydata
 
         if (object_polydata.GetNumberOfCells() == 0) and (object_polydata.GetNumberOfPoints() > 0):
-            # print "Setting Glyph Radius : ",point_radius
+            print "Setting Glyph Radius : ",point_radius
 
             if object_polydata.GetPointData().GetNumberOfComponents() < 3:
                 sphere = vtk.vtkSphereSource()
@@ -628,6 +628,7 @@ class VtkViewer(QtGui.QWidget):
                 sphere.SetThetaResolution(12)
                 sphere.SetPhiResolution(12)
                 glyph = vtk.vtkGlyph3D()
+                #glyph.SetScaleModeToScaleByScalar()
                 glyph.SetScaleModeToDataScalingOff()
                 glyph.SetColorModeToColorByScalar()
                 glyph.SetSource(sphere.GetOutput())
