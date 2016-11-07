@@ -376,6 +376,9 @@ class VtkViewer(QtGui.QWidget):
         self.compute()
 
     def compute(self, autofocus=False):
+        from time import time
+        start_time = time()
+
         for name, prop in self.view_prop.items():
             if self.property[name]['disp']:
                 if not self.ren.HasViewProp(prop):
@@ -399,6 +402,9 @@ class VtkViewer(QtGui.QWidget):
             self.auto_focus()
         else:
             self.render()
+
+        end_time = time()
+        print "    --> Rendering VTK Scene [",end_time-start_time,"s]"
 
     def _remove_view_prop(self, name):
         if name in self.view_prop:
@@ -510,6 +516,9 @@ class VtkViewer(QtGui.QWidget):
 
 
     def add_polydata(self, name, polydata, **kwargs):
+        from time import time
+        start_time = time()
+
         dtype = 'polydata'
         resolution = tuple(default_value(dtype, 'resolution', **kwargs))
         position = tuple(default_value(dtype, 'position', **kwargs))
@@ -583,6 +592,9 @@ class VtkViewer(QtGui.QWidget):
         self.set_polydata_lookuptable(name, colormap=cmap, alpha=alpha, intensity_range=irange)
         self.set_polydata_alpha(name, alpha=alpha)
         self.set_polydata_linewidth(name, linewidth=linewidth)
+
+        end_time = time()
+        print "  --> Adding VTK polydata   [",end_time-start_time,"s]"
 
 
     def set_polydata_lookuptable(self, name, colormap, **kwargs):
@@ -706,74 +718,78 @@ class VtkViewer(QtGui.QWidget):
                 mapper.SetInputData(polydata)
 
     def slice_polydata(self, name, **kwargs):
+
         dtype = 'polydata'
         polydata_name = name_polydata(name)
         x_slice = default_value(dtype, 'x_slice', **kwargs)
         y_slice = default_value(dtype, 'y_slice', **kwargs)
         z_slice = default_value(dtype, 'z_slice', **kwargs)
-        preserve_faces = default_value(dtype, 'preserve_faces', **kwargs)
 
-        if preserve_faces:
-            slicing_function = vtk_sub_polydata
-        else:
-            slicing_function = vtk_clipped_polydata
+        slices = np.transpose([x_slice,y_slice,z_slice])
+        if np.any(slices[0]>0) or np.any(slices[1]<100):
+            preserve_faces = default_value(dtype, 'preserve_faces', **kwargs)
 
-        displayed_polydata = self.polydata[name]
-        if name in self.object_repr:
-            object_polydata = self.object_repr[name]
-        else:
-            object_polydata = displayed_polydata
+            if preserve_faces:
+                slicing_function = vtk_sub_polydata
+            else:
+                slicing_function = vtk_clipped_polydata
 
-        point_polydata = (object_polydata.GetNumberOfCells() == 0) and (object_polydata.GetNumberOfPoints() > 0)
+            displayed_polydata = self.polydata[name]
+            if name in self.object_repr:
+                object_polydata = self.object_repr[name]
+            else:
+                object_polydata = displayed_polydata
 
-        polydata_extent = get_polydata_extent(object_polydata)
-        clipping_plane = vtk.vtkPlane()
-        sliced_polydata = vtk.vtkPolyData()
-        sliced_polydata.DeepCopy(object_polydata)
+            point_polydata = (object_polydata.GetNumberOfCells() == 0) and (object_polydata.GetNumberOfPoints() > 0)
 
-        plane_coords = np.array([x_slice[0] / 100., 0.5, 0.5])
-        plane_center = (1 - plane_coords) * polydata_extent[:, 0] + plane_coords * polydata_extent[:, 1]
-        clipping_plane.SetOrigin(plane_center)
-        clipping_plane.SetNormal(1, 0, 0)
-        polydata = slicing_function(sliced_polydata, clipping_plane, point_polydata=point_polydata)
-        # self.actor[name + '_polydata'].GetMapper().SetInput(slicing_function(sliced_polydata,clipping_plane))
+            polydata_extent = get_polydata_extent(object_polydata)
+            clipping_plane = vtk.vtkPlane()
+            sliced_polydata = vtk.vtkPolyData()
+            sliced_polydata.DeepCopy(object_polydata)
 
-        sliced_polydata.DeepCopy(polydata)
-        plane_coords = np.array([x_slice[1] / 100., 0.5, 0.5])
-        plane_center = (1 - plane_coords) * polydata_extent[:, 0] + plane_coords * polydata_extent[:, 1]
-        clipping_plane.SetOrigin(plane_center)
-        clipping_plane.SetNormal(1, 0, 0)
-        polydata = slicing_function(sliced_polydata, clipping_plane, point_polydata=point_polydata, inside_out=True)
+            plane_coords = np.array([x_slice[0] / 100., 0.5, 0.5])
+            plane_center = (1 - plane_coords) * polydata_extent[:, 0] + plane_coords * polydata_extent[:, 1]
+            clipping_plane.SetOrigin(plane_center)
+            clipping_plane.SetNormal(1, 0, 0)
+            polydata = slicing_function(sliced_polydata, clipping_plane, point_polydata=point_polydata)
+            # self.actor[name + '_polydata'].GetMapper().SetInput(slicing_function(sliced_polydata,clipping_plane))
 
-        sliced_polydata.DeepCopy(polydata)
-        plane_coords = np.array([0.5, y_slice[0] / 100., 0.5])
-        plane_center = (1 - plane_coords) * polydata_extent[:, 0] + plane_coords * polydata_extent[:, 1]
-        clipping_plane.SetOrigin(plane_center)
-        clipping_plane.SetNormal(0, 1, 0)
-        polydata = slicing_function(polydata, clipping_plane, point_polydata=point_polydata)
+            sliced_polydata.DeepCopy(polydata)
+            plane_coords = np.array([x_slice[1] / 100., 0.5, 0.5])
+            plane_center = (1 - plane_coords) * polydata_extent[:, 0] + plane_coords * polydata_extent[:, 1]
+            clipping_plane.SetOrigin(plane_center)
+            clipping_plane.SetNormal(1, 0, 0)
+            polydata = slicing_function(sliced_polydata, clipping_plane, point_polydata=point_polydata, inside_out=True)
 
-        plane_coords = np.array([0.5, y_slice[1] / 100., 0.5])
-        plane_center = (1 - plane_coords) * polydata_extent[:, 0] + plane_coords * polydata_extent[:, 1]
-        clipping_plane.SetOrigin(plane_center)
-        clipping_plane.SetNormal(0, 1, 0)
-        polydata = slicing_function(polydata, clipping_plane, point_polydata=point_polydata, inside_out=True)
+            sliced_polydata.DeepCopy(polydata)
+            plane_coords = np.array([0.5, y_slice[0] / 100., 0.5])
+            plane_center = (1 - plane_coords) * polydata_extent[:, 0] + plane_coords * polydata_extent[:, 1]
+            clipping_plane.SetOrigin(plane_center)
+            clipping_plane.SetNormal(0, 1, 0)
+            polydata = slicing_function(polydata, clipping_plane, point_polydata=point_polydata)
 
-        sliced_polydata.DeepCopy(polydata)
-        plane_coords = np.array([0.5, 0.5, z_slice[0] / 100.])
-        plane_center = (1 - plane_coords) * polydata_extent[:, 0] + plane_coords * polydata_extent[:, 1]
-        clipping_plane.SetOrigin(plane_center)
-        clipping_plane.SetNormal(0, 0, 1)
-        polydata = slicing_function(polydata, clipping_plane, point_polydata=point_polydata)
+            plane_coords = np.array([0.5, y_slice[1] / 100., 0.5])
+            plane_center = (1 - plane_coords) * polydata_extent[:, 0] + plane_coords * polydata_extent[:, 1]
+            clipping_plane.SetOrigin(plane_center)
+            clipping_plane.SetNormal(0, 1, 0)
+            polydata = slicing_function(polydata, clipping_plane, point_polydata=point_polydata, inside_out=True)
 
-        sliced_polydata.DeepCopy(polydata)
-        plane_coords = np.array([0.5, 0.5, z_slice[1] / 100.])
-        plane_center = (1 - plane_coords) * polydata_extent[:, 0] + plane_coords * polydata_extent[:, 1]
-        clipping_plane.SetOrigin(plane_center)
-        clipping_plane.SetNormal(0, 0, 1)
-        polydata = slicing_function(polydata, clipping_plane, point_polydata=point_polydata, inside_out=True)
+            sliced_polydata.DeepCopy(polydata)
+            plane_coords = np.array([0.5, 0.5, z_slice[0] / 100.])
+            plane_center = (1 - plane_coords) * polydata_extent[:, 0] + plane_coords * polydata_extent[:, 1]
+            clipping_plane.SetOrigin(plane_center)
+            clipping_plane.SetNormal(0, 0, 1)
+            polydata = slicing_function(polydata, clipping_plane, point_polydata=point_polydata)
 
-        sliced_polydata.DeepCopy(polydata)
-        self.polydata[name] = sliced_polydata
+            sliced_polydata.DeepCopy(polydata)
+            plane_coords = np.array([0.5, 0.5, z_slice[1] / 100.])
+            plane_center = (1 - plane_coords) * polydata_extent[:, 0] + plane_coords * polydata_extent[:, 1]
+            clipping_plane.SetOrigin(plane_center)
+            clipping_plane.SetNormal(0, 0, 1)
+            polydata = slicing_function(polydata, clipping_plane, point_polydata=point_polydata, inside_out=True)
+
+            sliced_polydata.DeepCopy(polydata)
+            self.polydata[name] = sliced_polydata
         self.set_polydata_point_radius(name, **kwargs)
 
     def add_outline(self, name, data_matrix, **kwargs):

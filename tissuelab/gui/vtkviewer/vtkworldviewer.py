@@ -348,6 +348,10 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                         if attribute['name'] == axis + '_plane_position':
                             self.move_cut_plane(name=world_object.name, position=attribute['value'], orientation=i + 1)
             elif isinstance(object_data, vtk.vtkPolyData):
+                from time import time
+                start_time = time()
+                print "--> Updating PolyData Object (",attribute['name'],')'
+
                 dtype = 'polydata'
                 alpha = attribute_value(world_object, dtype, 'polydata_alpha')
                 colormap = attribute_value(world_object, dtype, 'polydata_colormap')
@@ -419,6 +423,9 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                         preserve_faces=attribute['value'],
                         point_radius=glyph_size)
 
+                end_time = time()
+                print "<-- Updating PolyData Object (",attribute['name'],")   [",end_time-start_time,"s]"
+
             elif isinstance(object_data, ImageBlending):
                 if attribute['name'] == 'blending_factor':
                     self.set_blending_factor(world_object.name, blending_factor=attribute['value'])
@@ -444,6 +451,10 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         world_object.silent = False
 
     def add_polydata(self, world_object, polydata, **kwargs):
+        from time import time
+        start_time = time()
+        print "--> Adding polydata"
+
         world_object.silent = True
 
         dtype = 'polydata'
@@ -464,11 +475,11 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
             pass
         super(VtkWorldViewer, self).add_polydata(world_object.name, polydata, **obj_kwargs)
 
-        world_object.silent = False
+        # world_object.silent = False
         setdefault(world_object, dtype, 'display_polydata', **kwargs)
         setdefault(world_object, dtype, 'display_colorbar', **kwargs)
 
-        world_object.silent = True
+        # world_object.silent = True
 
         for axis in ['x', 'y', 'z']:
             attr_name = axis + '_slice'
@@ -478,6 +489,8 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         # print "preserve_faces"
         setdefault(world_object, dtype, 'preserve_faces', **kwargs)
 
+        end_time = time()
+        print "<-- Adding polydata   [",end_time-start_time,"s]"
         
 
     def set_polydata_property(self, name, property=None, **kwargs):
