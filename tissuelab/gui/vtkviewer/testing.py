@@ -17,11 +17,12 @@
 #       OpenAlea WebSite : http://openalea.gforge.inria.fr
 #
 ###############################################################################
+
 import vtk
 import numpy as np
 import unittest
-from openalea.vpltk.qt import QtGui, QtCore
-from PyQt4 import QtTest
+
+from Qt import QtCore, QtGui, QtWidgets, QtTest
 
 
 def demo_actor():
@@ -126,13 +127,13 @@ class VtkQtTestCase(QtTestCase):
 
         self.widget.resize(300, 300)
 
-        self.l_ref = QtGui.QLabel()
-        self.cmp_widget = QtGui.QWidget()
-        layout = QtGui.QGridLayout(self.cmp_widget)
+        self.l_ref = QtWidgets.QLabel()
+        self.cmp_widget = QtWidgets.QWidget()
+        layout = QtWidgets.QGridLayout(self.cmp_widget)
         name = self.id().split('.')[-1]
-        layout.addWidget(QtGui.QLabel(name), 0, 0)
+        layout.addWidget(QtWidgets.QLabel(name), 0, 0)
         layout.addWidget(self.widget, 1, 0)
-        layout.addWidget(QtGui.QLabel("Reference"), 0, 1)
+        layout.addWidget(QtWidgets.QLabel("Reference"), 0, 1)
         layout.addWidget(self.l_ref, 1, 1)
 
         self.set_up()

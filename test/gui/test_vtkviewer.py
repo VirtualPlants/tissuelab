@@ -17,7 +17,7 @@
 #
 ###############################################################################
 
-from openalea.vpltk.qt import QtGui, QtCore
+from Qt import QtCore, QtGui, QtWidgets
 from tissuelab.gui.vtkviewer.vtkviewer import VtkViewer
 from tissuelab.gui.vtkviewer.testing import VtkQtTestCase
 from tissuelab.gui.vtkviewer.testing import demo_actor, demo_matrix_range, demo_matrix_xyz, demo_polydata_cube

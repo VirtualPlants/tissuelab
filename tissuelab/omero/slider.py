@@ -16,33 +16,32 @@
 #
 ###############################################################################
 
-from openalea.vpltk.qt import QtGui, QtCore
+from Qt import QtCore, QtGui, QtWidgets
 
-
-class Slider(QtGui.QWidget):
+class Slider(QtWidgets.QWidget):
 
     valueChanged = QtCore.Signal(int)
 
     def __init__(self, key, label=u'label', orientation=QtCore.Qt.Horizontal):
-        QtGui.QWidget.__init__(self)
+        QtWidgets.QWidget.__init__(self)
 
         self.key = key
 
         if orientation == QtCore.Qt.Horizontal:
-            self._layout = QtGui.QHBoxLayout(self)
+            self._layout = QtWidgets.QHBoxLayout(self)
         else:
-            self._layout = QtGui.QVBoxLayout(self)
+            self._layout = QtWidgets.QVBoxLayout(self)
 
         self._value = 0
         self._vmax = 0
 
-        #size_policy = QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum, QtGui.QSizePolicy.Maximum)
+        #size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
         #self.setSizePolicy(size_policy)
 
-        self.label = QtGui.QLabel(label)
+        self.label = QtWidgets.QLabel(label)
 
-        self.spinbox = QtGui.QSpinBox()
-        self.slider = QtGui.QSlider()
+        self.spinbox = QtWidgets.QSpinBox()
+        self.slider = QtWidgets.QSlider()
         self.slider.setOrientation(orientation)
 
         self.slider.valueChanged.connect(self.setValue)

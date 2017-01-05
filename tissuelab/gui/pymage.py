@@ -19,7 +19,7 @@
 ###############################################################################
 import sys
 
-from openalea.vpltk.qt import QtGui
+from Qt import QtWidgets
 
 from openalea.core.path import path as Path
 from openalea.core.service.plugin import plugin_instance
@@ -77,9 +77,9 @@ class Pymage(MiniLab):
 
 
 def main():
-    instance = QtGui.QApplication.instance()
+    instance = QtWidgets.QApplication.instance()
     if instance is None:
-        app = QtGui.QApplication(sys.argv)
+        app = QtWidgets.QApplication(sys.argv)
     else:
         app = instance
 

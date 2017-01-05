@@ -20,32 +20,30 @@ __all__ = ['Image5DViewer']
 
 import time
 
-from openalea.vpltk.qt import QtGui, QtCore
+from Qt import QtCore, QtGui, QtWidgets
 
 from slider import Slider
 from utils import to_qimg
 
-
 def hash_plane(*args):
     return args[0].getId(), str(tuple(args[1]))
 
-
-class Image5DViewer(QtGui.QWidget):
+class Image5DViewer(QtWidgets.QWidget):
     # Implements IImage5DViewer
 
     def __init__(self):
 
         self._img = None
 
-        QtGui.QWidget.__init__(self)
+        QtWidgets.QWidget.__init__(self)
 
-        self.grid = QtGui.QGridLayout(self)
+        self.grid = QtWidgets.QGridLayout(self)
 
-        self.image = QtGui.QLabel()
-        size_policy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.MinimumExpanding)
+        self.image = QtWidgets.QLabel()
+        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding)
         self.image.setSizePolicy(size_policy)
 
-        self.l_status = QtGui.QLabel()
+        self.l_status = QtWidgets.QLabel()
 
         self.slider_z = Slider('z', 'z', QtCore.Qt.Vertical)
         self.slider_c = Slider('c', 'c', QtCore.Qt.Vertical)

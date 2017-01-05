@@ -1,6 +1,7 @@
 import sys
 
-from openalea.vpltk.qt import QtGui
+from Qt import QtWidgets
+
 from openalea.grapheditor import qt
 from custom_graph_model import Graph
 
@@ -15,7 +16,7 @@ class SimpleView( qt.View ):
         position = self.mapToScene(event.pos())
         position = [position.x(), position.y()]
         self.scene().new_vertex(position=position)
-    
+
     # def mousePressEvent(self, event):
     #     print event.globalX(), event.globalY()
     #     global tmp
@@ -36,7 +37,7 @@ class SimpleVertex(qt.DefaultGraphicalVertex):
         # print z
         # z+=1
         return self.get_observed().get_ad_hoc_dict().get_metadata(key)
-        
+
 SimpleGraph = qt.QtGraphStrategyMaker( graphView            = SimpleView,
                                        vertexWidgetMap      = {"vertex":SimpleVertex},
                                        edgeWidgetMap        = {"default":qt.DefaultGraphicalEdge,
@@ -56,10 +57,10 @@ def get_next(t, n):
         return out
 
 #THE APPLICATION'S MAIN WINDOW
-class MainWindow(QtGui.QMainWindow):
+class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, parent=None):
         """                """
-        QtGui.QMainWindow.__init__(self, parent)
+        QtWidgets.QMainWindow.__init__(self, parent)
         self.__graph = Graph()
         self.__graphView = SimpleGraph.create_view(self.__graph, parent=self)
         self.setCentralWidget(self.__graphView)
@@ -105,8 +106,8 @@ class MainWindow(QtGui.QMainWindow):
 
 #THE ENTRY POINT
 def main(args):
-    app = QtGui.QApplication([])
-    QtGui.QApplication.processEvents()
+    app = QtWidgets.QApplication([])
+    QtWidgets.QApplication.processEvents()
     win = MainWindow()
     win.show()
 

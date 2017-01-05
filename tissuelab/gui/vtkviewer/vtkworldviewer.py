@@ -22,16 +22,16 @@
 
 import vtk
 import numpy as np
+
 from scipy import ndimage as nd
+
+from Qt import QtWidgets
 
 from openalea.core.observer import AbstractListener
 from openalea.core.world import World
-from openalea.vpltk.qt import QtGui
-
 
 from tissuelab.gui.vtkviewer.vtk_utils import define_lookuptable
 from tissuelab.gui.vtkviewer.vtkviewer import VtkViewer, attribute_args, attribute_definition, colormaps
-
 
 class ImageBlending(object):
 
@@ -44,7 +44,7 @@ class ImageBlending(object):
 
 
 def expand(widget):
-    p = QtGui.QSizePolicy
+    p = QtWidgets.QSizePolicy
     widget.setSizePolicy(p(p.MinimumExpanding, p.MinimumExpanding))
 
 
@@ -444,7 +444,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         dtype = 'actor'
 
         setdefault(world_object, dtype, 'position', conv=_tuple, **kwargs)
-        
+
         obj_kwargs = world_kwargs(world_object)
         super(VtkWorldViewer, self).add_actor(world_object.name, actor, **obj_kwargs)
 
@@ -491,7 +491,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
 
         end_time = time()
         print "<-- Adding polydata   [",end_time-start_time,"s]"
-        
+
 
     def set_polydata_property(self, name, property=None, **kwargs):
         cmap = kwargs.get('colormap', 'grey')
@@ -652,7 +652,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                 event.acceptProposedAction()
                 return
 
-        return QtGui.QWidget.dragEnterEvent(self, event)
+        return QtWidgets.QWidget.dragEnterEvent(self, event)
 
     def dragMoveEvent(self, event):
         for fmt in ['text/uri-list', 'openalealab/data']:
@@ -676,7 +676,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                     event.acceptProposedAction()
                     self.auto_focus()
                 else:
-                    return QtGui.QWidget.dropEvent(self, event)
+                    return QtWidgets.QWidget.dropEvent(self, event)
 
         elif source.hasFormat('openalealab/data'):
             from openalea.core.service.mimetype import decode
@@ -688,4 +688,4 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
             event.acceptProposedAction()
 
         else:
-            return QtGui.QWidget.dropEvent(self, event)
+            return QtWidgets.QWidget.dropEvent(self, event)

@@ -20,9 +20,12 @@
 import numpy as np
 import vtk
 from math import sqrt
-from openalea.vpltk.qt import QtGui, QtCore
+
+from Qt import QtCore, QtWidgets
+
 from tissuelab.gui.vtkviewer.qvtkrenderwindowinteractor import QVTKRenderWindowInteractor
 from .vtk_utils import matrix_to_image_reader
+from openalea.vpltk.qt.designer import generate_pyfile_from_uifile, get_data
 
 #from openalea.image.serial.all import imsave
 #from openalea.image.spatial_image import SpatialImage
@@ -37,6 +40,8 @@ from vtk import VTK_UNSIGNED_LONG
 from vtk import VTK_FLOAT
 from vtk import VTK_DOUBLE
 
+from tissuelab.gui.vtkviewer.designer._panel_control_editor import Ui_panel_control_editor
+
 #TODO : recalculer la box de l'editor quand un point est deplace en dehors
 #TODO : modifier le code pour le rendre plus expensif (laisser une place pour le choix de deplacement, de split, etc)
 #TODO : rajouter une méthode de déplacement en fonction de l'intensité ????
@@ -44,25 +49,18 @@ from vtk import VTK_DOUBLE
 # TODO : garder les mêmes réglages pour les matrices quand on fait apply
 # (affichage coupe/volume, intensity/segmented, même tranche....
 
-
-from openalea.vpltk.qt.designer import generate_pyfile_from_uifile, get_data
-
-
 name = 'panel_control_editor'
 src = get_data("tissuelab.gui.vtkviewer.designer", '%s.ui' % name)
 dest = get_data("tissuelab.gui.vtkviewer.designer", "_%s.py" % name)
 generate_pyfile_from_uifile(__name__, src=src, dest=dest)
 
 
-from tissuelab.gui.vtkviewer.designer._panel_control_editor import Ui_panel_control_editor
-
-
 def expand(widget):
-    p = QtGui.QSizePolicy
+    p = QtWidgets.QSizePolicy
     widget.setSizePolicy(p(p.MinimumExpanding, p.MinimumExpanding))
 
 
-class EditorWindow(QtGui.QWidget):
+class EditorWindow(QtWidgets.QWidget):
 
     """
     An EditorWindow is a class that defined the popup that open when you edit a cell.
@@ -72,13 +70,13 @@ class EditorWindow(QtGui.QWidget):
     segmentation_changed = QtCore.Signal(np.ndarray)
 
     def __init__(self, parent=None):
-        QtGui.QWidget.__init__(self, parent)
+        QtWidgets.QWidget.__init__(self, parent)
 
-        layout = QtGui.QVBoxLayout(self)
+        layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        self.frame = QtGui.QFrame()
-        self.vl = QtGui.QGridLayout(self.frame)
+        self.frame = QtWidgets.QFrame()
+        self.vl = QtWidgets.QGridLayout(self.frame)
         self.vl.setContentsMargins(0, 0, 0, 0)
 
         self.viewer = ViewerEditor()
@@ -134,7 +132,7 @@ class EditorWindow(QtGui.QWidget):
         self.viewer.interactor.AddObserver("CellSelected", self.cell_selected)
 
     def resizeEvent(self, *args, **kwargs):
-        return QtGui.QWidget.resizeEvent(self, *args, **kwargs)
+        return QtWidgets.QWidget.resizeEvent(self, *args, **kwargs)
 
     def set_data(self, intensity_mat, segmented_mat, label):
         """
@@ -281,27 +279,27 @@ class EditorWindow(QtGui.QWidget):
         self.control.bp_new_edit.setEnabled(False)
 
 
-class ControlsEditor(QtGui.QWidget, Ui_panel_control_editor):
+class ControlsEditor(QtWidgets.QWidget, Ui_panel_control_editor):
 
     """
     class that contains the ui of the Editor Controls Panel
     """
 
     def __init__(self):
-        QtGui.QWidget.__init__(self)
+        QtWidgets.QWidget.__init__(self)
         self.setupUi(self)
 
 
-class ViewerEditor3D(QtGui.QWidget):
+class ViewerEditor3D(QtWidgets.QWidget):
 
     def __init__(self):
-        QtGui.QWidget.__init__(self)
+        QtWidgets.QWidget.__init__(self)
 
-        layout = QtGui.QVBoxLayout(self)
+        layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        self.frame = QtGui.QFrame()
-        self.vl = QtGui.QVBoxLayout(self.frame)
+        self.frame = QtWidgets.QFrame()
+        self.vl = QtWidgets.QVBoxLayout(self.frame)
         self.vl.setContentsMargins(0, 0, 0, 0)
 
         self.vtkWidget = QVTKRenderWindowInteractor(self.frame)
@@ -332,7 +330,7 @@ class ViewerEditor3D(QtGui.QWidget):
 
     def resizeEvent(self, *args, **kwargs):
         self.render()
-        return QtGui.QWidget.resizeEvent(self, *args, **kwargs)
+        return QtWidgets.QWidget.resizeEvent(self, *args, **kwargs)
 
     def render(self):
         self.iren.Render()
@@ -387,20 +385,20 @@ class ViewerEditor3D(QtGui.QWidget):
         self.render()
 
 
-class ViewerEditor(QtGui.QWidget):
+class ViewerEditor(QtWidgets.QWidget):
 
     """
     class that implements the vtkviewer of the editor and pass information to the interactor
     """
 
     def __init__(self):
-        QtGui.QWidget.__init__(self)
+        QtWidgets.QWidget.__init__(self)
 
-        layout = QtGui.QVBoxLayout(self)
+        layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        self.frame = QtGui.QFrame()
-        self.vl = QtGui.QVBoxLayout(self.frame)
+        self.frame = QtWidgets.QFrame()
+        self.vl = QtWidgets.QVBoxLayout(self.frame)
         self.vl.setContentsMargins(0, 0, 0, 0)
 
         self.vtkWidget = QVTKRenderWindowInteractor(self.frame)
@@ -431,7 +429,7 @@ class ViewerEditor(QtGui.QWidget):
 
     def resizeEvent(self, *args, **kwargs):
         self.render()
-        return QtGui.QWidget.resizeEvent(self, *args, **kwargs)
+        return QtWidgets.QWidget.resizeEvent(self, *args, **kwargs)
 
     def render(self):
         self.iren.Render()
@@ -1604,7 +1602,7 @@ class InteractorEditor2D (vtk.vtkInteractorStyle):
 
 if __name__ == "__main__":
     import sys
-    app = QtGui.QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     ew = EditorWindow()
     ew.show()
     sys.exit(app.exec_())

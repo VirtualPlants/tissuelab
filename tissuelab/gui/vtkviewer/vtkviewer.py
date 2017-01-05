@@ -27,7 +27,8 @@ import vtk
 
 import mimetypes
 
-from openalea.vpltk.qt import QtGui
+from Qt import QtWidgets
+
 from openalea.core.interface import IBool, IInt, IFloat, ITuple, IEnumStr
 from openalea.oalab.interface import IIntRange, IColormap
 # Do not import world related module in this module, see vtkworldviewer instead!
@@ -39,7 +40,7 @@ from tissuelab.gui.vtkviewer.vtk_utils import (matrix_to_image_reader, define_lo
 
 
 def expand(widget):
-    p = QtGui.QSizePolicy
+    p = QtWidgets.QSizePolicy
     widget.setSizePolicy(p(p.MinimumExpanding, p.MinimumExpanding))
 
 # Define constraints
@@ -170,7 +171,7 @@ def name_colorbar(name):
     return '%s_colorbar' % name
 
 
-class VtkViewer(QtGui.QWidget):
+class VtkViewer(QtWidgets.QWidget):
 
     """
     Class providing a VtkViewer and convenience methods
@@ -190,13 +191,13 @@ class VtkViewer(QtGui.QWidget):
     DEFAULT_INTERACTOR_STYLE = vtk.vtkInteractorStyleTrackballCamera
 
     def __init__(self):
-        QtGui.QWidget.__init__(self)
+        QtWidgets.QWidget.__init__(self)
 
-        layout = QtGui.QVBoxLayout(self)
+        layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        self.frame = QtGui.QFrame()
-        self.vl = QtGui.QVBoxLayout(self.frame)
+        self.frame = QtWidgets.QFrame()
+        self.vl = QtWidgets.QVBoxLayout(self.frame)
         self.vl.setContentsMargins(0, 0, 0, 0)
 
         self.vtkWidget = QVTKRenderWindowInteractor(self.frame)
@@ -239,7 +240,7 @@ class VtkViewer(QtGui.QWidget):
 
     def resizeEvent(self, *args, **kwargs):
         self.render()
-        return QtGui.QWidget.resizeEvent(self, *args, **kwargs)
+        return QtWidgets.QWidget.resizeEvent(self, *args, **kwargs)
 
     ################################################
     # PURE VTK METHODS, NO MORE Qt AFTER THIS LINE #
@@ -527,7 +528,7 @@ class VtkViewer(QtGui.QWidget):
         irange = default_value(dtype, 'intensity_range', **kwargs)
         linewidth = default_value(dtype, 'linewidth', **kwargs)
 
-        normal_generator = vtk.vtkPolyDataNormals() 
+        normal_generator = vtk.vtkPolyDataNormals()
         if vtk.VTK_MAJOR_VERSION <= 5:
             normal_generator.SetInput(polydata)
         else:
@@ -670,7 +671,7 @@ class VtkViewer(QtGui.QWidget):
                     glyph.SetInput(displayed_polydata)
                 else:
                     glyph.SetInputData(displayed_polydata)
-                
+
                 glyph.SetVectorModeToUseVector()
                 glyph.SetColorModeToColorByVector()
                 glyph.SetScaleModeToScaleByVector()
@@ -678,12 +679,12 @@ class VtkViewer(QtGui.QWidget):
 
 
             elif object_polydata.GetPointData().GetNumberOfComponents() == 9:
-      
+
                 sphere = vtk.vtkSphereSource()
                 sphere.SetThetaResolution(12)
                 sphere.SetPhiResolution(8)
                 sphere.Update()
-                
+
                 line = vtk.vtkLineSource()
                 line.SetPoint1(0,0,0)
                 line.SetPoint2(1,0,0)

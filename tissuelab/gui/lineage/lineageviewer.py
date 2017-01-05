@@ -16,7 +16,7 @@
 #
 ###############################################################################
 
-from openalea.vpltk.qt import QtGui
+from Qt import QtWidgets
 
 from openalea.grapheditor import qt
 from custom_graph_model import Graph
@@ -61,14 +61,14 @@ SimpleGraph = qt.QtGraphStrategyMaker(graphView=SimpleView,
                                       adapterType=None)
 
 
-class LineageViewer(QtGui.QWidget):
+class LineageViewer(QtWidgets.QWidget):
 
     def __init__(self):
-        QtGui.QWidget.__init__(self)
+        QtWidgets.QWidget.__init__(self)
         self.graph = Graph()
         self.view = SimpleGraph.create_view(self.graph)
 
-        layout = QtGui.QVBoxLayout(self)
+        layout = QtWidgets.QVBoxLayout(self)
         layout.addWidget(self.view)
 
     def new_graph(self):

@@ -21,7 +21,7 @@
 import numpy as np
 import vtk
 
-from openalea.vpltk.qt import QtGui
+from Qt import QtGui, QtWidgets
 from openalea.core.service.plugin import plugin_instance
 
 
@@ -93,10 +93,10 @@ def demo():
 if __name__ == '__main__':
 
     from openalea.oalab.widget.splittablewindow import TestMainWin
-    instance = QtGui.QApplication.instance()
+    instance = QtWidgets.QApplication.instance()
 
     if instance is None:
-        app = QtGui.QApplication([])
+        app = QtWidgets.QApplication([])
     else:
         app = instance
 

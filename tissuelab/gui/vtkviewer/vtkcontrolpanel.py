@@ -16,12 +16,12 @@
 #
 ###############################################################################
 
+from Qt import QtCore, QtWidgets
+
 from openalea.oalab.control.manager import ControlManagerWidget
-from openalea.vpltk.qt import QtGui, QtCore
 from openalea.core.service.ipython import interpreter as get_interpreter
 
-
-class VtkControlPanel(QtGui.QWidget):
+class VtkControlPanel(QtWidgets.QWidget):
 
     StyleTableView = 0
     StylePanel = 1
@@ -30,15 +30,15 @@ class VtkControlPanel(QtGui.QWidget):
     attributeChanged = QtCore.Signal(str, dict)
 
     def __init__(self, parent=None, style=None):
-        QtGui.QWidget.__init__(self, parent=parent)
+        QtWidgets.QWidget.__init__(self, parent=parent)
         if style is None:
             style = self.DEFAULT_STYLE
         self.style = style
 
         self._manager = {}
 
-        self._cb_matrix_name = QtGui.QComboBox()
-        p = QtGui.QSizePolicy
+        self._cb_matrix_name = QtWidgets.QComboBox()
+        p = QtWidgets.QSizePolicy
         self._cb_matrix_name.setSizePolicy(p(p.Expanding, p.Maximum))
         self._cb_matrix_name.currentIndexChanged.connect(
             self._matrix_name_changed)
@@ -60,7 +60,7 @@ class VtkControlPanel(QtGui.QWidget):
         else:
             self._view = ControlManagerWidget(manager=self._default_manager)
 
-        self._layout = QtGui.QVBoxLayout(self)
+        self._layout = QtWidgets.QVBoxLayout(self)
         self._layout.addWidget(self._cb_matrix_name)
         self._layout.addWidget(self._view)
 

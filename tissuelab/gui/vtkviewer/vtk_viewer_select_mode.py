@@ -1,18 +1,18 @@
+from Qt import QtCore, QtGui, QtWidgets
+
 from tissuelab.gui.vtkviewer.editor import get_contours
 from tissuelab.gui.vtkviewer.vtkworldviewer import ImageBlending
-from openalea.vpltk.qt import QtGui, QtCore
-from openalea.core.observer import AbstractListener
+from tissuelab.gui.vtkviewer.designer._vtk_viewer_select_mode import Ui_vtk_viewer_select_mode
 
+from openalea.core.observer import AbstractListener
 from openalea.core.world import World
+from openalea.vpltk.qt.designer import generate_pyfile_from_uifile
+
 import numpy as np
 import vtk
 
 
-from openalea.vpltk.qt.designer import generate_pyfile_from_uifile
-
-
 generate_pyfile_from_uifile(__name__)
-from tissuelab.gui.vtkviewer.designer._vtk_viewer_select_mode import Ui_vtk_viewer_select_mode
 
 
 class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractListener):
@@ -163,7 +163,7 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
             self.slice_label.hide()
             self.slice_slider.hide()
 
-        elif index == 3: # Nuclei edition            
+        elif index == 3: # Nuclei edition
 
             self.action_launch_button.hide()
             self.synchro_cb.show()
@@ -369,8 +369,8 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
                     if self.synchro_cb.isChecked():
                         if self.polydata_cb.count() > 0:
                             if obj.name == str(self.image2_cb.currentText()):
-                                if ((new['name'] == 'x_plane_position' and  self.axis_cb.currentText() == 'X') or 
-                                    (new['name'] == 'y_plane_position' and  self.axis_cb.currentText() == 'Y') or 
+                                if ((new['name'] == 'x_plane_position' and  self.axis_cb.currentText() == 'X') or
+                                    (new['name'] == 'y_plane_position' and  self.axis_cb.currentText() == 'Y') or
                                     (new['name'] == 'z_plane_position' and  self.axis_cb.currentText() == 'Z')) :
                                     self.cut_points(str(self.polydata_cb.currentText()),str(self.image2_cb.currentText()))
 

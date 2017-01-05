@@ -1,8 +1,7 @@
-
 from tissuelab.mockup.ui_omeroclient import Ui_Form
-from openalea.vpltk.qt import QtGui
+from Qt import QtWidgets
 
-class OmeroClientWidget(QtGui.QWidget, Ui_Form):
+class OmeroClientWidget(QtWidgets.QWidget, Ui_Form):
     def __init__(self):
-        QtGui.QWidget.__init__(self)
+        QtWidgets.QWidget.__init__(self)
         self.setupUi(self)

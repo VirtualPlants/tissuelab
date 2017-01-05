@@ -16,21 +16,21 @@
 #
 ###############################################################################
 
+from Qt import QtCore, QtGui, QtWidgets
 from openalea.core.service.control import create_control, group_controls
 from openalea.oalab.utils import ModalDialog, qicon
 from openalea.oalab.service.qt_control import edit
-from openalea.vpltk.qt import QtCore, QtGui
 from tissuelab.omero.omerodbbrowser import OmeroDbBrowser
 
 
-class OmeroClient(QtGui.QWidget):
+class OmeroClient(QtWidgets.QWidget):
 
     def __init__(self, parent=None):
-        QtGui.QWidget.__init__(self, parent)
+        QtWidgets.QWidget.__init__(self, parent)
 
         self.browser = OmeroDbBrowser()
 
-        layout = QtGui.QVBoxLayout(self)
+        layout = QtWidgets.QVBoxLayout(self)
         layout.addWidget(self.browser)
 
         self._create_menu()
@@ -43,17 +43,17 @@ class OmeroClient(QtGui.QWidget):
         self._connection = None
 
     def _create_menu(self):
-        self.menu = QtGui.QMenu('Omero')
+        self.menu = QtWidgets.QMenu('Omero')
 
-        self.action_connect_db = QtGui.QAction(
+        self.action_connect_db = QtWidgets.QAction(
             qicon('Crystal_Clear_filesystem_socket.png'), u'Connect to database', self)
         self.action_connect_db.triggered.connect(self.connect)
 
-        self.action_reload_db = QtGui.QAction(
+        self.action_reload_db = QtWidgets.QAction(
             qicon('Crystal_Clear_Quick_restart.png'), u'Reload database', self)
         self.action_reload_db.triggered.connect(self.reload)
 
-        self.action_close_db = QtGui.QAction(
+        self.action_close_db = QtWidgets.QAction(
             qicon('Crystal_Clear_Action-delete-icon.png'), u'Close database', self)
         self.action_close_db.triggered.connect(self.close_db)
 
@@ -87,7 +87,7 @@ class OmeroClient(QtGui.QWidget):
             gr = group_controls([username, password, host, port])
             container = edit(gr)
             qt_password = container.editor[password]()
-            qt_password.setEchoMode(QtGui.QLineEdit.Password)
+            qt_password.setEchoMode(QtWidgets.QLineEdit.Password)
             dialog = ModalDialog(container)
             if dialog.exec_():
                 username = username.value

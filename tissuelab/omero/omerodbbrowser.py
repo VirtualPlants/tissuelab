@@ -18,12 +18,10 @@
 
 __all__ = ['OmeroDbBrowser', 'OmeroModel', 'OmeroView']
 
+from Qt import QtCore, QtGui, QtWidgets
+
 from cStringIO import StringIO
-
 from openalea.image.pil import Image
-from openalea.vpltk.qt import QtGui, QtCore
-from openalea.vpltk.qt.QtCore import Signal
-
 
 def image_to_items(image):
     item_type_image = QtGui.QStandardItem('image')
@@ -138,14 +136,14 @@ class OmeroModel(QtGui.QStandardItemModel):
             return self._connection.getObject(data_type, data_id)
 
 
-class OmeroView(QtGui.QTreeView):
-    objectSelected = Signal(object)
-    imageSelected = Signal(object)
+class OmeroView(QtWidgets.QTreeView):
+    objectSelected = QtCore.Signal(object)
+    imageSelected = QtCore.Signal(object)
 
     def __init__(self):
-        QtGui.QTreeView.__init__(self)
+        QtWidgets.QTreeView.__init__(self)
 
-        self.setEditTriggers(QtGui.QTreeView.NoEditTriggers)
+        self.setEditTriggers(QtWidgets.QTreeView.NoEditTriggers)
 
         self.setDragEnabled(True)
         self.setDropIndicatorShown(True)
@@ -209,18 +207,18 @@ class OmeroView(QtGui.QTreeView):
         event.ignore()
 
 
-class OmeroDbBrowser(QtGui.QWidget):
-    objectSelected = Signal(object)
-    imageSelected = Signal(object)
+class OmeroDbBrowser(QtWidgets.QWidget):
+    objectSelected = QtCore.Signal(object)
+    imageSelected = QtCore.Signal(object)
 
     def __init__(self):
-        QtGui.QWidget.__init__(self)
+        QtWidgets.QWidget.__init__(self)
 
         self.view = OmeroView()
         self.model = OmeroModel()
         self.view.setModel(self.model)
 
-        self.grid = QtGui.QGridLayout(self)
+        self.grid = QtWidgets.QGridLayout(self)
         self.grid.addWidget(self.view, 0, 0)
 
         self.resize(QtCore.QSize(800, 600))
@@ -235,12 +233,12 @@ class OmeroDbBrowser(QtGui.QWidget):
 if __name__ == '__main__':
     import sys
     import tissuelab.omero
-    app = QtGui.QApplication.instance()
+    app = QtWidgets.QApplication.instance()
     if app:
         EMBEDED = True
     else:
         EMBEDED = False
-        app = QtGui.QApplication(sys.argv)
+        app = QtWidgets.QApplication(sys.argv)
 
     from omero.gateway import BlitzGateway
     conn = BlitzGateway('root', 'omero', host='localhost', port=4064)
