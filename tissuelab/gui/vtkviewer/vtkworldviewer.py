@@ -48,7 +48,7 @@ def expand(widget):
     widget.setSizePolicy(p(p.MinimumExpanding, p.MinimumExpanding))
 
 
-def attribute_value(world_object, dtype, attr_name, **kwargs):
+def attribute_value(world_object, dtype, attr_name, attribute_definition=attribute_definition, **kwargs):
     """
     Return a value for attr_name. Try to get value in this order:
         1. kwargs
@@ -66,7 +66,8 @@ def attribute_value(world_object, dtype, attr_name, **kwargs):
         return world_object.get(attr_name, attribute_definition[dtype][attr_name]['value'])
 
 
-def setdefault(world_object, dtype, attr_name, obj_attr_name=None, conv=None, **kwargs):
+def setdefault(world_object, dtype, attr_name, obj_attr_name=None, conv=None, attribute_definition=attribute_definition, **kwargs):
+
     if obj_attr_name is None:
         obj_attr_name = attr_name
     if isinstance(attr_name, basestring):
@@ -86,7 +87,9 @@ def setdefault(world_object, dtype, attr_name, obj_attr_name=None, conv=None, **
 
     #    2. world object
     if value is None:
-        value = world_object.get(attr_name, None)
+        for attr_name in attr_names:
+            if value is None:
+                value = world_object.get(attr_name, None)
 
     # If a conversion has been defined, apply it
     attribute = None
@@ -107,7 +110,7 @@ def setdefault(world_object, dtype, attr_name, obj_attr_name=None, conv=None, **
                 break
 
     # Set as attribute
-    world_object.set_attribute(**attribute_args(dtype, obj_attr_name, **attribute))
+    world_object.set_attribute(**attribute_args(dtype, obj_attr_name, attribute_definition, **attribute))
 
     # And clear from kwargs
     world_object.kwargs.pop(obj_attr_name, None)
@@ -141,14 +144,19 @@ def _irange(world_object, attr_name, irange, **kwargs):
         if irange is None:
             i_min = kwargs.get('i_min', None)
             i_max = kwargs.get('i_max', None)
-            irange = (i_min, i_max) if (i_min is not None) and (i_max is not None) else None
-        constraints = None
+            irange = (np.floor(i_min), np.ceil(i_max)) if (i_min is not None) and (i_max is not None) else None
+        else:
+            i_min = irange[0]
+            i_max = irange[1]
+        constraints = dict(min=np.floor(i_min)-1, max=np.ceil(i_max-1)) if (i_min is not None) and (i_max is not None) else None
     else:
         if irange is None:
             i_min = kwargs.get('i_min', object_min)
             i_max = kwargs.get('i_max', object_max)
-            irange = (i_min, i_max)
-        constraints = dict(min=object_min, max=object_max)
+            if np.floor(i_min) == np.ceil(i_max):
+                i_max += 1
+            irange = (np.floor(i_min), np.ceil(i_max))
+        constraints = dict(min=np.floor(object_min)-1, max=np.ceil(object_max-1))
 
     return dict(value=irange, constraints=constraints)
 
@@ -244,7 +252,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         self.object_repr[object_name] = object_data
 
         if isinstance(object_data, np.ndarray):
-            if hasattr(object_data, 'resolution') and 'resolution' not in world_object.kwargs:
+            if hasattr(object_data, 'resolution') and 'resolution' not in world_object.kwargs and 'resolution' not in [a['name'] for a in world_object.attributes]:
                 world_object.kwargs['resolution'] = object_data.resolution
             self.add_matrix(world_object, object_data, datatype=object_data.dtype, **world_object.kwargs)
         elif isinstance(object_data, vtk.vtkPolyData):
@@ -252,10 +260,12 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         elif isinstance(object_data, ImageBlending):
             self.add_blending(world_object, object_data, **world_object.kwargs)
         elif isinstance(object_data, vtk.vtkActor):
-            self.add_actor(object_name, object_data, **world_object.kwargs)
+            self.add_world_object_actor(world_object, object_data, **world_object.kwargs)
         if compute is True:
             self.compute(autofocus=self._first_object)
             self._first_object = False
+
+        world_object.clear_kwargs()
 
     def remove_world_object(self, world, world_object):
         """
@@ -338,22 +348,40 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                         if attribute['name'] == axis + '_plane_position':
                             self.move_cut_plane(name=world_object.name, position=attribute['value'], orientation=i + 1)
             elif isinstance(object_data, vtk.vtkPolyData):
+                from time import time
+                start_time = time()
+                print "--> Updating PolyData Object (",attribute['name'],')'
+
                 dtype = 'polydata'
                 alpha = attribute_value(world_object, dtype, 'polydata_alpha')
                 colormap = attribute_value(world_object, dtype, 'polydata_colormap')
                 irange = attribute_value(world_object, dtype, 'intensity_range')
                 linewidth = attribute_value(world_object, dtype, 'linewidth')
                 point_radius = attribute_value(world_object, dtype, 'point_radius')
+                try:
+                    if world_object.data.data().ndim > 1:
+                        glyph_size =  world_object.data.characteristic_dimension()*point_radius/(10.*world_object.data.mean())
+                    else:
+                        glyph_size = point_radius
+                except AttributeError:
+                    glyph_size = point_radius
                 preserve_faces = attribute_value(world_object, dtype, 'preserve_faces')
                 x_slice = attribute_value(world_object, dtype, 'x_slice')
                 y_slice = attribute_value(world_object, dtype, 'y_slice')
                 z_slice = attribute_value(world_object, dtype, 'z_slice')
+                colorbar = attribute_value(world_object, dtype, 'display_colorbar')
                 if attribute['name'] == 'display_polydata':
                     self.display_polydata(name=world_object.name, disp=attribute['value'])
+                    if not attribute['value']:
+                        self.display_colorbar(name=world_object.name, disp=attribute['value'])
+                    else:
+                        self.display_colorbar(name=world_object.name, disp=colorbar)
+                if attribute['name'] == 'display_colorbar':
+                    self.display_colorbar(name=world_object.name, disp=attribute['value'])
                 elif attribute['name'] == 'linewidth':
                     self.set_polydata_linewidth(world_object.name, linewidth=attribute['value'])
                 elif attribute['name'] == 'point_radius':
-                    self.set_polydata_point_radius(world_object.name, point_radius=attribute['value'])
+                    self.set_polydata_point_radius(world_object.name, point_radius=glyph_size)
                 elif attribute['name'] == 'polydata_colormap':
                     self.set_polydata_lookuptable(world_object.name, colormap=attribute['value'], alpha=alpha,
                                                   intensity_range=irange)
@@ -369,7 +397,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                         y_slice=y_slice,
                         z_slice=z_slice,
                         preserve_faces=preserve_faces,
-                        point_radius=point_radius)
+                        point_radius=glyph_size)
                 elif attribute['name'] == 'y_slice':
                     self.slice_polydata(
                         name=world_object.name,
@@ -377,7 +405,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                         y_slice=attribute['value'],
                         z_slice=z_slice,
                         preserve_faces=preserve_faces,
-                        point_radius=point_radius)
+                        point_radius=glyph_size)
                 elif attribute['name'] == 'z_slice':
                     self.slice_polydata(
                         name=world_object.name,
@@ -385,7 +413,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                         y_slice=y_slice,
                         z_slice=attribute['value'],
                         preserve_faces=preserve_faces,
-                        point_radius=point_radius)
+                        point_radius=glyph_size)
                 elif attribute['name'] == 'preserve_faces':
                     self.slice_polydata(
                         name=world_object.name,
@@ -393,7 +421,10 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                         y_slice=y_slice,
                         z_slice=z_slice,
                         preserve_faces=attribute['value'],
-                        point_radius=point_radius)
+                        point_radius=glyph_size)
+
+                end_time = time()
+                print "<-- Updating PolyData Object (",attribute['name'],")   [",end_time-start_time,"s]"
 
             elif isinstance(object_data, ImageBlending):
                 if attribute['name'] == 'blending_factor':
@@ -408,7 +439,22 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                             self.move_cut_plane(name=world_object.name, position=attribute['value'], orientation=i + 1)
         self.render()
 
+    def add_world_object_actor(self, world_object, actor, **kwargs):
+        world_object.silent = True
+        dtype = 'actor'
+
+        setdefault(world_object, dtype, 'position', conv=_tuple, **kwargs)
+        
+        obj_kwargs = world_kwargs(world_object)
+        super(VtkWorldViewer, self).add_actor(world_object.name, actor, **obj_kwargs)
+
+        world_object.silent = False
+
     def add_polydata(self, world_object, polydata, **kwargs):
+        from time import time
+        start_time = time()
+        print "--> Adding polydata"
+
         world_object.silent = True
 
         dtype = 'polydata'
@@ -422,18 +468,30 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         setdefault(world_object, dtype, 'point_radius', **kwargs)
 
         obj_kwargs = world_kwargs(world_object)
+        try:
+            if world_object.data.data().ndim > 1:
+                obj_kwargs['point_radius'] *= world_object.data.characteristic_dimension()/(10.*world_object.data.mean())
+        except AttributeError:
+            pass
         super(VtkWorldViewer, self).add_polydata(world_object.name, polydata, **obj_kwargs)
 
-        world_object.silent = False
+        # world_object.silent = False
         setdefault(world_object, dtype, 'display_polydata', **kwargs)
+        setdefault(world_object, dtype, 'display_colorbar', **kwargs)
 
-        world_object.silent = True
+        # world_object.silent = True
+
         for axis in ['x', 'y', 'z']:
             attr_name = axis + '_slice'
             setdefault(world_object, dtype, attr_name, **kwargs)
         world_object.silent = False
 
+        # print "preserve_faces"
         setdefault(world_object, dtype, 'preserve_faces', **kwargs)
+
+        end_time = time()
+        print "<-- Adding polydata   [",end_time-start_time,"s]"
+        
 
     def set_polydata_property(self, name, property=None, **kwargs):
         cmap = kwargs.get('colormap', 'grey')
@@ -533,6 +591,8 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
 
         kwargs = world_kwargs(world_object)
         super(VtkWorldViewer, self).add_matrix_cut_planes(name, data_matrix, datatype=datatype, **kwargs)
+
+
 
     def add_matrix_as_volume(self, world_object, data_matrix, datatype=np.uint16, decimate=1, **kwargs):
         dtype = 'matrix'

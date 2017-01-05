@@ -246,7 +246,7 @@ def get_polydata_extent(vtk_polydata):
 
     if vtk_polydata.GetNumberOfPoints() > 0:
         polydata_points = np.array([vtk_polydata.GetPoints().GetPoint(p) for p in xrange(vtk_polydata.GetNumberOfPoints())])
-        polydata_extent = np.transpose([polydata_points.min(axis=0), polydata_points.max(axis=0)])
+        polydata_extent = np.transpose([polydata_points.min(axis=0)-0.001, polydata_points.max(axis=0)+0.001])
     else:
         polydata_extent = np.zeros((3, 2), int)
     return polydata_extent
