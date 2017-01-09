@@ -1,3 +1,17 @@
+# Version: $Id$
+#
+#
+
+# Commentary:
+#
+#
+
+# Change Log:
+#
+#
+
+# Code:
+
 from Qt import QtCore, QtGui, QtWidgets
 
 from tissuelab.gui.vtkviewer.editor import get_contours
@@ -6,14 +20,14 @@ from tissuelab.gui.vtkviewer.designer._vtk_viewer_select_mode import Ui_vtk_view
 
 from openalea.core.observer import AbstractListener
 from openalea.core.world import World
-from openalea.vpltk.qt.designer import generate_pyfile_from_uifile
+
+from openalea.qt.designer import generate_pyfile_from_uifile
 
 import numpy as np
+
 import vtk
 
-
 generate_pyfile_from_uifile(__name__)
-
 
 class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractListener):
 
@@ -480,3 +494,6 @@ if __name__ == "__main__":
 
     if instance is None:
         sys.exit(app.exec_())
+
+#
+# vtk_viewer_select_mode.py ends here

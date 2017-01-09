@@ -22,6 +22,7 @@ import weakref
 from Qt import QtWidgets
 
 from openalea.core.service.ipython import interpreter as get_interpreter
+
 from openalea.oalab.service.drag_and_drop import add_drop_callback
 from openalea.oalab.utils import qicon
 
@@ -163,7 +164,7 @@ class TissueViewer(QtWidgets.QWidget):
         self.mode_selector.set_label(self.vtk.interactor_style.selected_label(), res, pos)
 
     def save_screenshot(self):
-        from openalea.vpltk.qt.compat import getsavefilename
+        from openalea.qt.compat import getsavefilename
         filters = "PNG Images (*.png);;Tiff Images (*.tiff);; JPEG Images (*.jpg)"
         filename, filters = getsavefilename(self, "Image filename", filters=filters)
         if filename:

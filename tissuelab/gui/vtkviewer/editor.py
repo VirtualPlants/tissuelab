@@ -24,11 +24,10 @@ from math import sqrt
 from Qt import QtCore, QtWidgets
 
 from tissuelab.gui.vtkviewer.qvtkrenderwindowinteractor import QVTKRenderWindowInteractor
-from .vtk_utils import matrix_to_image_reader
-from openalea.vpltk.qt.designer import generate_pyfile_from_uifile, get_data
+from vtk.vtk_utils import matrix_to_image_reader
 
-#from openalea.image.serial.all import imsave
-#from openalea.image.spatial_image import SpatialImage
+from openalea.qt.designer import generate_pyfile_from_uifile, get_data
+
 from vtk import VTK_SIGNED_CHAR
 from vtk import VTK_UNSIGNED_CHAR
 from vtk import VTK_SHORT
