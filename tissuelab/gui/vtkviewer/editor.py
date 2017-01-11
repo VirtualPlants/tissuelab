@@ -24,7 +24,7 @@ from math import sqrt
 from Qt import QtCore, QtWidgets
 
 from tissuelab.gui.vtkviewer.qvtkrenderwindowinteractor import QVTKRenderWindowInteractor
-from vtk.vtk_utils import matrix_to_image_reader
+from .vtk_utils import matrix_to_image_reader
 
 from openalea.qt.designer import generate_pyfile_from_uifile, get_data
 

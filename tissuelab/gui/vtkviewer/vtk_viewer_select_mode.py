@@ -29,8 +29,7 @@ import vtk
 
 generate_pyfile_from_uifile(__name__)
 
-class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractListener):
-
+class VtkviewerSelectMode(QtWidgets.QWidget, Ui_vtk_viewer_select_mode, AbstractListener):
     """
     Get Selector Data:
         - matrix_from_name(name) -> matrix (ndarray)
@@ -45,7 +44,7 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
     matrix_changed = QtCore.Signal(int, np.ndarray)
 
     def __init__(self):
-        QtGui.QWidget.__init__(self)
+        QtWidgets.QWidget.__init__(self)
         AbstractListener.__init__(self)
         self.setupUi(self)
 
@@ -93,34 +92,34 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
 
         if index == 1: # Edtion
             self.action_launch_button.setToolTip(
-                QtGui.QApplication.translate("vtk_viewer_select_mode",
+                QtWidgets.QApplication.translate("vtk_viewer_select_mode",
                                              "Start the selected cell edition",
                                              None))
             self.action_launch_button.setText(
-                QtGui.QApplication.translate(
+                QtWidgets.QApplication.translate(
                     "vtk_viewer_select_mode",
                     "Edit Cell",
                     None))
             self.action_launch_button.show()
             self.synchro_cb.hide()
             self.image1_label.setToolTip(
-                QtGui.QApplication.translate(
+                QtWidgets.QApplication.translate(
                     "vtk_viewer_select_mode",
                     "choose your segmented matrix",
                     None))
             self.image1_label.setText(
-                QtGui.QApplication.translate("vtk_viewer_select_mode",
+                QtWidgets.QApplication.translate("vtk_viewer_select_mode",
                                              "<html><head/><body><p>Segmented</p></body></html>",
                                              None))
             self.image1_label.show()
             self.image1_cb.show()
             self.image2_label.setToolTip(
-                QtGui.QApplication.translate(
+                QtWidgets.QApplication.translate(
                     "vtk_viewer_select_mode",
                     "choose your intensity matrix",
                     None))
             self.image2_label.setText(
-                QtGui.QApplication.translate("vtk_viewer_select_mode",
+                QtWidgets.QApplication.translate("vtk_viewer_select_mode",
                                              "<html><head/><body><p>Intensity</p></body></html>",
                                              None))
             self.image2_label.show()
@@ -136,34 +135,34 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
 
         elif index == 2: # Blending
             self.action_launch_button.setToolTip(
-                QtGui.QApplication.translate("vtk_viewer_select_mode",
+                QtWidgets.QApplication.translate("vtk_viewer_select_mode",
                                              "Blend the two selected images",
                                              None))
             self.action_launch_button.setText(
-                QtGui.QApplication.translate(
+                QtWidgets.QApplication.translate(
                     "vtk_viewer_select_mode",
                     "Blend Images",
                     None))
             self.action_launch_button.show()
             self.synchro_cb.hide()
             self.image1_label.setToolTip(
-                QtGui.QApplication.translate(
+                QtWidgets.QApplication.translate(
                     "vtk_viewer_select_mode",
                     "choose your first image matrix",
                     None))
             self.image1_label.setText(
-                QtGui.QApplication.translate("vtk_viewer_select_mode",
+                QtWidgets.QApplication.translate("vtk_viewer_select_mode",
                                              "<html><head/><body><p>Image 1</p></body></html>",
                                              None))
             self.image1_label.show()
             self.image1_cb.show()
             self.image2_label.setToolTip(
-                QtGui.QApplication.translate(
+                QtWidgets.QApplication.translate(
                     "vtk_viewer_select_mode",
                     "choose your second image matrix",
                     None))
             self.image2_label.setText(
-                QtGui.QApplication.translate("vtk_viewer_select_mode",
+                QtWidgets.QApplication.translate("vtk_viewer_select_mode",
                                              "<html><head/><body><p>Image 2</p></body></html>",
                                              None))
             self.image2_label.show()
@@ -184,23 +183,23 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
             self.image1_label.hide()
             self.image1_cb.hide()
             self.image2_label.setToolTip(
-                QtGui.QApplication.translate(
+                QtWidgets.QApplication.translate(
                     "vtk_viewer_select_mode",
                     "choose the image on which to synchronize",
                     None))
             self.image2_label.setText(
-                QtGui.QApplication.translate("vtk_viewer_select_mode",
+                QtWidgets.QApplication.translate("vtk_viewer_select_mode",
                                              "<html><head/><body><p>Sync. Image</p></body></html>",
                                              None))
             self.image2_label.show()
             self.image2_cb.show()
             self.polydata_label.setToolTip(
-                QtGui.QApplication.translate(
+                QtWidgets.QApplication.translate(
                     "vtk_viewer_select_mode",
                     "choose your points",
                     None))
             self.polydata_label.setText(
-                QtGui.QApplication.translate("vtk_viewer_select_mode",
+                QtWidgets.QApplication.translate("vtk_viewer_select_mode",
                                              "<html><head/><body><p>Points</p></body></html>",
                                              None))
             self.polydata_label.show()
@@ -477,9 +476,9 @@ if __name__ == "__main__":
     world.add(matseg, name='seg')
     world.add(matint, name='int')
     #world.add(poly,name='poly')
-    instance = QtGui.QApplication.instance()
+    instance = QtWidgets.QApplication.instance()
     if instance is None:
-        app = QtGui.QApplication(sys.argv)
+        app = QtWidgets.QApplication(sys.argv)
 
     vtk_viewer_select_mode = VtkviewerSelectMode()
     vtk_viewer_select_mode.world = world

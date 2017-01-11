@@ -169,7 +169,10 @@ class QVTKRenderWindowInteractor(QtWidgets.QWidget):
         self.setSizePolicy(QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding))
 
         self._Timer = QtCore.QTimer(self)
-        self.connect(self._Timer, QtCore.SIGNAL('timeout()'), self.TimerEvent)
+
+        # New connection syntax
+        #self.connect(self._Timer, QtCore.SIGNAL('timeout()'), self.TimerEvent)
+        self._Timer.timeout.connect(self.TimerEvent)
 
         self._Iren.AddObserver('CreateTimerEvent', self.CreateTimer)
         self._Iren.AddObserver('DestroyTimerEvent', self.DestroyTimer)
