@@ -52,16 +52,6 @@ class OmeroClient(object):
         from tissuelab.omero.client import OmeroClient
         return OmeroClient
 
-#
-# TBR
-#
-
-import logging
-
-logger = logging.getLogger("tissueLab::plugin::applet")
-
-#
-
 @PluginDef
 class TissueViewer(object):
 
@@ -72,9 +62,7 @@ class TissueViewer(object):
     tags = ['tissue', 'vtk', 'viewer', '3d']
 
     def __call__(self):
-        logger.warning("__call__ 1")
         from tissuelab.gui.vtkviewer.tissueviewer import TissueViewer
-        logger.warning("__call__ 2")
         return TissueViewer
 
 
