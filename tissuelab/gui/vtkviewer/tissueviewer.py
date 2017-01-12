@@ -31,6 +31,16 @@ from tissuelab.gui.vtkviewer.vtk_viewer_select_mode import VtkviewerSelectMode
 from tissuelab.gui.vtkviewer.vtkworldviewer import VtkWorldViewer
 from tissuelab.gui.vtkviewer.point_editor import SelectPointInteractorStyle
 
+#
+# TBR
+#
+
+import logging
+
+logger = logging.getLogger("tissueLab::gui::vtkviewer")
+
+#
+
 class TissueViewer(QtWidgets.QWidget):
 
     MODE_VISUALISATION = 0
@@ -39,10 +49,15 @@ class TissueViewer(QtWidgets.QWidget):
     MODE_POINT_EDITION = 3
 
     def __init__(self):
+
+        logger.warning("__init__ 1")
+
         QtWidgets.QWidget.__init__(self)
 
         layout = QtWidgets.QVBoxLayout(self)
+        logger.warning("__init__ 2")
         self.vtk = VtkWorldViewer()  # embedded into the VtkViewerWidget
+        logger.warning("__init__ 3")
         layout.addWidget(self.vtk)
 
         self.interpreter = get_interpreter()
