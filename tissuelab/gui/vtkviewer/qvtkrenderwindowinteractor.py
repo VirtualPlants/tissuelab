@@ -332,7 +332,7 @@ class QVTKRenderWindowInteractor(QtWidgets.QWidget):
         self._Iren.KeyReleaseEvent()
 
     def wheelEvent(self, ev):
-        if ev.delta() >= 0:
+        if ev.angleDelta().y() >= 0:
             self._Iren.MouseWheelForwardEvent()
         else:
             self._Iren.MouseWheelBackwardEvent()
