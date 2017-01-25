@@ -17,11 +17,12 @@
 ###############################################################################
 
 from Qt import QtCore, QtGui, QtWidgets
+
 from openalea.core.service.control import create_control, group_controls
 from openalea.oalab.utils import ModalDialog, qicon
 from openalea.oalab.service.qt_control import edit
-from tissuelab.omero.omerodbbrowser import OmeroDbBrowser
 
+from tissuelab.omero.omerodbbrowser import OmeroDbBrowser
 
 class OmeroClient(QtWidgets.QWidget):
 
