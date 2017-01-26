@@ -17,7 +17,7 @@
 ###############################################################################
 
 import functools
-from openalea.image.all import to_img, to_pix
+from openalea.image.gui.pixmap import to_img, to_pix
 
 # def to_qimg(plane):
 #     img = QtGui.QImage(plane.shape[0], plane.shape[1], QtGui.QImage.Format_Indexed8)
