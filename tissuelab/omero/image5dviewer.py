@@ -19,11 +19,12 @@
 __all__ = ['Image5DViewer']
 
 import time
+import re
 
 from openalea.vpltk.qt import QtGui, QtCore
 
 from slider import Slider
-from utils import to_qimg
+from utils import to_qimg, memoized
 
 
 def hash_plane(*args):
@@ -44,6 +45,7 @@ class Image5DViewer(QtGui.QWidget):
         self.image = QtGui.QLabel()
         size_policy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.MinimumExpanding)
         self.image.setSizePolicy(size_policy)
+        self.setAcceptDrops(True)
 
         self.l_status = QtGui.QLabel()
 
@@ -91,12 +93,11 @@ class Image5DViewer(QtGui.QWidget):
         values = [slider.value() for slider in self._slider]
         return values
 
-    # @memoized(hash_plane, 500)
+    @memoized(hash_plane, 500)
     def pixmap(self, img, values):
         pixels = img.getPrimaryPixels()
         plane = pixels.getPlane(*values)
         qimg = to_qimg(plane)
-        # pixmap = QtGui.QPixmap.fromImage(qimg)
         return qimg
 
     def update(self, *args):
@@ -110,3 +111,34 @@ class Image5DViewer(QtGui.QWidget):
             t = time.time()
             size = self.image.size()
             self.image.setPixmap(self.pixmap(self._img, values).scaled(size.height(), size.width()))
+
+
+    def dragEnterEvent(self, event):
+        for fmt in ['openalealab/omero']:
+            if event.mimeData().hasFormat(fmt):
+                event.acceptProposedAction()
+                return
+
+        return QtGui.QWidget.dragEnterEvent(self, event)
+
+    def dragMoveEvent(self, event):
+        for fmt in ['openalealab/omero']:
+            if event.mimeData().hasFormat(fmt):
+                event.acceptProposedAction()
+                return
+
+        event.ignore()
+
+    def dropEvent(self, event):
+        source = event.mimeData()
+        if source.hasFormat('openalealab/omero'):
+            from openalea.core.service.ipython import interpreter
+            db = interpreter().user_ns['omerodb']
+            uri = source.data('openalealab/omero')
+            uid = re.match(".*id=(\d+)", uri).groups()[0]
+            self.setData(db.read(category='Image',uid=uid))
+            event.acceptProposedAction()
+
+
+        else:
+            return QtGui.QWidget.dropEvent(self, event)

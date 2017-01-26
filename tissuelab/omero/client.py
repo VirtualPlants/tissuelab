@@ -37,7 +37,7 @@ class OmeroClient(QtGui.QWidget):
 
         # TODO: should be moved to service or manager
         from openalea.core.service.ipython import interpreter
-        interpreter().user_ns['db'] = self
+        interpreter().user_ns['omerodb'] = self
 
         self._current = [None, None, None]
         self._connection = None
