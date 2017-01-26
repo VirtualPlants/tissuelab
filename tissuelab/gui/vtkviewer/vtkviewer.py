@@ -233,7 +233,6 @@ class VtkViewer(QtWidgets.QWidget):
 
     def resizeEvent(self, *args, **kwargs):
         self.vtkWidget.resize(args[0].size())
-        # self.vtkWidget.render()
         QtWidgets.QWidget.resizeEvent(self, *args, **kwargs)
 
     ################################################
