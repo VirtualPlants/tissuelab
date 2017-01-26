@@ -22,6 +22,8 @@ from openalea.oalab.service.qt_control import edit
 from openalea.vpltk.qt import QtCore, QtGui
 from tissuelab.omero.omerodbbrowser import OmeroDbBrowser
 
+from openalea.core.settings import Settings
+
 
 class OmeroClient(QtGui.QWidget):
 
@@ -80,7 +82,18 @@ class OmeroClient(QtGui.QWidget):
 
     def connect(self, username=None, password=None, host='localhost', port=4064):
         if username is None or password is None:
-            username = create_control('username', 'IStr')
+
+            config = Settings()
+            try:
+                username = config.get("omero", "username")
+                host = config.get("omero", "host")
+                port = int(config.get("omero", "port"))
+            except:
+                username = None
+                host = "localhost"
+                port = 4064
+
+            username = create_control('username', 'IStr', value=username)
             password = create_control('password', 'IStr')
             host = create_control('host', 'IStr', value=host)
             port = create_control('port', 'IInt', value=port, constraints={'min': 0, 'max': 65536})
@@ -94,6 +107,11 @@ class OmeroClient(QtGui.QWidget):
                 password = password.value
                 host = host.value
                 port = port.value
+                config.set("omero", "username", username)
+                config.set("omero", "host", host)
+                config.set("omero", "port", str(port))
+                config.write()
+
             else:
                 username = None
 
