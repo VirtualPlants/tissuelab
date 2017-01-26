@@ -217,7 +217,7 @@ class QVTKRenderWindowInteractor(QtWidgets.QWidget):
         self.setCursor(cursor)
 
     def sizeHint(self):
-        return QtCore.QSize(400, 400)
+        return QtCore.QSize(800, 800)
 
     def paintEngine(self):
         return None
@@ -226,11 +226,15 @@ class QVTKRenderWindowInteractor(QtWidgets.QWidget):
         self._Iren.Render()
 
     def resizeEvent(self, ev):
-        w = self.width()
-        h = self.height()
+        # w = self.width()
+        # h = self.height()
+
+        w = ev.size().width()
+        h = ev.size().height()
 
         self._RenderWindow.SetSize(w, h)
         self._Iren.SetSize(w, h)
+        self.update()
 
     def _GetCtrlShift(self, ev):
         ctrl = shift = False
@@ -364,7 +368,7 @@ def QVTKRenderWidgetConeExample():
     cone.SetResolution(8)
 
     coneMapper = vtk.vtkPolyDataMapper()
-    coneMapper.SetInput(cone.GetOutput())
+    coneMapper.SetInputData(cone.GetOutput())
 
     coneActor = vtk.vtkActor()
     coneActor.SetMapper(coneMapper)

@@ -41,7 +41,8 @@ from tissuelab.gui.vtkviewer.vtk_utils import (matrix_to_image_reader, define_lo
 
 def expand(widget):
     p = QtWidgets.QSizePolicy
-    widget.setSizePolicy(p(p.MinimumExpanding, p.MinimumExpanding))
+    widget.setSizePolicy(p(p.Expanding, p.Expanding))
+
 
 # Define constraints
 cst_proba = dict(step=0.01, min=0, max=1)
@@ -111,13 +112,13 @@ attribute_definition['polydata']['display_colorbar'] = dict(value=True, interfac
 attribute_definition['actor'] = {}
 attribute_definition['actor']['position'] = dict(value=(0.0, 0.0, 0.0), interface=ITuple, label=u"Position")
 
-
 colormaps = load_colormaps()
 
 
 def attribute_meta(dtype, attr_name, attribute_definition=attribute_definition):
     return dict(interface=attribute_definition[dtype][attr_name]['interface'],
                 label=attribute_definition[dtype][attr_name]['label'])
+
 
 
 def attribute_args(dtype, attr_name, attribute_definition=attribute_definition, value=None, constraints=None):
@@ -193,18 +194,14 @@ class VtkViewer(QtWidgets.QWidget):
     def __init__(self):
         QtWidgets.QWidget.__init__(self)
 
+        self.vtkWidget = QVTKRenderWindowInteractor(self)
+        self.vtkWidget.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-
-        self.frame = QtWidgets.QFrame()
-        self.vl = QtWidgets.QVBoxLayout(self.frame)
-        self.vl.setContentsMargins(0, 0, 0, 0)
-
-        self.vtkWidget = QVTKRenderWindowInteractor(self.frame)
-        self.vl.addWidget(self.vtkWidget)
+        layout.addWidget(self.vtkWidget)
 
         expand(self)
-        expand(self.frame)
         expand(self.vtkWidget)
 
         self.ren = vtk.vtkRenderer()  # vtk renderer
@@ -215,19 +212,15 @@ class VtkViewer(QtWidgets.QWidget):
         self.default_interactor_style = self.DEFAULT_INTERACTOR_STYLE()
         self.set_interactor_style(self.default_interactor_style)
 
-        #rajout picker
         self.picker = vtk.vtkPointPicker()
         self.picker.SetTolerance(0.005)
         self.iren.SetPicker(self.picker)
-        #fin rajout
 
-        layout.addWidget(self.frame)
         self.ren.ResetCamera()
+        self.render()
 
         self.colormaps = colormaps
 
-        # vtk objects (like vtk volumes, vtk actors...) sorted by name in a
-        # dictionnary
         self.object_repr = {}
         self.matrix = {}
         self.reader = {}
@@ -239,8 +232,9 @@ class VtkViewer(QtWidgets.QWidget):
         self.blend = {}
 
     def resizeEvent(self, *args, **kwargs):
-        self.render()
-        return QtWidgets.QWidget.resizeEvent(self, *args, **kwargs)
+        self.vtkWidget.resize(args[0].size())
+        # self.vtkWidget.render()
+        QtWidgets.QWidget.resizeEvent(self, *args, **kwargs)
 
     ################################################
     # PURE VTK METHODS, NO MORE Qt AFTER THIS LINE #

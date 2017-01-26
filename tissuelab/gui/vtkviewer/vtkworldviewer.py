@@ -33,6 +33,7 @@ from openalea.core.world import World
 from tissuelab.gui.vtkviewer.vtk_utils import define_lookuptable
 from tissuelab.gui.vtkviewer.vtkviewer import VtkViewer, attribute_args, attribute_definition, colormaps
 
+
 class ImageBlending(object):
 
     def __init__(self, world_objects):
@@ -45,7 +46,7 @@ class ImageBlending(object):
 
 def expand(widget):
     p = QtWidgets.QSizePolicy
-    widget.setSizePolicy(p(p.MinimumExpanding, p.MinimumExpanding))
+    widget.setSizePolicy(p(p.Expanding, p.Expanding))
 
 
 def attribute_value(world_object, dtype, attr_name, attribute_definition=attribute_definition, **kwargs):
@@ -77,7 +78,7 @@ def setdefault(world_object, dtype, attr_name, obj_attr_name=None, conv=None, at
     if obj_attr_name != attr_name:
         attr_names.insert(0, obj_attr_name)
 
-    #Try to get value in this order:
+    # Try to get value in this order:
     #    1. kwargs
     value = None
     for attr_name in attr_names:
@@ -193,6 +194,8 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
 
         self.world = World()
         self.world.register_listener(self)
+        self.world.clear()
+
         self.setAcceptDrops(True)
 
         self._first_object = True
@@ -492,7 +495,6 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         end_time = time()
         print "<-- Adding polydata   [",end_time-start_time,"s]"
 
-
     def set_polydata_property(self, name, property=None, **kwargs):
         cmap = kwargs.get('colormap', 'grey')
         i_min = kwargs.get('i_min', None)
@@ -592,8 +594,6 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         kwargs = world_kwargs(world_object)
         super(VtkWorldViewer, self).add_matrix_cut_planes(name, data_matrix, datatype=datatype, **kwargs)
 
-
-
     def add_matrix_as_volume(self, world_object, data_matrix, datatype=np.uint16, decimate=1, **kwargs):
         dtype = 'matrix'
 
@@ -636,8 +636,8 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         obj_kwargs = world_kwargs(world_object)
         super(VtkWorldViewer, self).add_blending(world_object.name, names, data_matrices, **obj_kwargs)
 
-        #w1, w2 = world_object.dat.data_matrices
-        #self.set_matrix_lookuptable(
+        # w1, w2 = world_object.dat.data_matrices
+        # self.set_matrix_lookuptable(
         #    w1.name,
         #    colormap=w1.attribute('colormap')['value'],
         #    intensity_range=w1.attribute('intensity_range'))
