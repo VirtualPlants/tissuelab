@@ -17,7 +17,7 @@
 ###############################################################################
 
 import functools
-from openalea.image.gui.pixmap import to_img, to_pix
+from openalea.image.gui.pixmap import to_pix
 
 # def to_qimg(plane):
 #     img = QtGui.QImage(plane.shape[0], plane.shape[1], QtGui.QImage.Format_Indexed8)
@@ -91,10 +91,8 @@ class memoized(object):
                 self.cache_values[cache_id].pop(0)
 
             if hashed_args in self.cache_keys[cache_id]:
-                print 'restore   ', cache_id, repr(hashed_args)
                 return self.cache_values[cache_id][self.cache_keys[cache_id].index(hashed_args)]
             else:
-                print 'compute   ', cache_id, repr(hashed_args)
                 value = cached_func(cls, *func_params)
                 self.cache_keys[cache_id].append(hashed_args)
                 self.cache_values[cache_id].append(value)
