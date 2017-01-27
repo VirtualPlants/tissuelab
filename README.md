@@ -6,4 +6,4 @@
 
 ## Installation
 
-###[Procedure *via* **conda**](wiki/install)
+###[Procedure *via* **conda**](https://github.com/VirtualPlants/tissuelab/wiki/install)
