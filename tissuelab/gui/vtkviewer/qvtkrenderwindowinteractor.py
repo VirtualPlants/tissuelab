@@ -47,7 +47,6 @@ PyQtImpl = None
 QVTKRWIBase = "QGLWidget"
 
 if PyQtImpl is None:
-    # Autodetect the PyQt implementation to use
     try:
         import PyQt5
         PyQtImpl = "PyQt5"
@@ -98,7 +97,6 @@ elif PyQtImpl == "PySide":
 else:
     raise ImportError("Unknown PyQt implementation " + repr(PyQtImpl))
 
-# Define types for base class, based on string
 if QVTKRWIBase == "QWidget":
     QVTKRWIBaseClass = QWidget
 elif QVTKRWIBase == "QGLWidget":
@@ -175,7 +173,6 @@ class QVTKRenderWindowInteractor(QVTKRWIBaseClass):
     are wireframe.
     """
 
-    # Map between VTK and Qt cursors.
     _CURSOR_MAP = {
         0:  Qt.ArrowCursor,          # VTK_CURSOR_DEFAULT
         1:  Qt.ArrowCursor,          # VTK_CURSOR_ARROW
@@ -191,18 +188,14 @@ class QVTKRenderWindowInteractor(QVTKRWIBaseClass):
     }
 
     def __init__(self, parent=None, **kw):
-        # the current button
+
         self._ActiveButton = Qt.NoButton
 
-        # private attributes
         self.__saveX = 0
         self.__saveY = 0
         self.__saveModifiers = Qt.NoModifier
         self.__saveButtons = Qt.NoButton
         self.__wheelDelta = 0
-
-        # do special handling of some keywords:
-        # stereo, rw
 
         try:
             stereo = bool(kw['stereo'])
@@ -214,7 +207,6 @@ class QVTKRenderWindowInteractor(QVTKRWIBaseClass):
         except KeyError:
             rw = None
 
-        # create base qt-level widget
         if QVTKRWIBase == "QWidget":
             if "wflags" in kw:
                 wflags = kw['wflags']
@@ -224,14 +216,13 @@ class QVTKRenderWindowInteractor(QVTKRWIBaseClass):
         elif QVTKRWIBase == "QGLWidget":
             QGLWidget.__init__(self, parent)
 
-        if rw: # user-supplied render window
+        if rw:
             self._RenderWindow = rw
         else:
             self._RenderWindow = vtk.vtkRenderWindow()
 
         WId = self.winId()
 
-        # Python2
         if type(WId).__name__ == 'PyCObject':
             from ctypes import pythonapi, c_void_p, py_object
 
@@ -240,7 +231,6 @@ class QVTKRenderWindowInteractor(QVTKRWIBaseClass):
 
             WId = pythonapi.PyCObject_AsVoidPtr(WId)
 
-        # Python3
         elif type(WId).__name__ == 'PyCapsule':
             from ctypes import pythonapi, c_void_p, py_object, c_char_p
 
@@ -266,10 +256,9 @@ class QVTKRenderWindowInteractor(QVTKRWIBaseClass):
             self._Iren = vtk.vtkGenericRenderWindowInteractor()
             self._Iren.SetRenderWindow(self._RenderWindow)
 
-        # do all the necessary qt setup
         self.setAttribute(Qt.WA_OpaquePaintEvent)
         self.setAttribute(Qt.WA_PaintOnScreen)
-        self.setMouseTracking(True) # get all mouse events
+        self.setMouseTracking(True)
         self.setFocusPolicy(Qt.WheelFocus)
         self.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding))
 
@@ -281,9 +270,6 @@ class QVTKRenderWindowInteractor(QVTKRWIBaseClass):
         self._Iren.GetRenderWindow().AddObserver('CursorChangedEvent',
                                                  self.CursorChangedEvent)
 
-        #Create a hidden child widget and connect its destroyed signal to its
-        #parent ``Finalize`` slot. The hidden children will be destroyed before
-        #its parent thus allowing cleanup of VTK elements.
         self._hidden = QWidget(self)
         self._hidden.hide()
         self._hidden.destroyed.connect(self.Finalize)
@@ -316,9 +302,6 @@ class QVTKRenderWindowInteractor(QVTKRWIBaseClass):
 
     def CursorChangedEvent(self, obj, evt):
         """Called when the CursorChangedEvent fires on the render window."""
-        # This indirection is needed since when the event fires, the current
-        # cursor is not yet set so we defer this by which time the current
-        # cursor should have been set.
         QTimer.singleShot(0, self.ShowCursor)
 
     def HideCursor(self):
@@ -496,7 +479,6 @@ _keysyms = {
     Qt.Key_Backspace: 'BackSpace',
     Qt.Key_Tab: 'Tab',
     Qt.Key_Backtab: 'Tab',
-    # Qt.Key_Clear : 'Clear',
     Qt.Key_Return: 'Return',
     Qt.Key_Enter: 'Return',
     Qt.Key_Shift: 'Shift_L',
@@ -506,8 +488,6 @@ _keysyms = {
     Qt.Key_CapsLock: 'Caps_Lock',
     Qt.Key_Escape: 'Escape',
     Qt.Key_Space: 'space',
-    # Qt.Key_Prior : 'Prior',
-    # Qt.Key_Next : 'Next',
     Qt.Key_End: 'End',
     Qt.Key_Home: 'Home',
     Qt.Key_Left: 'Left',
