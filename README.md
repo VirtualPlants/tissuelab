@@ -6,4 +6,4 @@
 
 ## Installation
 
-###[Procedure *via* **conda**](wiki/installation)
+###[Procedure *via* **conda**](wiki/install)
