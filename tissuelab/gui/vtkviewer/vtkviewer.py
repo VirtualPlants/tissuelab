@@ -65,7 +65,7 @@ attribute_definition['matrix']['cut_planes_alpha'] = dict(value=1.0, interface=I
                                                           label=u"Alpha (Cut planes)")
 attribute_definition['matrix']['blending_factor'] = dict(value=0.5, interface=IFloat, constraints=cst_proba,
                                                          label=u"Blending factor")
-attribute_definition['matrix']['resolution'] = dict(value=(1.0, 1.0, 1.0), interface=ITuple, label=u"Resolution")
+attribute_definition['matrix']['voxelsize'] = dict(value=(1.0, 1.0, 1.0), interface=ITuple, label=u"Voxel Size")
 attribute_definition['matrix']['position'] = dict(value=(0.0, 0.0, 0.0), interface=ITuple, label=u"Position")
 for axis in ['x', 'y', 'z']:
     label = u"Move " + axis + " plane"
@@ -90,7 +90,7 @@ attribute_definition[
     interface=IFloat,
     constraints=cst_width,
     label=u"Point Size")
-attribute_definition['polydata']['resolution'] = dict(value=(1.0, 1.0, 1.0), interface=ITuple, label=u"Resolution")
+attribute_definition['polydata']['voxelsize'] = dict(value=(1.0, 1.0, 1.0), interface=ITuple, label=u"Resolution")
 attribute_definition['polydata']['position'] = dict(value=(0.0, 0.0, 0.0), interface=ITuple, label=u"Position")
 attribute_definition['polydata']['display_polydata'] = dict(value=True, interface=IBool, label=u"Display Polydata")
 for axis in ['x', 'y', 'z']:
@@ -520,7 +520,7 @@ class VtkViewer(QtGui.QWidget):
         start_time = time()
 
         dtype = 'polydata'
-        resolution = tuple(default_value(dtype, 'resolution', **kwargs))
+        voxelsize = tuple(default_value(dtype, 'voxelsize', **kwargs))
         position = tuple(default_value(dtype, 'position', **kwargs))
         alpha = default_value(dtype, ['polydata_alpha', 'alpha'], **kwargs)
         cmap = default_value(dtype, ['polydata_colormap', 'colormap'], **kwargs)
@@ -558,7 +558,7 @@ class VtkViewer(QtGui.QWidget):
 
         self.polydata[name] = polydata
 
-        polydata_actor.SetScale(resolution[0], resolution[1], resolution[2])
+        polydata_actor.SetScale(voxelsize[0], voxelsize[1], voxelsize[2])
         # if position is not None:
         #     polydata_actor.SetOrigin(position[0], position[1], position[2])
         #     # imgactor.SetPosition(-(nx - 1) / 2., -(ny - 1) / 2., -(nz - 1) / 2.)
@@ -829,7 +829,7 @@ class VtkViewer(QtGui.QWidget):
         if isinstance(cmap, str):
             cmap = dict(name=cmap, color_points=self.colormaps[cmap]._color_points)
 
-        resolution = default_value(dtype, 'resolution', **kwargs)
+        voxelsize = default_value(dtype, 'voxelsize', **kwargs)
         position = default_value(dtype, 'position', **kwargs)
         alpha = default_value(dtype, 'cut_planes_alpha', **kwargs)
 
@@ -879,7 +879,7 @@ class VtkViewer(QtGui.QWidget):
             elif orientation == 3:
                 imgactor.SetDisplayExtent(x_min, x_max, y_min, y_max, z, z)
 
-            imgactor.SetScale(resolution[0], resolution[1], resolution[2])
+            imgactor.SetScale(voxelsize[0], voxelsize[1], voxelsize[2])
             # imgactor, blend = blend_funct(data_matrix, reader, lut, reader, lut, orientation)
             # self.vtkdata['%s_blend_cut_plane_%d' % (name, orientation)] = blend
 
@@ -897,7 +897,7 @@ class VtkViewer(QtGui.QWidget):
     def add_matrix_as_volume(self, name, data_matrix, datatype=np.uint16, decimate=1, **kwargs):
         dtype = 'matrix'
         position = tuple(default_value(dtype, 'position', **kwargs))
-        resolution = tuple(default_value(dtype, 'resolution', **kwargs))
+        voxelsize = tuple(default_value(dtype, 'voxelsize', **kwargs))
         alpha = default_value(dtype, ['volume_alpha', 'alpha'], **kwargs)
         alphamap = default_value(dtype, 'alphamap', **kwargs)
         cmap = default_value(dtype, ['matrix_colormap', 'colormap'], **kwargs)
@@ -942,7 +942,7 @@ class VtkViewer(QtGui.QWidget):
         if isinstance(cmap, str):
             cmap = dict(name=cmap, color_points=self.colormaps[cmap]._color_points)
 
-        volume.SetScale(resolution[0], resolution[1], resolution[2])
+        volume.SetScale(voxelsize[0], voxelsize[1], voxelsize[2])
 
         if volume_name in self.view_prop:
             old_volume = self.view_prop[volume_name]
@@ -960,7 +960,7 @@ class VtkViewer(QtGui.QWidget):
 
         self.reader[name] = matrix_to_image_reader(name, self.matrix[name], datatype=np.uint16, decimate=1)
 
-        resolution = default_value(dtype, 'resolution', **kwargs)
+        voxelsize = default_value(dtype, 'voxelsize', **kwargs)
         position = default_value(dtype, 'position', **kwargs)
 
         nx, ny, nz = data_matrices[0].shape
@@ -1003,7 +1003,7 @@ class VtkViewer(QtGui.QWidget):
                 blend_actor.SetDisplayExtent(
                     0, xMax, 0, yMax, np.round(zMax / 2), np.round(zMax / 2))
 
-            blend_actor.SetScale(resolution[0], resolution[1], resolution[2])
+            blend_actor.SetScale(voxelsize[0], voxelsize[1], voxelsize[2])
 
             # if position is not None:
             #     blend_actor.SetOrigin(position[0], position[1], position[2])
@@ -1125,7 +1125,7 @@ class VtkViewer(QtGui.QWidget):
             #     blend_actor.SetDisplayExtent(
             #         0, xMax, 0, yMax, np.round(zMax / 2), np.round(zMax / 2))
 
-            # blend_actor.SetScale(resolution[0], resolution[1], resolution[2])
+            # blend_actor.SetScale(voxelsize[0], voxelsize[1], voxelsize[2])
 
             # if position is not None:
             #     blend_actor.SetOrigin(position[0], position[1], position[2])

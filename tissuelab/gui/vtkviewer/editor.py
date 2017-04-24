@@ -650,13 +650,13 @@ def get_contours(matrix, label):
     return compute_points(reader.GetOutput(), label)
 
 
-def get_contours_with_scale(matrix, label, resolution):
+def get_contours_with_scale(matrix, label, voxelsize):
     """
     take as input a segmented matrix and an id and return the contour of the polydata associated
-    with the resolution passed in argument
+    with the voxelsize passed in argument
     """
     reader = matrix_to_image_reader('la', matrix, matrix.dtype)
-    reader.SetDataSpacing(resolution)
+    reader.SetDataSpacing(voxelsize)
     return compute_points(reader.GetOutput(), label)
 
 
@@ -854,7 +854,7 @@ class SelectCellInteractorStyle (vtk.vtkInteractorStyleTrackballCamera):
     def __init__(self, parent=None):
         self.AddObserver("MiddleButtonPressEvent", self.MiddleButtonPressEvent)
         self.data = np.arange(1)
-        self.resolution = [1, 1, 1]
+        self.voxelsize = [1, 1, 1]
         self.position = [0, 0, 0]
 
         self._ignored_labels = [0, 1]
@@ -880,9 +880,9 @@ class SelectCellInteractorStyle (vtk.vtkInteractorStyleTrackballCamera):
         if points.GetNumberOfPoints() > 0:
             coord = points.GetPoint(0)
             if (self.GetInteractor().GetPicker().GetPointId() != -1):
-                x = int((coord[0] / self.resolution[0] + self.position[0]))
-                y = int((coord[1] / self.resolution[1] + self.position[1]))
-                z = int((coord[2] / self.resolution[2] + self.position[2]))
+                x = int((coord[0] / self.voxelsize[0] + self.position[0]))
+                y = int((coord[1] / self.voxelsize[1] + self.position[1]))
+                z = int((coord[2] / self.voxelsize[2] + self.position[2]))
                 xm, ym, zm = self.data.shape
                 if x < xm and y < ym and z < zm:
                     label = self.data[x, y, z]

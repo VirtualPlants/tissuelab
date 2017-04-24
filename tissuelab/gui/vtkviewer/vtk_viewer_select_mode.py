@@ -294,7 +294,7 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
         # self.world[image_name].set_attribute('cut_planes_alpha',0.7)
         slice_width = int(self.slice_slider.value())
         if self.axis_cb.currentText() == 'X':
-            x_level = self.world[image_name].get('x_plane_position')*self.world[image_name].get('resolution')[0]
+            x_level = self.world[image_name].get('x_plane_position')*self.world[image_name].get('voxelsize')[0]
             x_min = np.array(self.world[points_name].data.points.values())[:,0].min()
             x_max = np.array(self.world[points_name].data.points.values())[:,0].max()
             x_level = float(x_level-x_min)/(x_max-x_min)
@@ -302,7 +302,7 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
             self.world[points_name].set_attribute('y_slice',(-1,101))
             self.world[points_name].set_attribute('z_slice',(-1,101))
         if self.axis_cb.currentText() == 'Y':
-            y_level = self.world[image_name].get('y_plane_position')*self.world[image_name].get('resolution')[1]
+            y_level = self.world[image_name].get('y_plane_position')*self.world[image_name].get('voxelsize')[1]
             y_min = np.array(self.world[points_name].data.points.values())[:,1].min()
             y_max = np.array(self.world[points_name].data.points.values())[:,1].max()
             y_level = float(y_level-y_min)/(y_max-y_min)
@@ -310,7 +310,7 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
             self.world[points_name].set_attribute('x_slice',(-1,101))
             self.world[points_name].set_attribute('z_slice',(-1,101))
         if self.axis_cb.currentText() == 'Z':
-            z_level = self.world[image_name].get('z_plane_position')*self.world[image_name].get('resolution')[2]
+            z_level = self.world[image_name].get('z_plane_position')*self.world[image_name].get('voxelsize')[2]
             z_min = np.array(self.world[points_name].data.points.values())[:,2].min()
             z_max = np.array(self.world[points_name].data.points.values())[:,2].max()
             z_level = float(z_level-z_min)/(z_max-z_min)
@@ -420,7 +420,7 @@ class VtkviewerSelectMode(QtGui.QWidget, Ui_vtk_viewer_select_mode, AbstractList
         self._label = label
         contour = get_contours(self.matrix(0), self._label)
         name2 = str(self._label)
-        self.world.add(contour, name="cell_edit_" + name2, colormap='glasbey', position=pos, resolution=res)
+        self.world.add(contour, name="cell_edit_" + name2, colormap='glasbey', position=pos, voxelsize=res)
 
         self.enable_button()
 

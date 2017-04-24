@@ -28,6 +28,8 @@ from openalea.core.observer import AbstractListener
 from openalea.core.world import World
 from openalea.vpltk.qt import QtGui
 
+from openalea.oalab.service.drag_and_drop import add_drop_callback
+
 
 from tissuelab.gui.vtkviewer.vtk_utils import define_lookuptable
 from tissuelab.gui.vtkviewer.vtkviewer import VtkViewer, attribute_args, attribute_definition, colormaps
@@ -40,7 +42,7 @@ class ImageBlending(object):
         self.data_matrices = [world_object.data for world_object in world_objects]
 
         self.shape = world_objects[0].data.shape
-        self.resolution = world_objects[0].data.resolution
+        self.voxelsize = world_objects[0].data.voxelsize
 
 
 def expand(widget):
@@ -193,7 +195,10 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
 
         self.world = World()
         self.world.register_listener(self)
-        self.setAcceptDrops(True)
+        # self.setAcceptDrops(True)
+
+        add_drop_callback(self, 'openalea/interface.ITopomesh', self.drop_object)
+        add_drop_callback(self, 'openalea/interface.IImage', self.drop_object)
 
         self._first_object = True
 
@@ -252,8 +257,8 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         self.object_repr[object_name] = object_data
 
         if isinstance(object_data, np.ndarray):
-            if hasattr(object_data, 'resolution') and 'resolution' not in world_object.kwargs and 'resolution' not in [a['name'] for a in world_object.attributes]:
-                world_object.kwargs['resolution'] = object_data.resolution
+            if hasattr(object_data, 'voxelsize') and 'voxelsize' not in world_object.kwargs and 'voxelsize' not in [a['name'] for a in world_object.attributes]:
+                world_object.kwargs['voxelsize'] = object_data.voxelsize
             self.add_matrix(world_object, object_data, datatype=object_data.dtype, **world_object.kwargs)
         elif isinstance(object_data, vtk.vtkPolyData):
             self.add_polydata(world_object, object_data, **world_object.kwargs)
@@ -463,7 +468,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         setdefault(world_object, dtype, 'alpha', 'polydata_alpha', **kwargs)
         setdefault(world_object, dtype, 'intensity_range', conv=_irange, **kwargs)
         setdefault(world_object, dtype, 'position', conv=_tuple, **kwargs)
-        setdefault(world_object, dtype, 'resolution', conv=_tuple, **kwargs)
+        setdefault(world_object, dtype, 'voxelsize', conv=_tuple, **kwargs)
         setdefault(world_object, dtype, 'linewidth', **kwargs)
         setdefault(world_object, dtype, 'point_radius', **kwargs)
 
@@ -602,7 +607,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         setdefault(world_object, dtype, 'alphamap', **kwargs)
         setdefault(world_object, dtype, 'intensity_range', conv=_irange, **kwargs)
         setdefault(world_object, dtype, 'position', conv=_tuple, **kwargs)
-        setdefault(world_object, dtype, 'resolution', conv=_tuple, **kwargs)
+        setdefault(world_object, dtype, 'voxelsize', conv=_tuple, **kwargs)
         setdefault(world_object, dtype, 'bg_id', conv=_bg_id, **kwargs)
         kwargs = world_kwargs(world_object)
         super(VtkWorldViewer, self).add_matrix_as_volume(world_object.name, data_matrix,
@@ -627,7 +632,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
 
         obj_kwargs = world_kwargs(blended_objects[0])
         setdefault(world_object, dtype, 'position', conv=_tuple, **obj_kwargs)
-        setdefault(world_object, dtype, 'resolution', conv=_tuple, **obj_kwargs)
+        setdefault(world_object, dtype, 'voxelsize', conv=_tuple, **obj_kwargs)
 
         for axis in ['x', 'y', 'z']:
             attr_name = axis + '_plane_position'
@@ -646,46 +651,50 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
 
         setdefault(world_object, dtype, 'cut_planes', **kwargs)
 
-    def dragEnterEvent(self, event):
-        for fmt in ['text/uri-list', 'openalealab/data']:
-            if event.mimeData().hasFormat(fmt):
-                event.acceptProposedAction()
-                return
+    def drop_object(self, obj, **kwargs):
+        if obj is not None:
+            self.world.add(obj, **kwargs)
 
-        return QtGui.QWidget.dragEnterEvent(self, event)
+    # def dragEnterEvent(self, event):
+    #     for fmt in ['text/uri-list', 'openalealab/data']:
+    #         if event.mimeData().hasFormat(fmt):
+    #             event.acceptProposedAction()
+    #             return
 
-    def dragMoveEvent(self, event):
-        for fmt in ['text/uri-list', 'openalealab/data']:
-            if event.mimeData().hasFormat(fmt):
-                event.acceptProposedAction()
-                return
+    #     return QtGui.QWidget.dragEnterEvent(self, event)
 
-        event.ignore()
+    # def dragMoveEvent(self, event):
+    #     for fmt in ['text/uri-list', 'openalealab/data']:
+    #         if event.mimeData().hasFormat(fmt):
+    #             event.acceptProposedAction()
+    #             return
 
-    def dropEvent(self, event):
-        source = event.mimeData()
-        if source.hasFormat('text/uri-list'):
-            from openalea.image.serial.basics import imread
-            from openalea.core.path import path
-            for url in source.urls():
-                local_file = url.toLocalFile()
-                local_file = path(local_file)
-                if local_file.exists():
-                    data = imread(local_file)
-                    self.world.add(data, name=local_file.namebase)
-                    event.acceptProposedAction()
-                    self.auto_focus()
-                else:
-                    return QtGui.QWidget.dropEvent(self, event)
+    #     event.ignore()
 
-        elif source.hasFormat('openalealab/data'):
-            from openalea.core.service.mimetype import decode
-            data = decode('openalealab/data', source.data('openalealab/data'))
-            from openalea.image.serial.basics import imread
-            matrix = imread(data.path)
-            self.world.add(matrix, name=data.path.namebase)
-            self.auto_focus()
-            event.acceptProposedAction()
+    # def dropEvent(self, event):
+    #     source = event.mimeData()
+    #     if source.hasFormat('text/uri-list'):
+    #         from openalea.image.serial.basics import imread
+    #         from openalea.core.path import path
+    #         for url in source.urls():
+    #             local_file = url.toLocalFile()
+    #             local_file = path(local_file)
+    #             if local_file.exists():
+    #                 data = imread(local_file)
+    #                 self.world.add(data, name=local_file.namebase)
+    #                 event.acceptProposedAction()
+    #                 self.auto_focus()
+    #             else:
+    #                 return QtGui.QWidget.dropEvent(self, event)
 
-        else:
-            return QtGui.QWidget.dropEvent(self, event)
+    #     elif source.hasFormat('openalealab/data'):
+    #         from openalea.core.service.mimetype import decode
+    #         data = decode('openalealab/data', source.data('openalealab/data'))
+    #         from openalea.image.serial.basics import imread
+    #         matrix = imread(data.path)
+    #         self.world.add(matrix, name=data.path.namebase)
+    #         self.auto_focus()
+    #         event.acceptProposedAction()
+
+    #     else:
+    #         return QtGui.QWidget.dropEvent(self, event)
