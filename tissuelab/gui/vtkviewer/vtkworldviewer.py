@@ -42,7 +42,7 @@ class ImageBlending(object):
         self.data_matrices = [world_object.data for world_object in world_objects]
 
         self.shape = world_objects[0].data.shape
-        self.resolution = world_objects[0].data.resolution
+        self.voxelsize = world_objects[0].data.voxelsize
 
 
 def expand(widget):
@@ -257,8 +257,8 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         self.object_repr[object_name] = object_data
 
         if isinstance(object_data, np.ndarray):
-            if hasattr(object_data, 'resolution') and 'resolution' not in world_object.kwargs and 'resolution' not in [a['name'] for a in world_object.attributes]:
-                world_object.kwargs['resolution'] = object_data.resolution
+            if hasattr(object_data, 'voxelsize') and 'voxelsize' not in world_object.kwargs and 'voxelsize' not in [a['name'] for a in world_object.attributes]:
+                world_object.kwargs['voxelsize'] = object_data.voxelsize
             self.add_matrix(world_object, object_data, datatype=object_data.dtype, **world_object.kwargs)
         elif isinstance(object_data, vtk.vtkPolyData):
             self.add_polydata(world_object, object_data, **world_object.kwargs)
@@ -468,7 +468,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         setdefault(world_object, dtype, 'alpha', 'polydata_alpha', **kwargs)
         setdefault(world_object, dtype, 'intensity_range', conv=_irange, **kwargs)
         setdefault(world_object, dtype, 'position', conv=_tuple, **kwargs)
-        setdefault(world_object, dtype, 'resolution', conv=_tuple, **kwargs)
+        setdefault(world_object, dtype, 'voxelsize', conv=_tuple, **kwargs)
         setdefault(world_object, dtype, 'linewidth', **kwargs)
         setdefault(world_object, dtype, 'point_radius', **kwargs)
 
@@ -607,7 +607,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         setdefault(world_object, dtype, 'alphamap', **kwargs)
         setdefault(world_object, dtype, 'intensity_range', conv=_irange, **kwargs)
         setdefault(world_object, dtype, 'position', conv=_tuple, **kwargs)
-        setdefault(world_object, dtype, 'resolution', conv=_tuple, **kwargs)
+        setdefault(world_object, dtype, 'voxelsize', conv=_tuple, **kwargs)
         setdefault(world_object, dtype, 'bg_id', conv=_bg_id, **kwargs)
         kwargs = world_kwargs(world_object)
         super(VtkWorldViewer, self).add_matrix_as_volume(world_object.name, data_matrix,
@@ -632,7 +632,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
 
         obj_kwargs = world_kwargs(blended_objects[0])
         setdefault(world_object, dtype, 'position', conv=_tuple, **obj_kwargs)
-        setdefault(world_object, dtype, 'resolution', conv=_tuple, **obj_kwargs)
+        setdefault(world_object, dtype, 'voxelsize', conv=_tuple, **obj_kwargs)
 
         for axis in ['x', 'y', 'z']:
             attr_name = axis + '_plane_position'

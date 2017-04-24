@@ -283,7 +283,7 @@ class SelectPointInteractorStyle (vtk.vtkInteractorStyleTrackballCamera):
         if self.selected_cell != -1:
 
             if key == 'f':
-                position = np.array(self.cell_sphere.GetCenter())/np.array(self.image_world_object.get('resolution'))
+                position = np.array(self.cell_sphere.GetCenter())/np.array(self.image_world_object.get('voxelsize'))
                 self.image_world_object.set_attribute('x_plane_position',int(np.round(position[0])))
                 self.image_world_object.set_attribute('y_plane_position',int(np.round(position[1])))
                 self.image_world_object.set_attribute('z_plane_position',int(np.round(position[2])))
