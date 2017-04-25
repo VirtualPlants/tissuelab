@@ -155,5 +155,7 @@ class OmeroClient(QtGui.QWidget):
 
     def get_voxelsize(self, uid):
         image_wrapper = self.read(category='Image', uid=uid)
-        return (image_wrapper.getPixelSizeX(),image_wrapper.getPixelSizeY(),image_wrapper.getPixelSizeZ())
+        vs = (image_wrapper.getPixelSizeX(),image_wrapper.getPixelSizeY(),image_wrapper.getPixelSizeZ())
+        return tuple([s if s is not None else 1 for s in vs])
+
 
