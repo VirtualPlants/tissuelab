@@ -152,3 +152,8 @@ class OmeroClient(QtGui.QWidget):
         image_wrapper = self.read(category='Image', uid=uid)
         from tissuelab.omero.utils import image_wrapper_to_ndarray
         return image_wrapper_to_ndarray(image_wrapper)
+
+    def get_voxelsize(self, uid):
+        image_wrapper = self.read(category='Image', uid=uid)
+        return (image_wrapper.getPixelSizeX(),image_wrapper.getPixelSizeY(),image_wrapper.getPixelSizeZ())
+

@@ -654,7 +654,14 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
 
     def drop_object(self, obj, **kwargs):
         if obj is not None:
-            self.world.add(obj, **kwargs)
+            if isinstance(obj,dict):
+                for c in obj.keys():
+                    from copy import deepcopy
+                    obj_kwargs = deepcopy(kwargs)
+                    obj_kwargs['name'] += '_'+str(c)
+                    self.world.add(obj[c], **obj_kwargs)
+            else:
+                self.world.add(obj, **kwargs)
 
     # def dragEnterEvent(self, event):
     #     for fmt in ['text/uri-list', 'openalealab/data', 'openalealab/omero']:

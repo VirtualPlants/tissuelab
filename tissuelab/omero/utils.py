@@ -57,7 +57,15 @@ def image_wrapper_to_ndarray(image):
 
     planes = image.getPrimaryPixels().getPlanes(zctList)
 
-    return np.transpose(list(planes),(1,2,0))
+    img_matrix = np.transpose(list(planes),(1,2,0))
+    
+    if sizeC == 1:
+        return img_matrix
+    else:
+        img_dict = {}
+        for c, label in enumerate(image.getChannelLabels()):
+            img_dict[label] = img_matrix[:,:,c::sizeC]
+        return img_dict
 
 
 class memoized(object):

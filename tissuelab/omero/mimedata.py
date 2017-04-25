@@ -49,11 +49,17 @@ def read_omero_image(raw_data, mimetype_in, mimetype_out):
 
     if db is not None:
         img_matrix = db.get_image(uid=uid)
+        img_voxelsize = db.get_voxelsize(uid=uid)
         kwds = {}
         kwds['name'] = filename.namebase
         if filename.ext == ".gz":
             kwds['name'] = filename.stripext().namebase
-        img = SpatialImage(img_matrix)
+        if isinstance(img_matrix,dict):
+            img = {}
+            for c in img_matrix.keys():
+                img[c] =  SpatialImage(img_matrix[c],voxelsize=img_voxelsize)
+        else:
+            img = SpatialImage(img_matrix,voxelsize=img_voxelsize)
         return img, kwds
     else:
         return None, {}
