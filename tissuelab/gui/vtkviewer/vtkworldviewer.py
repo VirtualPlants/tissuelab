@@ -449,7 +449,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
         dtype = 'actor'
 
         setdefault(world_object, dtype, 'position', conv=_tuple, **kwargs)
-        
+
         obj_kwargs = world_kwargs(world_object)
         super(VtkWorldViewer, self).add_actor(world_object.name, actor, **obj_kwargs)
 
@@ -496,7 +496,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
 
         end_time = time()
         print "<-- Adding polydata   [",end_time-start_time,"s]"
-        
+
 
     def set_polydata_property(self, name, property=None, **kwargs):
         cmap = kwargs.get('colormap', 'grey')

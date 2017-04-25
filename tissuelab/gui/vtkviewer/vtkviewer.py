@@ -527,7 +527,7 @@ class VtkViewer(QtGui.QWidget):
         irange = default_value(dtype, 'intensity_range', **kwargs)
         linewidth = default_value(dtype, 'linewidth', **kwargs)
 
-        normal_generator = vtk.vtkPolyDataNormals() 
+        normal_generator = vtk.vtkPolyDataNormals()
         if vtk.VTK_MAJOR_VERSION <= 5:
             normal_generator.SetInput(polydata)
         else:
@@ -639,14 +639,15 @@ class VtkViewer(QtGui.QWidget):
                 sphere.SetRadius(point_radius)
                 sphere.SetThetaResolution(12)
                 sphere.SetPhiResolution(12)
+                sphere.Update()
                 glyph = vtk.vtkGlyph3D()
-                #glyph.SetScaleModeToScaleByScalar()
                 glyph.SetScaleModeToDataScalingOff()
                 glyph.SetColorModeToColorByScalar()
-                glyph.SetSource(sphere.GetOutput())
                 if vtk.VTK_MAJOR_VERSION <= 5:
+                    glyph.SetSource(sphere.GetOutput())
                     glyph.SetInput(displayed_polydata)
                 else:
+                    glyph.SetSourceData(sphere.GetOutput())
                     glyph.SetInputData(displayed_polydata)
 
             elif object_polydata.GetPointData().GetNumberOfComponents() == 3:
@@ -670,7 +671,7 @@ class VtkViewer(QtGui.QWidget):
                     glyph.SetInput(displayed_polydata)
                 else:
                     glyph.SetInputData(displayed_polydata)
-                
+
                 glyph.SetVectorModeToUseVector()
                 glyph.SetColorModeToColorByVector()
                 glyph.SetScaleModeToScaleByVector()
@@ -678,12 +679,12 @@ class VtkViewer(QtGui.QWidget):
 
 
             elif object_polydata.GetPointData().GetNumberOfComponents() == 9:
-      
+
                 sphere = vtk.vtkSphereSource()
                 sphere.SetThetaResolution(12)
                 sphere.SetPhiResolution(8)
                 sphere.Update()
-                
+
                 line = vtk.vtkLineSource()
                 line.SetPoint1(0,0,0)
                 line.SetPoint2(1,0,0)
