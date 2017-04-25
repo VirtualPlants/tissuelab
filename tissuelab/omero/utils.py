@@ -42,6 +42,8 @@ def hash_simple_list(lst):
 
 
 def image_wrapper_to_ndarray(image):
+    import numpy as np
+
     # Prepare plane list...
     sizeZ = image.getSizeZ()
     sizeC = image.getSizeC()
@@ -55,8 +57,7 @@ def image_wrapper_to_ndarray(image):
 
     planes = image.getPrimaryPixels().getPlanes(zctList)
 
-    import numpy
-    return numpy.array(list(planes))
+    return np.transpose(list(planes),(1,2,0))
 
 
 class memoized(object):

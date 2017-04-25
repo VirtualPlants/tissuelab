@@ -24,9 +24,39 @@ from openalea.oalab.mimedata.qcodec import QMimeCodec
 from openalea.oalab.mimedata.exception import MimeConversionError
 from openalea.oalab.mimedata.builtin import BuiltinDataCodec 
 
+from openalea.core.service.plugin import plugin_instances
+from openalea.core.path import path
+
+import re
+from urlparse import urlparse
+
 def read_omero_image(raw_data, mimetype_in, mimetype_out):
-    print "Omero Codec :",raw_data
-    return None, {}
+    from openalea.image.spatial_image import SpatialImage
+
+    uri = str(raw_data.data('openalealab/omero'))
+    print "Omero Codec :",uri
+    uid = re.match(".*id=(\d+)", uri).groups()[0]
+    db_url = urlparse(re.match("(.+) = (.+):",uri).groups()[1]).netloc
+    username, hostname = db_url.split('@')
+    filename = path(re.match("(.+) = (.+):",uri).groups()[0])
+
+    db_instances = plugin_instances('oalab.applet','OmeroClient')
+    db = None
+    for plugin in db_instances:
+        plugin_username, plugin_hostname, _ = plugin._current
+        if (plugin_username == username) and (plugin_hostname == hostname):
+            db = plugin
+
+    if db is not None:
+        img_matrix = db.get_image(uid=uid)
+        kwds = {}
+        kwds['name'] = filename.namebase
+        if filename.ext == ".gz":
+            kwds['name'] = filename.stripext().namebase
+        img = SpatialImage(img_matrix)
+        return img, kwds
+    else:
+        return None, {}
 
 
 class IOmeroImageCodec(QMimeCodec):
