@@ -18,9 +18,6 @@
 
 __all__ = ['OmeroDbBrowser', 'OmeroModel', 'OmeroView']
 
-from cStringIO import StringIO
-
-from openalea.image.pil import Image
 from openalea.vpltk.qt import QtGui, QtCore
 from openalea.vpltk.qt.QtCore import Signal
 
@@ -34,11 +31,9 @@ def image_to_items(image):
     item_image.setData(image)
 
     img_data = image.getThumbnail()
-    renderedThumb = Image.open(StringIO(img_data))
-    # renderedThumb.show()           # shows a pop-up
-    filename = "thumbnail_%d.jpg" % image.getId()
-    renderedThumb.save(filename)
-    item_thumbnail.setIcon(QtGui.QIcon(filename))
+    pixmap = QtGui.QPixmap()
+    pixmap.loadFromData(img_data, "JPEG")
+    item_thumbnail.setIcon(QtGui.QIcon(pixmap))
     return [item_image, item_type_image, item_id, item_thumbnail]
 
 
