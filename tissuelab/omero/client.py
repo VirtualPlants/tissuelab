@@ -21,11 +21,10 @@ from openalea.core.service.control import create_control, group_controls
 from openalea.oalab.utils import ModalDialog, qicon
 from openalea.oalab.service.qt_control import edit
 from openalea.oalab.service.drag_and_drop import add_drop_callback
-from openalea.vpltk.qt import QtCore, QtGui
+from openalea.vpltk.qt import QtGui
 from tissuelab.omero.omerodbbrowser import OmeroDbBrowser
 
 from openalea.core.settings import Settings
-
 
 class OmeroClient(QtGui.QWidget):
 
@@ -33,6 +32,7 @@ class OmeroClient(QtGui.QWidget):
         QtGui.QWidget.__init__(self, parent)
 
         self.browser = OmeroDbBrowser()
+        self.browser.setClient(self)
 
         layout = QtGui.QVBoxLayout(self)
         layout.addWidget(self.browser)
@@ -84,6 +84,13 @@ class OmeroClient(QtGui.QWidget):
     def menus(self):
         return [self.menu]
 
+    def reconnect(self):
+        [username, host, port] =  self._current
+        print "closing old db"
+        self.close_db()
+        password = self.password
+        self.connect(username, password, host, port)
+
     def connect(self, username=None, password=None, host='localhost', port=4064):
         if username is None or password is None:
 
@@ -113,23 +120,24 @@ class OmeroClient(QtGui.QWidget):
                 port = port.value
                 config.set("omero", "username", username)
                 config.set("omero", "host", host)
+                self.password = password
                 config.set("omero", "port", str(port))
                 config.write()
 
             else:
                 username = None
 
-            if [username, host, port] == self._current:
-                return
-            elif username is not None:
-                if self._connection:
-                    self._connection._closeSession()
-                from omero.gateway import BlitzGateway
-                conn = BlitzGateway(username, password, host=host, port=port)
-                conn.connect()
-                self._current = [username, host, port]
-                self._connection = conn
-                self.browser.setConnection(conn)
+        if [username, host, port] == self._current:
+            return
+        elif username is not None:
+            if self._connection:
+                self._connection._closeSession()
+            from omero.gateway import BlitzGateway
+            conn = BlitzGateway(username, password, host=host, port=port)
+            conn.connect()
+            self._current = [username, host, port]
+            self._connection = conn
+            self.browser.setConnection(conn)
 
     def reload(self):
         self.browser.model.refresh()
