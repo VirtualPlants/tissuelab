@@ -324,7 +324,14 @@ class OmeroClient(QtGui.QWidget):
                 if dataset is not None:
                     ds = dataset._obj
 
-                    self._connection.SERVICE_OPTS['omero.group']= str(self._connection.getGroupFromContext().getId())
+                    group_id = -1
+                    for group in self._connection.getGroupsMemberOf():
+                        self._connection.SERVICE_OPTS.setOmeroGroup(group.getId())
+                        group_project_ids = [p.getId() for p in self._connection.listProjects()]
+                        if project.getId() in group_project_ids:
+                            group_id = group.getId()
+
+                    self._connection.SERVICE_OPTS.setOmeroGroup(group_id)
 
                     omero_image = self._connection.createImageFromNumpySeq(nd_array_to_image_generator(img)(), img_name+".tif", size_z, size_c, size_t, description="", dataset=ds)
                     omero_image = self._connection.getObject("Image", omero_image.getId())
@@ -341,6 +348,8 @@ class OmeroClient(QtGui.QWidget):
                     p.setPhysicalSizeY(LengthI(voxelsize[1], UnitsLength.MICROMETER))
                     p.setPhysicalSizeZ(LengthI(voxelsize[2], UnitsLength.MICROMETER))
                     self._connection.getUpdateService().saveObject(p)
+
+                    self._connection.SERVICE_OPTS.setOmeroGroup(-1)
 
                     self.browser.model.refresh()
                     self.browser.view.fineTune()
