@@ -319,7 +319,12 @@ class OmeroClient(QtGui.QWidget):
             export_panel = OmeroExportPanel()
             dialog = ModalDialog(export_panel)
             export_panel.setParent(dialog)
-            export_panel.update_connection(self._connection)
+            try:
+                export_panel.update_connection(self._connection)
+            except:
+                self.reconnect()
+                export_panel.update_connection(self._connection)
+
             export_panel.update_image_name(img_name+".tif")
 
             if dialog.exec_():
