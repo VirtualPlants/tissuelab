@@ -40,6 +40,9 @@ class OmeroExportPanel(QtGui.QWidget):
         QtGui.QWidget.__init__(self, parent=parent)
 
         self._connection = None
+        self._datasets = {}
+        self._dataset_projects = {}
+        self._dataset_group_ids = {}
 
         self._manager = ControlContainer()
         # self._view = ControlManagerWidget(manager=self._manager)
@@ -89,8 +92,27 @@ class OmeroExportPanel(QtGui.QWidget):
         # self._manager.control('project').interface.enum = project_list
 
         dataset_list = []
-        for project in conn.listProjects():
-            dataset_list += [d.getName()+"@"+project.getName()+":id="+str(d.getId()) for d in project.listChildren()]
+        self._datasets = {}
+        self._dataset_projects = {}
+        self._dataset_group_ids = {}
+
+        for group in self._connection.getGroupsMemberOf():
+            conn.SERVICE_OPTS.setOmeroGroup(group.getId())
+            for project in conn.listProjects():
+                for d in project.listChildren():
+                    dataset_name = d.getName()+"@"+project.getName()+":id="+str(d.getId())
+                    self._datasets[dataset_name] = d
+                    self._dataset_projects[dataset_name] = project
+                    self._dataset_group_ids[dataset_name] = group.getId()
+                    dataset_list += [dataset_name]
+            for d in conn.listOrphans('Dataset'):
+                dataset_name = d.getName()+"@"+"???"+":id="+str(d.getId())
+                self._datasets[dataset_name] = d
+                self._dataset_projects[dataset_name] = project
+                self._dataset_group_ids[dataset_name] = group.getId()
+                dataset_list += [dataset_name]
+        conn.SERVICE_OPTS.setOmeroGroup(-1)
+
         self._manager.control('dataset').interface.enum = dataset_list
 
         # self.refresh_manager()
@@ -105,17 +127,25 @@ class OmeroExportPanel(QtGui.QWidget):
         self._manager.enable_followers()
 
     def get_project(self):
-        import re
         dataset_uri = self._manager.control('dataset').value
-        dataset_name, project_name = re.match("(.+)@(.+):",dataset_uri).groups()
-        projects = [p for p in self._connection.listProjects() if p.getName() == project_name]
-        return None if len(projects)==0 else projects[0]
+        if self._dataset_projects.has_key(dataset_uri):
+            return self._dataset_projects[dataset_uri]
+        else:
+            return None
 
     def get_dataset(self):
-        import re
         dataset_uri = self._manager.control('dataset').value
-        dataset_id = re.match(".*id=(\d+)", dataset_uri).groups()[0]
-        return self._connection.getObject('Dataset',dataset_id)
+        if self._datasets.has_key(dataset_uri):
+            return self._datasets[dataset_uri]
+        else:
+            return None
+
+    def get_group_id(self):
+        dataset_uri = self._manager.control('dataset').value
+        if self._dataset_group_ids.has_key(dataset_uri):
+            return self._dataset_group_ids[dataset_uri]
+        else:
+            return -1
 
     def get_filename(self):
         return self._manager.control('filename').value
@@ -328,30 +358,38 @@ class OmeroClient(QtGui.QWidget):
             export_panel.update_image_name(img_name+".tif")
 
             if dialog.exec_():
-                project = export_panel.get_project()
                 dataset = export_panel.get_dataset()
+                group_id = export_panel.get_group_id()
                 img_filename = export_panel.get_filename()
 
                 if dataset is not None:
                     ds = dataset._obj
 
-                    self._connection.SERVICE_OPTS['omero.group']= str(self._connection.getGroupFromContext().getId())
+                    self._connection.SERVICE_OPTS.setOmeroGroup(group_id)
 
                     omero_image = self._connection.createImageFromNumpySeq(nd_array_to_image_generator(img)(), img_name+".tif", size_z, size_c, size_t, description="", dataset=ds)
-                    omero_image = self._connection.getObject("Image", omero_image.getId())
+                    
+                    self._connection.SERVICE_OPTS.setOmeroGroup(-1)
 
-                    voxelsize = kwargs.get('voxelsize',(1,1,1))
-                    if hasattr(img,'voxelsize'):
-                        voxelsize = img.voxelsize
+                    # Set voxelsize as physical size of the image wrapper
+                    #     get serverExceptionClass = ome.conditions.SecurityViolation
+                    #     when the dataset is not owned by the connection user
 
-                    from omero.model.enums import UnitsLength
-                    from omero.model import LengthI
+                    # omero_image = self._connection.getObject("Image", omero_image.getId())
 
-                    p = omero_image.getPrimaryPixels()._obj
-                    p.setPhysicalSizeX(LengthI(voxelsize[0], UnitsLength.MICROMETER))
-                    p.setPhysicalSizeY(LengthI(voxelsize[1], UnitsLength.MICROMETER))
-                    p.setPhysicalSizeZ(LengthI(voxelsize[2], UnitsLength.MICROMETER))
-                    self._connection.getUpdateService().saveObject(p)
+                    # voxelsize = kwargs.get('voxelsize',(1,1,1))
+                    # if hasattr(img,'voxelsize'):
+                    #     voxelsize = img.voxelsize
+
+                    # from omero.model.enums import UnitsLength
+                    # from omero.model import LengthI
+                    
+                    # p = omero_image.getPrimaryPixels()._obj
+                    # p.setPhysicalSizeX(LengthI(voxelsize[0], UnitsLength.MICROMETER))
+                    # p.setPhysicalSizeY(LengthI(voxelsize[1], UnitsLength.MICROMETER))
+                    # p.setPhysicalSizeZ(LengthI(voxelsize[2], UnitsLength.MICROMETER))
+                    # self._connection.getUpdateService().saveObject(p)
+
 
                     self.browser.model.refresh()
                     self.browser.view.fineTune()
