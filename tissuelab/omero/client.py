@@ -23,7 +23,7 @@ from openalea.core.control.manager import ControlContainer
 from openalea.oalab.utils import ModalDialog, qicon
 from openalea.oalab.service.qt_control import edit
 from openalea.oalab.service.drag_and_drop import add_drop_callback
-from openalea.vpltk.qt import QtGui
+from openalea.vpltk.qt import QtCore, QtGui
 import weakref
 from tissuelab.omero.omerodbbrowser import OmeroDbBrowser
 
@@ -212,8 +212,8 @@ class OmeroClient(QtGui.QWidget):
         return [self.menu]
 
     def reconnect(self):
+        print "reconnect to omero database (probably caused by a connection timeout)"
         [username, host, port] =  self._current
-        print "closing old db"
         self.close_db()
         password = self.password
         self.connect(username, password, host, port)
@@ -304,7 +304,6 @@ class OmeroClient(QtGui.QWidget):
 
     def drop_image(self, obj, **kwargs):
         from tissuelab.omero.utils import nd_array_to_image_generator
-        from omero.model import DatasetI
 
         img = obj
         print kwargs.get('name',"Unnamed"),img.shape
@@ -322,12 +321,12 @@ class OmeroClient(QtGui.QWidget):
             export_panel.setParent(dialog)
             export_panel.update_connection(self._connection)
             export_panel.update_image_name(img_name+".tif")
-            
+
             if dialog.exec_():
                 project = export_panel.get_project()
                 dataset = export_panel.get_dataset()
                 img_filename = export_panel.get_filename()
-                
+
                 if dataset is not None:
                     ds = dataset._obj
 
@@ -342,7 +341,7 @@ class OmeroClient(QtGui.QWidget):
 
                     from omero.model.enums import UnitsLength
                     from omero.model import LengthI
-                    
+
                     p = omero_image.getPrimaryPixels()._obj
                     p.setPhysicalSizeX(LengthI(voxelsize[0], UnitsLength.MICROMETER))
                     p.setPhysicalSizeY(LengthI(voxelsize[1], UnitsLength.MICROMETER))

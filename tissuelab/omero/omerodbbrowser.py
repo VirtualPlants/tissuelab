@@ -167,7 +167,6 @@ class OmeroView(QtGui.QTreeView):
             if obj.__class__.__name__ == '_ImageWrapper':
                 self.imageSelected.emit(obj)
         except:
-            print "connection problem ?, reconnect"
             self.client.reconnect()
 
     # Drag and drop
