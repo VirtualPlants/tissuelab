@@ -23,6 +23,8 @@ from cStringIO import StringIO
 from openalea.image.pil import Image
 from openalea.vpltk.qt import QtGui, QtCore
 from openalea.vpltk.qt.QtCore import Signal
+# from PyQt4.QtGui import *
+# from PyQt4.QtCore import *
 
 
 def image_to_items(image):
@@ -36,9 +38,13 @@ def image_to_items(image):
     img_data = image.getThumbnail()
     renderedThumb = Image.open(StringIO(img_data))
     # renderedThumb.show()           # shows a pop-up
-    filename = "thumbnail_%d.jpg" % image.getId()
-    renderedThumb.save(filename)
+    filename = "thumbnail_%d.png" % image.getId()
+
+    renderedThumb.save(filename, 'PNG')
     item_thumbnail.setIcon(QtGui.QIcon(filename))
+
+    print ('Info:', filename, item_image,
+           item_type_image, item_id, item_thumbnail)
     return [item_image, item_type_image, item_id, item_thumbnail]
 
 
@@ -77,6 +83,7 @@ class OmeroModel(QtGui.QStandardItemModel):
     def __init__(self):
         self._connection = None
         self._data = []
+        self.view = OmeroView()
 
         QtGui.QStandardItemModel.__init__(self)
 
@@ -95,32 +102,34 @@ class OmeroModel(QtGui.QStandardItemModel):
         for group in conn.getGroupsMemberOf():
             row_group = group_to_items(group)
             self.appendRow(row_group)
+            row_group[0].appendRow([QtGui.QStandardItem('Loading...'),
+                                    QtGui.QStandardItem('...'),
+                                    QtGui.QStandardItem(unicode(0))])
+            # conn.SERVICE_OPTS.setOmeroGroup(group.getId())
 
-            conn.SERVICE_OPTS.setOmeroGroup(group.getId())
+            # for project in conn.listProjects():
+            #     row_project = project_to_items(project)
+            #     row_group[0].appendRow(row_project)
+            #     for dataset in project.listChildren():
+            #         row_dataset = dataset_to_items(dataset)
+            #         row_project[0].appendRow(row_dataset)
+            #         for image in dataset.listChildren():
+            #             row_img = image_to_items(image)
+            #             row_dataset[0].appendRow(row_img)
 
-            for project in conn.listProjects():
-                row_project = project_to_items(project)
-                row_group[0].appendRow(row_project)
-                for dataset in project.listChildren():
-                    row_dataset = dataset_to_items(dataset)
-                    row_project[0].appendRow(row_dataset)
-                    for image in dataset.listChildren():
-                        row_img = image_to_items(image)
-                        row_dataset[0].appendRow(row_img)
+            # for dataset in conn.listOrphans('Dataset'):
+            #     row_dataset = dataset_to_items(dataset)
+            #     row_group[0].appendRow(row_dataset)
+            #     for image in dataset.listChildren():
+            #         row_img = image_to_items(image)
+            #         row_dataset[0].appendRow(row_img)
 
-            for dataset in conn.listOrphans('Dataset'):
-                row_dataset = dataset_to_items(dataset)
-                row_group[0].appendRow(row_dataset)
-                for image in dataset.listChildren():
-                    row_img = image_to_items(image)
-                    row_dataset[0].appendRow(row_img)
-
-            for image in conn.listOrphans('Image'):
-                row_img = image_to_items(image)
-                row_group[0].appendRow(row_img)
+            # for image in conn.listOrphans('Image'):
+            #     row_img = image_to_items(image)
+            #     row_group[0].appendRow(row_img)
 
         self.setColumnCount(4)
-        conn.SERVICE_OPTS.setOmeroGroup(-1)
+        # conn.SERVICE_OPTS.setOmeroGroup(-1)
 
     def omeroObject(self, idx):
         item = self.itemFromIndex(idx)
@@ -144,6 +153,7 @@ class OmeroView(QtGui.QTreeView):
 
     def __init__(self):
         QtGui.QTreeView.__init__(self)
+        self.expanded.connect(self.expandChildren)
 
         self.setEditTriggers(QtGui.QTreeView.NoEditTriggers)
 
@@ -155,12 +165,66 @@ class OmeroView(QtGui.QTreeView):
         self.fineTune()
 
     def fineTune(self):
-        self.expandAll()
+        # self.expandAll()
         for icol in range(4):
             self.resizeColumnToContents(icol)
         titles = ['Category', 'Name', 'Id', 'Image']
         if self.model():
             self.model().setHorizontalHeaderLabels(titles)
+
+    def expandChildren(self, index):
+        # childCount = self.rowCount(index)
+        # for i in range(1, childCount):
+        #     child = self.child(i, 0)
+        #     print child.row()
+
+        item = self.model().itemFromIndex(index)
+        parent = item.parent()
+        if parent:
+            item = parent.child
+        else:
+            item = self.model().item
+        name = str(item(index.row(), 0).text()).capitalize()
+        type = str(item(index.row(), 1).text()).capitalize()
+        id = int(item(index.row(), 2).text())
+        _it = self.model().itemFromIndex(index)
+        conn = self.model()._connection
+        if type == 'Group':
+            _it.removeRows(0, _it.rowCount())
+            conn.SERVICE_OPTS.setOmeroGroup(id)
+            for i, project in enumerate(conn.listProjects()):
+                row_project = project_to_items(project)
+                _it.appendRow(row_project)
+                row_project[0].appendRow([QtGui.QStandardItem('Loading...'),
+                                          QtGui.QStandardItem('...'),
+                                          QtGui.QStandardItem(unicode(0))])
+            for i, dataset in enumerate(conn.listOrphans('Dataset')):
+                row_dataset = dataset_to_items(dataset)
+                _it.appendRow(row_dataset)
+                row_dataset[0].appendRow([QtGui.QStandardItem('Loading...'),
+                                          QtGui.QStandardItem('...'),
+                                          QtGui.QStandardItem(unicode(0))])
+            for image in conn.listOrphans('Image'):
+                row_img = image_to_items(image)
+                _it.appendRow(row_img)
+
+        if type == 'Project':
+            _it.removeRows(0, _it.rowCount())
+            for i, dataset in enumerate(_it.data().listChildren()):
+                row_dataset = dataset_to_items(dataset)
+                _it.appendRow(row_dataset)
+                row_dataset[0].appendRow([QtGui.QStandardItem('Loading...'),
+                                          QtGui.QStandardItem('...'),
+                                          QtGui.QStandardItem(unicode(0))])
+                for image in dataset.listChildren():
+                    row_dataset[0].removeRows(0, _it.rowCount())
+                    row_img = image_to_items(image)
+                    row_dataset[0].appendRow(row_img)
+        if type == 'Dataset':
+            _it.removeRows(0, _it.rowCount())
+            for i, image in enumerate(_it.data().listChildren()):
+                row_img = image_to_items(image)
+                _it.appendRow(row_img)
 
     def currentChanged(self, current, previous):
         obj = self.model().omeroObject(current)
@@ -232,9 +296,10 @@ class OmeroDbBrowser(QtGui.QWidget):
         self.model.setConnection(omero_connection)
         self.view.fineTune()
 
+
 if __name__ == '__main__':
     import sys
-    import tissuelab.omero
+    # import tissuelab.omero
     app = QtGui.QApplication.instance()
     if app:
         EMBEDED = True
