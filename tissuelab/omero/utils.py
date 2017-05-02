@@ -17,7 +17,7 @@
 ###############################################################################
 
 import functools
-from openalea.image.all import to_img, to_pix
+from openalea.image.gui.pixmap import to_pix
 
 # def to_qimg(plane):
 #     img = QtGui.QImage(plane.shape[0], plane.shape[1], QtGui.QImage.Format_Indexed8)
@@ -42,6 +42,8 @@ def hash_simple_list(lst):
 
 
 def image_wrapper_to_ndarray(image):
+    import numpy as np
+
     # Prepare plane list...
     sizeZ = image.getSizeZ()
     sizeC = image.getSizeC()
@@ -55,8 +57,24 @@ def image_wrapper_to_ndarray(image):
 
     planes = image.getPrimaryPixels().getPlanes(zctList)
 
-    import numpy
-    return numpy.array(list(planes))
+    img_matrix = np.transpose(list(planes),(2,1,0))
+    
+    if sizeC == 1:
+        return img_matrix
+    else:
+        img_dict = {}
+        for c, label in enumerate(image.getChannelLabels()):
+            img_dict[label] = img_matrix[:,:,c::sizeC]
+        return img_dict
+
+def nd_array_to_image_generator(img):
+    import numpy as np
+    
+    planes = [np.transpose(img[:,:,i_z]) for i_z in xrange(img.shape[2])]
+    def plane_gen():
+        for p in planes:
+            yield p
+    return plane_gen
 
 
 class memoized(object):
@@ -91,10 +109,8 @@ class memoized(object):
                 self.cache_values[cache_id].pop(0)
 
             if hashed_args in self.cache_keys[cache_id]:
-                print 'restore   ', cache_id, repr(hashed_args)
                 return self.cache_values[cache_id][self.cache_keys[cache_id].index(hashed_args)]
             else:
-                print 'compute   ', cache_id, repr(hashed_args)
                 value = cached_func(cls, *func_params)
                 self.cache_keys[cache_id].append(hashed_args)
                 self.cache_values[cache_id].append(value)

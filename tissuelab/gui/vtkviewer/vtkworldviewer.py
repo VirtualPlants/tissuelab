@@ -22,6 +22,7 @@
 
 import vtk
 import numpy as np
+import re
 from scipy import ndimage as nd
 
 from openalea.core.observer import AbstractListener
@@ -653,10 +654,17 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
 
     def drop_object(self, obj, **kwargs):
         if obj is not None:
-            self.world.add(obj, **kwargs)
+            if isinstance(obj,dict):
+                for c in obj.keys():
+                    from copy import deepcopy
+                    obj_kwargs = deepcopy(kwargs)
+                    obj_kwargs['name'] += '_'+str(c)
+                    self.world.add(obj[c], **obj_kwargs)
+            else:
+                self.world.add(obj, **kwargs)
 
     # def dragEnterEvent(self, event):
-    #     for fmt in ['text/uri-list', 'openalealab/data']:
+    #     for fmt in ['text/uri-list', 'openalealab/data', 'openalealab/omero']:
     #         if event.mimeData().hasFormat(fmt):
     #             event.acceptProposedAction()
     #             return
@@ -664,7 +672,7 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
     #     return QtGui.QWidget.dragEnterEvent(self, event)
 
     # def dragMoveEvent(self, event):
-    #     for fmt in ['text/uri-list', 'openalealab/data']:
+    #     for fmt in ['text/uri-list', 'openalealab/data', 'openalealab/omero']:
     #         if event.mimeData().hasFormat(fmt):
     #             event.acceptProposedAction()
     #             return
@@ -693,6 +701,16 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
     #         from openalea.image.serial.basics import imread
     #         matrix = imread(data.path)
     #         self.world.add(matrix, name=data.path.namebase)
+    #         self.auto_focus()
+    #         event.acceptProposedAction()
+
+    #     elif source.hasFormat('openalealab/omero'):
+    #         from openalea.core.service.ipython import interpreter
+    #         db = interpreter().user_ns['omerodb']
+    #         uri = source.data('openalealab/omero')
+    #         uid = re.match(".*id=(\d+)", uri).groups()[0]
+    #         matrix = db.get_image(uid=uid)
+    #         self.world.add(matrix, name=source.text())
     #         self.auto_focus()
     #         event.acceptProposedAction()
 

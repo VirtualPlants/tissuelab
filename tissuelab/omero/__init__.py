@@ -17,7 +17,7 @@
 ###############################################################################
 
 import pkg_resources
-path = pkg_resources.resource_filename('tissuelab.omero', 'gateway_ome500_ice351')
+path = pkg_resources.resource_filename('tissuelab.omero', 'gateway_ome527_ice36b40')
 
 import sys
 sys.path.append(path)

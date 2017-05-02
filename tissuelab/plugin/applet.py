@@ -52,6 +52,19 @@ class OmeroClient(object):
         from tissuelab.omero.client import OmeroClient
         return OmeroClient
 
+@PluginDef
+class AdapterSpatialImageToImage5D(object):
+
+    name = 'AdapterSpatialImageToImage5D'
+    label = '5D Viewer'
+    icon = 'icon_vtkviewer.png'
+    authors = [gbaty]
+    tags = ['tissue', 'omero', 'viewer', '5d']
+
+    def __call__(self):
+        from tissuelab.omero.image5dviewer import Image5DViewer
+        return Image5DViewer
+
 
 @PluginDef
 class TissueViewer(object):
