@@ -94,6 +94,10 @@ setup(
             'oalab.applet/tissuelab = tissuelab.plugin.applet',
         ],
 
+        'oalab.plugin': [
+            'oalab.lab/tissuelab = tissuelab.plugin.codec',
+        ],
+
         'oalab.lab': [
             'oalab.lab/tissuelab = tissuelab.plugin.lab',
         ],

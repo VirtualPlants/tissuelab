@@ -17,11 +17,10 @@
 ###############################################################################
 
 __all__ = ['OmeroDbBrowser', 'OmeroModel', 'OmeroView']
-
 from cStringIO import StringIO
 
-from openalea.image.pil import Image
 from openalea.vpltk.qt import QtGui, QtCore
+from openalea.image.pil import Image
 from openalea.vpltk.qt.QtCore import Signal
 # from PyQt4.QtGui import *
 # from PyQt4.QtCore import *
@@ -45,6 +44,7 @@ def image_to_items(image):
 
     print ('Info:', filename, item_image,
            item_type_image, item_id, item_thumbnail)
+
     return [item_image, item_type_image, item_id, item_thumbnail]
 
 
@@ -164,6 +164,9 @@ class OmeroView(QtGui.QTreeView):
         self.setIconSize(QtCore.QSize(50, 50))
         self.fineTune()
 
+    def setClient(self, omeroClient):
+        self.client = omeroClient
+
     def fineTune(self):
         # self.expandAll()
         for icol in range(4):
@@ -227,10 +230,13 @@ class OmeroView(QtGui.QTreeView):
                 _it.appendRow(row_img)
 
     def currentChanged(self, current, previous):
-        obj = self.model().omeroObject(current)
-        self.objectSelected.emit(obj)
-        if obj.__class__.__name__ == '_ImageWrapper':
-            self.imageSelected.emit(obj)
+        try:
+            obj = self.model().omeroObject(current)
+            self.objectSelected.emit(obj)
+            if obj.__class__.__name__ == '_ImageWrapper':
+                self.imageSelected.emit(obj)
+        except:
+            self.client.reconnect()
 
     # Drag and drop
 
@@ -295,6 +301,10 @@ class OmeroDbBrowser(QtGui.QWidget):
     def setConnection(self, omero_connection):
         self.model.setConnection(omero_connection)
         self.view.fineTune()
+
+    def setClient(self, omeroClient):
+        self.client = omeroClient
+        self.view.setClient(omeroClient)
 
 
 if __name__ == '__main__':
