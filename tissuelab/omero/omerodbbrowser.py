@@ -42,8 +42,8 @@ def image_to_items(image):
     renderedThumb.save(filename, 'PNG')
     item_thumbnail.setIcon(QtGui.QIcon(filename))
 
-    print ('Info:', filename, item_image,
-           item_type_image, item_id, item_thumbnail)
+    # print ('Info:', filename, item_image,
+    #        item_type_image, item_id, item_thumbnail)
 
     return [item_image, item_type_image, item_id, item_thumbnail]
 

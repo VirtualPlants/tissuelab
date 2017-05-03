@@ -30,9 +30,12 @@ from tissuelab.omero.omerodbbrowser import OmeroDbBrowser
 from openalea.core.settings import Settings
 
 omero_attributes = {}
-# omero_attributes['project'] = dict(value="",interface="IEnumStr",constraints=dict(enum=[""]),label="Project") 
-omero_attributes['dataset'] = dict(value="",interface="IEnumStr",constraints=dict(enum=[""]),label="Dataset") 
-omero_attributes['filename'] = dict(value="",interface="IStr",constraints={},label="Filename")
+# omero_attributes['project'] = dict(value="",interface="IEnumStr",constraints=dict(enum=[""]),label="Project")
+omero_attributes['dataset'] = dict(
+    value="", interface="IEnumStr", constraints=dict(enum=[""]), label="Dataset")
+omero_attributes['filename'] = dict(
+    value="", interface="IStr", constraints={}, label="Filename")
+
 
 class OmeroExportPanel(QtGui.QWidget):
 
@@ -52,13 +55,12 @@ class OmeroExportPanel(QtGui.QWidget):
 
         self.refresh_manager()
 
-        self._label = QtGui.QLabel(u"Enter where to save image")
+        self._label = QtGui.QLabel("Enter where to save image")
         self._layout.addWidget(self._label)
 
         # self._layout.addWidget(self._view)
 
         self.refresh_view()
-
 
     # def notify(self, sender, event=None):
     #     signal, data = event
@@ -66,12 +68,13 @@ class OmeroExportPanel(QtGui.QWidget):
     def refresh_manager(self):
         self._manager.clear_followers()
         self._manager.clear()
-        for name in ['dataset','filename']:
+        for name in ['dataset', 'filename']:
             attribute = omero_attributes[name]
-            self._manager.add(name, interface=attribute['interface'], value=attribute['value'], label=attribute['label'], constraints=attribute['constraints'])
+            self._manager.add(name, interface=attribute['interface'], value=attribute[
+                              'value'], label=attribute['label'], constraints=attribute['constraints'])
             # self._manager.register_follower(name, self._item_changed(name))
         self._manager.enable_followers()
-    
+
     def refresh_view(self):
         view = self._view
         if self._view is not None:
@@ -100,13 +103,13 @@ class OmeroExportPanel(QtGui.QWidget):
             conn.SERVICE_OPTS.setOmeroGroup(group.getId())
             for project in conn.listProjects():
                 for d in project.listChildren():
-                    dataset_name = d.getName()+"@"+project.getName()+":id="+str(d.getId())
+                    dataset_name = d.getName() + "@" + project.getName() + ":id=" + str(d.getId())
                     self._datasets[dataset_name] = d
                     self._dataset_projects[dataset_name] = project
                     self._dataset_group_ids[dataset_name] = group.getId()
                     dataset_list += [dataset_name]
             for d in conn.listOrphans('Dataset'):
-                dataset_name = d.getName()+"@"+"???"+":id="+str(d.getId())
+                dataset_name = d.getName() + "@" + "???" + ":id=" + str(d.getId())
                 self._datasets[dataset_name] = d
                 self._dataset_projects[dataset_name] = project
                 self._dataset_group_ids[dataset_name] = group.getId()
@@ -180,8 +183,8 @@ class OmeroExportPanel(QtGui.QWidget):
         #         row_group[0].appendRow(row_project)
         #         for dataset in project.listChildren():
 
-class OmeroClient(QtGui.QWidget):
 
+class OmeroClient(QtGui.QWidget):
 
     connectionEstablished = QtCore.Signal(str, bool)
 
@@ -243,7 +246,7 @@ class OmeroClient(QtGui.QWidget):
 
     def reconnect(self):
         print "reconnect to omero database (probably caused by a connection timeout)"
-        [username, host, port] =  self._current
+        [username, host, port] = self._current
         self.close_db()
         password = self.password
         self.connect(username, password, host, port)
@@ -264,7 +267,8 @@ class OmeroClient(QtGui.QWidget):
             username = create_control('username', 'IStr', value=username)
             password = create_control('password', 'IStr')
             host = create_control('host', 'IStr', value=host)
-            port = create_control('port', 'IInt', value=port, constraints={'min': 0, 'max': 65536})
+            port = create_control('port', 'IInt', value=port, constraints={
+                                  'min': 0, 'max': 65536})
             gr = group_controls([username, password, host, port])
             container = edit(gr)
             qt_password = container.editor[password]()
@@ -329,16 +333,16 @@ class OmeroClient(QtGui.QWidget):
 
     def get_voxelsize(self, uid):
         image_wrapper = self.read(category='Image', uid=uid)
-        vs = (image_wrapper.getPixelSizeX(),image_wrapper.getPixelSizeY(),image_wrapper.getPixelSizeZ())
+        vs = (image_wrapper.getPixelSizeX(),
+              image_wrapper.getPixelSizeY(), image_wrapper.getPixelSizeZ())
         return tuple([s if s is not None else 1 for s in vs])
 
     def drop_image(self, obj, **kwargs):
         from tissuelab.omero.utils import nd_array_to_image_generator
 
         img = obj
-        print kwargs.get('name',"Unnamed"),img.shape
-        img_name = kwargs.get('name',"Unnamed")
-
+        print kwargs.get('name', "Unnamed"), img.shape
+        img_name = kwargs.get('name', "Unnamed")
 
         size_z = img.shape[2]
         size_c = 1
@@ -355,7 +359,7 @@ class OmeroClient(QtGui.QWidget):
                 self.reconnect()
                 export_panel.update_connection(self._connection)
 
-            export_panel.update_image_name(img_name+".tif")
+            export_panel.update_image_name(img_name + ".tif")
 
             if dialog.exec_():
                 dataset = export_panel.get_dataset()
@@ -367,34 +371,46 @@ class OmeroClient(QtGui.QWidget):
 
                     self._connection.SERVICE_OPTS.setOmeroGroup(group_id)
 
-                    omero_image = self._connection.createImageFromNumpySeq(nd_array_to_image_generator(img)(), img_name+".tif", size_z, size_c, size_t, description="", dataset=ds)
-                    
-                    self._connection.SERVICE_OPTS.setOmeroGroup(-1)
+                    omero_image = self._connection.createImageFromNumpySeq(nd_array_to_image_generator(
+                        img)(), img_filename, size_z, size_c, size_t, description="", dataset=ds)
 
-                    # Set voxelsize as physical size of the image wrapper
+                    print 'omero-image: %s Name:"%s"' % (omero_image.getId(),
+                                                         omero_image.getName())
+
+                    # Set voxelsize as physical size of teimage wrapper
                     #     get serverExceptionClass = ome.conditions.SecurityViolation
                     #     when the dataset is not owned by the connection user
 
-                    # omero_image = self._connection.getObject("Image", omero_image.getId())
+                    omero_image = self._connection.getObject(
+                        "Image", omero_image.getId())
+                    print "reload : id image:", omero_image.getId()
 
-                    # voxelsize = kwargs.get('voxelsize',(1,1,1))
-                    # if hasattr(img,'voxelsize'):
-                    #     voxelsize = img.voxelsize
+                    voxelsize = kwargs.get('voxelsize', (1, 1, 1))
+                    if hasattr(img, 'voxelsize'):
+                        voxelsize = img.voxelsize
 
-                    # from omero.model.enums import UnitsLength
-                    # from omero.model import LengthI
-                    
-                    # p = omero_image.getPrimaryPixels()._obj
-                    # p.setPhysicalSizeX(LengthI(voxelsize[0], UnitsLength.MICROMETER))
-                    # p.setPhysicalSizeY(LengthI(voxelsize[1], UnitsLength.MICROMETER))
-                    # p.setPhysicalSizeZ(LengthI(voxelsize[2], UnitsLength.MICROMETER))
-                    # self._connection.getUpdateService().saveObject(p)
+                        from omero.model.enums import UnitsLength
+                        from omero.model import LengthI
 
+                        # u = LengthI(voxelsize[0], UnitsLength.MICROMETER)
+
+                        # v = LengthI(voxelsize[1], UnitsLength.MICROMETER)
+
+                        # w = LengthI(voxelsize[2], UnitsLength.MICROMETER)
+
+                        p = omero_image.getPrimaryPixels()._obj
+                        p.setPhysicalSizeX(
+                            LengthI(voxelsize[0], UnitsLength.MICROMETER))
+                        p.setPhysicalSizeY(
+                            LengthI(voxelsize[1], UnitsLength.MICROMETER))
+                        p.setPhysicalSizeZ(
+                            LengthI(voxelsize[2], UnitsLength.MICROMETER))
+                        self._connection.getUpdateService().saveObject(p)
+
+                    self._connection.SERVICE_OPTS.setOmeroGroup(-1)
 
                     self.browser.model.refresh()
                     self.browser.view.fineTune()
 
             else:
                 pass
-
-
