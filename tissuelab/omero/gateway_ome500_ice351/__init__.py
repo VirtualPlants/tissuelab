@@ -1,0 +1,1 @@
+from omero_version import omero_version
