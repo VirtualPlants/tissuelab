@@ -22,9 +22,8 @@ from cStringIO import StringIO
 from openalea.vpltk.qt import QtGui, QtCore
 from openalea.image.pil import Image
 from openalea.vpltk.qt.QtCore import Signal
-# from PyQt4.QtGui import *
-# from PyQt4.QtCore import *
 
+import omero
 
 def image_to_items(image):
     item_type_image = QtGui.QStandardItem('image')
@@ -41,9 +40,6 @@ def image_to_items(image):
 
     renderedThumb.save(filename, 'PNG')
     item_thumbnail.setIcon(QtGui.QIcon(filename))
-
-    # print ('Info:', filename, item_image,
-    #        item_type_image, item_id, item_thumbnail)
 
     return [item_image, item_type_image, item_id, item_thumbnail]
 
@@ -154,6 +150,7 @@ class OmeroView(QtGui.QTreeView):
     def __init__(self):
         QtGui.QTreeView.__init__(self)
         self.expanded.connect(self.expandChildren)
+        # self.itemClicked.connect(self.popUp)
 
         self.setEditTriggers(QtGui.QTreeView.NoEditTriggers)
 
@@ -168,7 +165,6 @@ class OmeroView(QtGui.QTreeView):
         self.client = omeroClient
 
     def fineTune(self):
-        # self.expandAll()
         for icol in range(4):
             self.resizeColumnToContents(icol)
         titles = ['Category', 'Name', 'Id', 'Image']
@@ -176,18 +172,12 @@ class OmeroView(QtGui.QTreeView):
             self.model().setHorizontalHeaderLabels(titles)
 
     def expandChildren(self, index):
-        # childCount = self.rowCount(index)
-        # for i in range(1, childCount):
-        #     child = self.child(i, 0)
-        #     print child.row()
-
         item = self.model().itemFromIndex(index)
         parent = item.parent()
         if parent:
             item = parent.child
         else:
             item = self.model().item
-        name = str(item(index.row(), 0).text()).capitalize()
         type = str(item(index.row(), 1).text()).capitalize()
         id = int(item(index.row(), 2).text())
         _it = self.model().itemFromIndex(index)
@@ -228,13 +218,82 @@ class OmeroView(QtGui.QTreeView):
             for i, image in enumerate(_it.data().listChildren()):
                 row_img = image_to_items(image)
                 _it.appendRow(row_img)
+        self.fineTune()
 
     def currentChanged(self, current, previous):
         try:
             obj = self.model().omeroObject(current)
             self.objectSelected.emit(obj)
+
             if obj.__class__.__name__ == '_ImageWrapper':
-                self.imageSelected.emit(obj)
+
+                tags     = []
+                comments = []
+                keyvals  = []
+                for ann in obj.listAnnotations():
+                    if isinstance(ann, omero.gateway.TagAnnotationWrapper):
+                        tags.append(ann.getValue())
+                    if isinstance(ann, omero.gateway.MapAnnotationWrapper):
+                        keyvals.append(ann.getValue())
+                    if isinstance(ann, omero.gateway.CommentAnnotationWrapper):
+                        comments.append(ann.getValue())
+
+                self.w = QtGui.QDialog(self)
+                self.w.setWindowTitle("Image Informations")
+                self.w.setWindowFlags(QtCore.Qt.Popup)
+                self.w.move(QtGui.QCursor.pos())
+                self.label = QtGui.QLabel("Image Name : %s " % obj.getName())
+                self.label2 = QtGui.QLabel("Image ID : %d " % obj.getId())
+                self.label3 = QtGui.QLabel("Image Owner: %s " % obj.getOwnerFullName())
+                desc = obj.getDescription()
+                if desc == '':
+                    self.label4 = QtGui.QLabel("Image Description : None ")
+                else:
+                    self.label4 = QtGui.QLabel("Image Description : %s " % desc)
+                self.label5 = QtGui.QLabel("Import Date: %s " % obj.getDate())
+                self.label6 = QtGui.QLabel("Dimensions (XY): %d " % obj.getSizeX() + "x %d " % obj.getSizeY())
+                self.label7 = QtGui.QLabel("Pixels Size (XYZ) (um): %s " % obj.getPixelSizeX() + "x  %s " % obj.getPixelSizeY() + "x %s" % obj.getPixelSizeZ())
+                self.label8 = QtGui.QLabel("Pixels Type: %s " % obj.getPixelsType())
+                self.label9 = QtGui.QLabel("Z-sections/Timepoints: %d " % obj.getSizeZ() + " x %d " % obj.getSizeT())
+                self.label10 = QtGui.QLabel("ROI Count: %d " % obj.getROICount())
+                self.label11 = QtGui.QLabel("Channels: %s " % obj.getChannelLabels())
+
+                if not tags:
+                    self.label12 = QtGui.QLabel("Tags: None ")
+                else:
+                    self.label12 = QtGui.QLabel("Tags: %s " % tags)
+
+                if not keyvals:
+                    self.label13 = QtGui.QLabel("Key-Value Pairs: None ")
+                else:
+                    self.label13 = QtGui.QLabel("Key-Value Pairs: %s " % keyvals)
+
+                if not comments:
+                    self.label14 = QtGui.QLabel("Comments: None ")
+                else:
+                    self.label14 = QtGui.QLabel("Comments: %s " % comments)
+
+                self.layout = QtGui.QGridLayout()
+                self.layout.addWidget(self.label)
+                self.layout.addWidget(self.label2)
+                self.layout.addWidget(self.label3)
+                self.layout.addWidget(self.label4)
+                self.layout.addWidget(self.label5)
+                self.layout.addWidget(self.label6)
+                self.layout.addWidget(self.label7)
+                self.layout.addWidget(self.label8)
+                self.layout.addWidget(self.label9)
+                self.layout.addWidget(self.label10)
+                self.layout.addWidget(self.label11)
+                self.layout.addWidget(self.label12)
+                self.layout.addWidget(self.label13)
+                self.layout.addWidget(self.label14)
+
+                self.w.setLayout(self.layout)
+                self.w.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+                self.w.show()
+                self.w.raise_()
+
         except:
             self.client.reconnect()
 
