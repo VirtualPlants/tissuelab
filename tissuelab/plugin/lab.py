@@ -49,15 +49,24 @@ class TissueLab(DefaultLab):
         14: {u'amount': 0.5823488533703961, u'splitDirection': 1},
         15: {u'amount': 0.7474178403755869, u'splitDirection': 2},
         16: {u'amount': 0.49107981220657276, u'splitDirection': 2},
-        17: {u'widget': {'applets': [{'name': u'FigureWidget', 'properties': {'num': 3}}]}},
-        18: {u'widget': {'applets': [{'name': u'TissueViewer'}], 'properties': {}}},
-        19: {u'widget': {'applets': [{'name': u'ProjectManager'}], 'properties': {}}},
+        17: {u'widget': {'applets': [{'name': u'MatplotlibFigures', 'properties': {}}]}},
+        18: {u'widget': {'applets': [
+            {'name': u'TissueViewer', 'properties': {'toolbar': True}}
+        ]}},
+        19: {u'widget': {'applets': [
+            {'name': u'ProjectManager'},
+            {'name': u'FileBrowser'},
+        ], 'properties': {}}},
         20: {u'widget': {'applets': [
             {'name': u'WorldControl'},
             {'name': u'ControlManager', 'properties': {'position': 2, 'icon': None}},
-            {'name': u'PkgManagerWidget'}
+            {'name': u'TopomeshControl'},
+            {'name': u'DataframeControl'}
         ], 'properties': {}}},
-        21: {u'widget': {'applets': [{'name': u'EditorManager'}]}},
+        21: {u'widget': {'applets': [
+            {'name': u'EditorManager'},
+            {'name': u'OmeroClient'},
+        ], 'properties': {"position": 2}}},
         22: {u'widget': {'applets': [{'name': u'ShellWidget'}]}}},
         'children': {0: [13, 14], 16: [17, 18], 13: [19, 20], 14: [15, 16], 15: [21, 22]}}
 
