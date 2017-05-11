@@ -44,11 +44,11 @@ class TissueLab(DefaultLab):
 
     layout = {'parents': {0: None, 13: 0, 14: 0, 15: 14, 16: 14, 17: 16, 18: 16, 19: 13, 20: 13, 21: 15, 22: 15},
               'properties': {
-        0: {u'amount': 0.24132492113564669, u'splitDirection': 1},
-        13: {u'amount': 0.46854460093896716, u'splitDirection': 2},
-        14: {u'amount': 0.5823488533703961, u'splitDirection': 1},
-        15: {u'amount': 0.7474178403755869, u'splitDirection': 2},
-        16: {u'amount': 0.49107981220657276, u'splitDirection': 2},
+        0: {u'amount': 0.2, u'splitDirection': 1},
+        13: {u'amount': 0.33, u'splitDirection': 2},
+        14: {u'amount': 0.45, u'splitDirection': 1},
+        15: {u'amount': 0.66, u'splitDirection': 2},
+        16: {u'amount': 0.66, u'splitDirection': 2},
         17: {u'widget': {'applets': [{'name': u'MatplotlibFigures', 'properties': {}}]}},
         18: {u'widget': {'applets': [
             {'name': u'TissueViewer', 'properties': {'toolbar': True}}
@@ -59,9 +59,7 @@ class TissueLab(DefaultLab):
         ], 'properties': {}}},
         20: {u'widget': {'applets': [
             {'name': u'WorldControl'},
-            {'name': u'ControlManager', 'properties': {'position': 2, 'icon': None}},
-            {'name': u'TopomeshControl'},
-            {'name': u'DataframeControl'}
+            {'name': u'ControlManager', 'properties': {'position': 2, 'icon': None}}
         ], 'properties': {}}},
         21: {u'widget': {'applets': [
             {'name': u'EditorManager'},
