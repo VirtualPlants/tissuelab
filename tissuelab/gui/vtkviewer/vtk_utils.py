@@ -67,11 +67,13 @@ def define_lookuptable(data, colormap_points, colormap_name, intensity_range=Non
         i_min = np.percentile(data, 5)
     if i_max is None:
         i_max = np.percentile(data, 95)
+
     lut = vtk.vtkColorTransferFunction()
 
     if colormap_name == 'glasbey':
         if i_max < 255:
             for i in xrange(256):
+                # print i, colormap_points.values()[i]
                 lut.AddRGBPoint(i, * colormap_points.values()[i])
         else:
 
@@ -80,16 +82,27 @@ def define_lookuptable(data, colormap_points, colormap_name, intensity_range=Non
             points = np.unique(data)
             # end_time = time()
             # print "Unique time : ", end_time - start_time, " s"
-
+            lut.AddRGBPoint(0, *colormap_points.values()[0])
+            
             # start_time = time()
             for i in points:
+                # print i, colormap_points.values()[int(i) % 256]
                 lut.AddRGBPoint(i, *colormap_points.values()[int(i) % 256])
             # end_time = time()
             # print "RGBPoint time : ", end_time - start_time, " s"
     else:
         for value in colormap_points.keys():
+            # print (1.0 - value) * i_min + value * i_max, colormap_points[value]
             lut.AddRGBPoint(
                 (1.0 - value) * i_min + value * i_max, *colormap_points[value])
+
+    lut.ClampingOn()
+    lut.UseBelowRangeColorOn()
+    lut.SetBelowRangeColor(colormap_points.values()[0])
+    lut.UseAboveRangeColorOn()
+    lut.SetAboveRangeColor(colormap_points.values()[-1])
+    # lut.AllowDuplicateScalarsOn()
+
     return lut
 
 

@@ -906,7 +906,7 @@ class VtkViewer(QtGui.QWidget):
 
         irange = default_value(dtype, 'intensity_range', **kwargs)
         if irange == attribute_definition[dtype]['intensity_range']:
-            irange = (data_matrix.min(), data_matrix.max())
+            irange = (data_matrix.min()-1, data_matrix.max()+1)
 
         if name in self.matrix:
             data_matrix = self.matrix[name]
@@ -928,6 +928,9 @@ class VtkViewer(QtGui.QWidget):
         volume_property = vtk.vtkVolumeProperty()
         volume_property.SetColor(colorFunc)
         volume_property.SetScalarOpacity(alphaChannelFunc)
+        volume_property.IndependentComponentsOff()
+        volume_property.ShadeOff()
+        volume_property.SetInterpolationTypeToNearest()
 
         volume_name = name_volume(name)
         self.property[volume_name] = dict(vtkVolumeProperty=volume_property, disp=kwargs.get('volume', True))
@@ -1022,26 +1025,29 @@ class VtkViewer(QtGui.QWidget):
         alphaChannelFunc.RemoveAllPoints()
 
         bg_id = kwargs.get('bg_id', None)
-        sh_id = kwargs.get('sh_id', None)
+        # sh_id = kwargs.get('sh_id', None)
         irange = kwargs.get('intensity_range', (self.matrix[name].min(), self.matrix[name].max()))
 
         if alphamap == "constant":
             alphaChannelFunc.ClampingOn()
-            alphaChannelFunc.AddPoint(irange[0], alpha)
-            alphaChannelFunc.AddPoint(irange[1], alpha)
-            if bg_id is not None:
-                if bg_id - 1 != sh_id:
-                    alphaChannelFunc.AddPoint(bg_id - 1, alpha)
-                alphaChannelFunc.AddPoint(bg_id, 0.0)
-                if bg_id + 1 != sh_id:
-                    alphaChannelFunc.AddPoint(bg_id + 1, alpha)
 
-            if sh_id is not None:
-                if not sh_id - 1 == bg_id:
-                    alphaChannelFunc.AddPoint(sh_id - 1, alpha)
-                alphaChannelFunc.AddPoint(sh_id, kwargs.get('shade_alpha', 0.1))
-                if not sh_id + 1 == bg_id:
-                    alphaChannelFunc.AddPoint(sh_id + 1, alpha)
+            if irange[0] != bg_id:
+                alphaChannelFunc.AddPoint(irange[0], alpha)
+            if irange[1] != bg_id:
+                alphaChannelFunc.AddPoint(irange[1], alpha)
+            if bg_id is not None:
+                # if bg_id - 1 != sh_id:
+                alphaChannelFunc.AddPoint(bg_id - 1, alpha)
+                alphaChannelFunc.AddPoint(bg_id, 0.0)
+                # if bg_id + 1 != sh_id:
+                alphaChannelFunc.AddPoint(bg_id + 1, alpha)
+
+            # if sh_id is not None:
+            #     if not sh_id - 1 == bg_id:
+            #         alphaChannelFunc.AddPoint(sh_id - 1, alpha)
+            #     alphaChannelFunc.AddPoint(sh_id, kwargs.get('shade_alpha', 0.1))
+            #     if not sh_id + 1 == bg_id:
+            #         alphaChannelFunc.AddPoint(sh_id + 1, alpha)
 
         elif alphamap == "linear":
             alphaChannelFunc.ClampingOn()
@@ -1050,21 +1056,25 @@ class VtkViewer(QtGui.QWidget):
 
     def set_matrix_lookuptable(self, name, colormap, **kwargs):
         irange = kwargs.pop('intensity_range', None)
-
         cut_planes = kwargs.get('cut_planes', True)
 
         lut = define_lookuptable(self.matrix[name],
                                  colormap_points=colormap['color_points'],
                                  colormap_name=colormap['name'],
                                  intensity_range=irange)
-        if 'sh_id' in kwargs:
-            lut.AddRGBPoint(kwargs['sh_id'], *kwargs.get('shade_color', (0., 0., 0.)))
+        # if 'sh_id' in kwargs:
+        #     print "Shade!",kwargs['sh_id']
+        #     lut.AddRGBPoint(kwargs['sh_id'], *kwargs.get('shade_color', (0., 0., 0.)))
+
         self.property[name_volume(name)]['vtkVolumeProperty'].SetColor(lut)
         if cut_planes:
             for orientation in [1, 2, 3]:
                 if name + "_cut_plane_colors_" + str(orientation) in self.vtkdata:
                     self.vtkdata[
                         name + "_cut_plane_colors_" + str(orientation)].SetLookupTable(lut)
+                    self.vtkdata[
+                        name + "_cut_plane_colors_" + str(orientation)].Update()
+
         self.reader[name].Update()
 
     def move_cut_plane(self, name, position=0, orientation=1):
@@ -1132,65 +1142,65 @@ class VtkViewer(QtGui.QWidget):
             #     blend_actor.SetOrigin(position[0], position[1], position[2])
             #     blend_actor.SetPosition(-position[0], -position[1], -position[2])
 
-    def cell_color(self, name, cell_id):
-        colorFunc = self.property[name_volume(name)]['vtkVolumeProperty'].GetRGBTransferFunction()
-        return colorFunc.GetColor(cell_id)
+    # def cell_color(self, name, cell_id):
+    #     colorFunc = self.property[name_volume(name)]['vtkVolumeProperty'].GetRGBTransferFunction()
+    #     return colorFunc.GetColor(cell_id)
 
-    def color_cell(self, name, cell_id=None, color=None, alpha=None):
-        if color is None:
-            color = (1., 1., 1.)
-        if cell_id is None:
-            cell_id = 1
-        colorFunc = self.property[name_volume(name)]['vtkVolumeProperty'].GetRGBTransferFunction()
-        colorFunc.RemoveAllPoints()
-        colorFunc.AddRGBPoint(cell_id - 1, 1., 1., 1.)
-        colorFunc.AddRGBPoint(cell_id, *color)
-        colorFunc.AddRGBPoint(cell_id + 1, 1., 1., 1.)
+    # def color_cell(self, name, cell_id=None, color=None, alpha=None):
+    #     if color is None:
+    #         color = (1., 1., 1.)
+    #     if cell_id is None:
+    #         cell_id = 1
+    #     colorFunc = self.property[name_volume(name)]['vtkVolumeProperty'].GetRGBTransferFunction()
+    #     colorFunc.RemoveAllPoints()
+    #     colorFunc.AddRGBPoint(cell_id - 1, 1., 1., 1.)
+    #     colorFunc.AddRGBPoint(cell_id, *color)
+    #     colorFunc.AddRGBPoint(cell_id + 1, 1., 1., 1.)
 
-    def old_color_cell(self, name, cell_id=None, color=None, alpha=None, bg_id=1, colormap='glasbey'):
-        """
-        TODO: replace with method that allows user to identify a cell
-        """
+    # def old_color_cell(self, name, cell_id=None, color=None, alpha=None, bg_id=1, colormap='glasbey'):
+    #     """
+    #     TODO: replace with method that allows user to identify a cell
+    #     """
 
-        alphaChannelFunc = self.property[name_volume(name)]['vtkVolumeProperty'].GetScalarOpacity()
+    #     alphaChannelFunc = self.property[name_volume(name)]['vtkVolumeProperty'].GetScalarOpacity()
 
-        if alpha is None:
-            alpha = 1.
+    #     if alpha is None:
+    #         alpha = 1.
 
-        # colorFunc.AddRGBPoint(bg_id, 1.0, 1.0, 1.0)
+    #     # colorFunc.AddRGBPoint(bg_id, 1.0, 1.0, 1.0)
 
-        for matrix in self.matrix.values():
+    #     for matrix in self.matrix.values():
 
-            if cell_id is None:
-                # colorFunc.RemoveAllPoints()
+    #         if cell_id is None:
+    #             # colorFunc.RemoveAllPoints()
 
-                # self.volume_property[name]['vtkVolumeProperty'].SetColor(
-                    # define_lookuptable(matrix, colormap=self.colormaps[colormap]))
+    #             # self.volume_property[name]['vtkVolumeProperty'].SetColor(
+    #                 # define_lookuptable(matrix, colormap=self.colormaps[colormap]))
 
-                self.volume_property[name]['vtkVolumeProperty'].SetColor(
-                    define_lookuptable(matrix, colormap_points=self.colormaps[colormap]._color_points, colormap_name=colormap))
+    #             self.volume_property[name]['vtkVolumeProperty'].SetColor(
+    #                 define_lookuptable(matrix, colormap_points=self.colormaps[colormap]._color_points, colormap_name=colormap))
 
-                alphaChannelFunc.RemoveAllPoints()
+    #             alphaChannelFunc.RemoveAllPoints()
 
-                alphaChannelFunc.AddPoint(bg_id, 0.0)
+    #             alphaChannelFunc.AddPoint(bg_id, 0.0)
 
-                if colormap not in ['glasbey']:
-                    alphaChannelFunc.RemoveAllPoints()
-                    alphaChannelFunc.AddPoint(matrix.min(), 0.0)
-                    alphaChannelFunc.AddPoint(matrix.max(), alpha)
-                else:
-                    # alphaChannelFunc.AddPoint(1, 0.0)
-                    alphaChannelFunc.AddPoint(bg_id + 1, alpha)
-                    alphaChannelFunc.AddPoint(matrix.max(), alpha)
+    #             if colormap not in ['glasbey']:
+    #                 alphaChannelFunc.RemoveAllPoints()
+    #                 alphaChannelFunc.AddPoint(matrix.min(), 0.0)
+    #                 alphaChannelFunc.AddPoint(matrix.max(), alpha)
+    #             else:
+    #                 # alphaChannelFunc.AddPoint(1, 0.0)
+    #                 alphaChannelFunc.AddPoint(bg_id + 1, alpha)
+    #                 alphaChannelFunc.AddPoint(matrix.max(), alpha)
 
-            else:
-                if color is None:
-                    color = (1., 1., 1.)
-                colorFunc = self.volume_property[name][
-                    'vtkVolumeProperty'].GetRGBTransferFunction()
-                colorFunc.AddRGBPoint(cell_id, *color)
+    #         else:
+    #             if color is None:
+    #                 color = (1., 1., 1.)
+    #             colorFunc = self.volume_property[name][
+    #                 'vtkVolumeProperty'].GetRGBTransferFunction()
+    #             colorFunc.AddRGBPoint(cell_id, *color)
 
-                alphaChannelFunc.AddPoint(cell_id, alpha)
+    #             alphaChannelFunc.AddPoint(cell_id, alpha)
 
     def set_interactor_style(self, interactor_style=None, **kwargs):
         if interactor_style is None:

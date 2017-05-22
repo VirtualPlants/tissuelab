@@ -151,15 +151,15 @@ def _irange(world_object, attr_name, irange, **kwargs):
         else:
             i_min = irange[0]
             i_max = irange[1]
-        constraints = dict(min=np.floor(i_min)-1, max=np.ceil(i_max-1)) if (i_min is not None) and (i_max is not None) else None
+        constraints = dict(min=np.floor(i_min)-1, max=np.ceil(i_max+1)) if (i_min is not None) and (i_max is not None) else None
     else:
         if irange is None:
             i_min = kwargs.get('i_min', object_min)
             i_max = kwargs.get('i_max', object_max)
             if np.floor(i_min) == np.ceil(i_max):
                 i_max += 1
-            irange = (np.floor(i_min), np.ceil(i_max))
-        constraints = dict(min=np.floor(object_min)-1, max=np.ceil(object_max-1))
+            irange = (np.floor(i_min)-1, np.ceil(i_max)+1)
+        constraints = dict(min=np.floor(object_min)-1, max=np.ceil(object_max+1))
 
     return dict(value=irange, constraints=constraints)
 
@@ -261,17 +261,21 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
             if hasattr(object_data, 'voxelsize') and 'voxelsize' not in world_object.kwargs and 'voxelsize' not in [a['name'] for a in world_object.attributes]:
                 world_object.kwargs['voxelsize'] = object_data.voxelsize
             self.add_matrix(world_object, object_data, datatype=object_data.dtype, **world_object.kwargs)
+            world_object.clear_kwargs()
         elif isinstance(object_data, vtk.vtkPolyData):
             self.add_polydata(world_object, object_data, **world_object.kwargs)
+            world_object.clear_kwargs()
         elif isinstance(object_data, ImageBlending):
             self.add_blending(world_object, object_data, **world_object.kwargs)
+            world_object.clear_kwargs()
         elif isinstance(object_data, vtk.vtkActor):
             self.add_world_object_actor(world_object, object_data, **world_object.kwargs)
+            world_object.clear_kwargs()
+            
         if compute is True:
             self.compute(autofocus=self._first_object)
             self._first_object = False
 
-        world_object.clear_kwargs()
 
     def remove_world_object(self, world, world_object):
         """
