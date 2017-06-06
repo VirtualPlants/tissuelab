@@ -97,10 +97,10 @@ def define_lookuptable(data, colormap_points, colormap_name, intensity_range=Non
                 (1.0 - value) * i_min + value * i_max, *colormap_points[value])
 
     lut.ClampingOn()
-    lut.UseBelowRangeColorOn()
-    lut.SetBelowRangeColor(colormap_points.values()[0])
-    lut.UseAboveRangeColorOn()
-    lut.SetAboveRangeColor(colormap_points.values()[-1])
+    # lut.UseBelowRangeColorOn()
+    # lut.SetBelowRangeColor(colormap_points.values()[0])
+    # lut.UseAboveRangeColorOn()
+    # lut.SetAboveRangeColor(colormap_points.values()[-1])
     # lut.AllowDuplicateScalarsOn()
 
     return lut
