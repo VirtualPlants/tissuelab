@@ -217,6 +217,9 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
             world, obj, item, old, new = data
             if item == 'attribute':
                 self.update_world_object(world, obj, new)
+            elif item == 'visibility':
+                self.update_world_object_display(world, obj, new)
+
 
     def set_world(self, world):
         self.clear()
@@ -448,6 +451,23 @@ class VtkWorldViewer(VtkViewer, AbstractListener):
                         if attribute['name'] == axis + '_plane_position':
                             self.move_cut_plane(name=world_object.name, position=attribute['value'], orientation=i + 1)
         self.render()
+
+    def update_world_object_display(self, world, world_object, display):
+        object_name = world_object.name
+        if object_name in self.object_repr:
+            object_data = self.object_repr[object_name]
+            if isinstance(object_data, np.ndarray):
+                dtype = 'matrix'
+                volume = attribute_value(world_object, dtype, 'volume')
+                cut_planes = attribute_value(world_object, dtype, 'cut_planes')
+                self.display_volume(world_object.name,display and volume)
+                self.display_cut_planes(world_object.name,display and cut_planes)
+            elif isinstance(object_data, vtk.vtkPolyData):
+                dtype = 'polydata'
+                polydata = attribute_value(world_object, dtype, 'display_polydata')
+                colorbar = attribute_value(world_object, dtype, 'display_colorbar')
+                self.display_polydata(world_object.name,display and polydata)
+                self.display_colorbar(world_object.name,display and colorbar and polydata)
 
     def add_world_object_actor(self, world_object, actor, **kwargs):
         world_object.silent = True

@@ -57,6 +57,9 @@ class TissueViewer(QtGui.QWidget):
 
         add_drop_callback(self, 'IImage', self.drop_image)
 
+    def initialize(self):
+        self.vtk.initialize()
+
     def _create_actions(self):
         self.action_auto_focus = QtGui.QAction(qicon("paraview/pqResetCamera32.png"), 'Auto focus', self)
         self.action_save_screenshot = QtGui.QAction(qicon("Crystal_Clear_app_camera.png"), 'Screenshot', self)

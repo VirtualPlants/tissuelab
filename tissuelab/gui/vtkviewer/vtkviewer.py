@@ -318,11 +318,13 @@ class VtkViewer(QtGui.QWidget):
                 if name_polydata(view_prop_name) in self.property:
                     self.property[name_polydata(view_prop_name)]['disp'] = disp
         else:
-            self.property[name_polydata(name)]['disp'] = disp
+            if name_polydata(name) in self.property:
+                self.property[name_polydata(name)]['disp'] = disp
 
     def _display_colorbar(self, name, disp=True):
-        self.property[name_colorbar(name)]['disp'] = disp
-        self.compute()
+        if name_colorbar(name) in self.property:
+            self.property[name_colorbar(name)]['disp'] = disp
+            self.compute()
 
     def initialize(self):
         pass
