@@ -729,7 +729,7 @@ class VtkViewer(QtGui.QWidget):
         z_slice = default_value(dtype, 'z_slice', **kwargs)
 
         slices = np.transpose([x_slice,y_slice,z_slice])
-        if np.any(slices[0]>0) or np.any(slices[1]<100):
+        if np.any(slices[0]>-1) or np.any(slices[1]<101):
             preserve_faces = default_value(dtype, 'preserve_faces', **kwargs)
 
             if preserve_faces:
@@ -793,6 +793,10 @@ class VtkViewer(QtGui.QWidget):
 
             sliced_polydata.DeepCopy(polydata)
             self.polydata[name] = sliced_polydata
+        else:
+            if name in self.object_repr:
+                self.polydata[name] = self.object_repr[name]
+
         self.set_polydata_point_radius(name, **kwargs)
 
     def add_outline(self, name, data_matrix, **kwargs):
